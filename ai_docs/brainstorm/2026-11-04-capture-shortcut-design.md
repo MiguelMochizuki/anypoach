@@ -6,4 +6,4 @@ A local SwiftUI key equivalent would only work while Poach is focused. A general
 
 Keep the registration controller alive with application state. Report registration conflicts in the menu panel and retain the recording buttons. Use exclusive registration so a conflicting registered hotkey produces a failure instead of triggering two applications. No dependency or generalized key logging is needed.
 
-Validation: Swift debug and packaged builds pass; macOS reports registration status zero. Global delivery and stop require a physical-key test because the automated app-targeted keypress did not open the overlay. Do not equate successful registration with verified delivery.
+Validation: the Swift debug and packaged builds passed. The user physically pressed Command–Shift–P from another application and confirmed that Poach opened its selection overlay. Stopping via the same physical shortcut has not been separately verified.
