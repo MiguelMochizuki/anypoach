@@ -76,6 +76,18 @@ async function referencePNG(sourcePath: string, timeMs: number): Promise<Buffer>
   return png;
 }
 
+/** Read a precise visual reference from a bounded local recording. */
+export async function readVideoMoment(videoFile: string, timeMs: number): Promise<Buffer> {
+  if (!Number.isFinite(timeMs) || timeMs < 0) throw new Error("Timestamp must be a nonnegative number of milliseconds");
+  const sourcePath = resolve(videoFile);
+  if (![".mp4", ".mov"].includes(extname(sourcePath).toLowerCase())) throw new Error("Expected an MP4 or MOV recording");
+  const info = await stat(sourcePath);
+  if (!info.isFile() || info.size > MAX_VIDEO_BYTES) throw new Error("Recording must be a file no larger than 512 MiB");
+  const duration = parseDuration(await run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "json", sourcePath]));
+  if (timeMs >= duration * 1000) throw new Error("Timestamp must be before the end of the recording");
+  return referencePNG(sourcePath, timeMs);
+}
+
 function chooseKeyframes(frames: readonly FrameSample[], deltas: readonly number[]): readonly { kind: Keyframe["kind"]; index: number }[] {
   if (frames.length === 1) return [{ kind: "start", index: 0 }];
   const peakDelta = Math.max(...deltas);

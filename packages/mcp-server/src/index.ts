@@ -2,7 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { inspectImage, inspectVideo } from "@poach/core";
+import { inspectImage, inspectVideo, readVideoMoment } from "@poach/core";
 import { readFile, unlink, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -93,6 +93,26 @@ server.registerTool("poach_read_brief", {
     return { content, structuredContent: brief };
   } catch (error) {
     return { isError: true, content: [{ type: "text" as const, text: `No readable shared brief. Use Share with assistant via MCP in Poach. ${error instanceof Error ? error.message : ""}` }] };
+  }
+});
+server.registerTool("poach_read_moment", {
+  title: "Inspect a moment in the shared recording",
+  description: "Read a PNG frame at a specific timestamp from the video explicitly shared in Poach. Use this to investigate timestamped notes and changes between reference frames. Only the active shared recording is accessible through this tool.",
+  inputSchema: { timeMs: z.number().min(0).max(30000).describe("Timestamp in milliseconds, before the recording ends") },
+}, async ({ timeMs }) => {
+  try {
+    const brief = z.object({ sharedAt: z.number(), evidence: z.object({ mediaType: z.literal("video"), sourcePath: z.string() }) }).parse(
+      JSON.parse(await readFile(join(homedir(), "Library/Caches/Poach/active-brief.json"), "utf8")),
+    );
+    if (Date.now() / 1000 - brief.sharedAt > 86400) throw new Error("Shared brief expired; share the recording again from Poach");
+    const png = await readVideoMoment(brief.evidence.sourcePath, timeMs);
+    if (png.length > 5 * 1024 * 1024) throw new Error("Reference image exceeds the 5 MB limit");
+    return { content: [
+      { type: "text" as const, text: `Shared recording at ${timeMs} ms. This frame alone does not establish the cause of a behavior.` },
+      { type: "image" as const, data: png.toString("base64"), mimeType: "image/png" },
+    ] };
+  } catch (error) {
+    return { isError: true, content: [{ type: "text" as const, text: error instanceof Error ? error.message : "Could not read this moment" }] };
   }
 });
 await server.connect(transport);
