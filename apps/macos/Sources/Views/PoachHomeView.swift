@@ -14,6 +14,7 @@ struct PoachHomeView: View {
     let onDropMedia: (URL) -> Void
     let loadingFile: URL?
     @State private var targeted = false
+    @State private var dragEntry = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var settings = false
@@ -91,8 +92,19 @@ struct PoachHomeView: View {
                         .font(.system(size: 17, weight: .medium))
                         .frame(width: 34, height: 34)
                         .background(.black.opacity(0.055), in: RoundedRectangle(cornerRadius: 9))
-                        .scaleEffect(targeted && !reduceMotion ? 1.08 : 1)
-                    Text(targeted ? "Drop an image or video" : "Release to load")
+                        .foregroundStyle(targeted ? Color.accentColor : .primary)
+                        .keyframeAnimator(initialValue: 0.0, trigger: dragEntry) { icon, displacement in
+                            let offset = targeted && !reduceMotion ? displacement : 0
+                            icon.rotationEffect(.degrees(offset * 1.6))
+                                .offset(x: offset)
+                        } keyframes: { _ in
+                            CubicKeyframe(-3.0, duration: 0.045)
+                            CubicKeyframe(3.0, duration: 0.065)
+                            CubicKeyframe(-1.8, duration: 0.055)
+                            CubicKeyframe(0.9, duration: 0.05)
+                            CubicKeyframe(0.0, duration: 0.065)
+                        }
+                    Text(targeted ? "Release to load" : "Drop an image or video")
                         .font(.system(size: 13, weight: .semibold))
                     Text("or click to browse").font(.caption).foregroundStyle(.secondary)
                 }
@@ -112,7 +124,9 @@ struct PoachHomeView: View {
                 }
                 return true
             }
-            .animation(reduceMotion ? nil : .spring(duration: 0.26, bounce: 0.15), value: targeted)
+            .onChange(of: targeted) {
+                if targeted && !reduceMotion { dragEntry += 1 }
+            }
             .disabled(isWorking || isRecording)
             }
         }
