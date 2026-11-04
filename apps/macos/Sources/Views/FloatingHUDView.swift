@@ -174,6 +174,8 @@ struct FloatingHUDView: View {
         .frame(maxWidth: .infinity)
         .preferredColorScheme(.light)
         }
+        .background(Color(nsColor: .windowBackgroundColor))
+        .preferredColorScheme(.light)
         .frame(width: min(660, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
                height: min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80))
         .onAppear { if isVideo { player = AVPlayer(url: sourceURL) } }
@@ -196,7 +198,11 @@ struct FloatingHUDView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-
+            Button("New capture") {
+                player?.pause()
+                onClose()
+            }
+            .buttonStyle(.bordered)
         }
     }
 

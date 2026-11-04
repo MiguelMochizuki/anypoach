@@ -293,7 +293,10 @@ private final class FloatingHUDWindowController {
             onCopyContext: { Self.copyContext(result, context: $0) },
             onShareContext: { try Self.shareContext(result, context: $0) },
             onPreviewInCursor: { Self.revealKeyframes(result) },
-            onClose: { [weak self] in self?.panel?.orderOut(nil) }
+            onClose: { [weak self] in
+                self?.panel?.orderOut(nil)
+                NSApp.windows.first { $0.title == "Poach" }?.makeKeyAndOrderFront(nil)
+            }
         )
 
         let panel = self.panel ?? makePanel()
@@ -306,6 +309,7 @@ private final class FloatingHUDWindowController {
                                          y: visible.midY - panel.frame.height / 2))
         }
         panel.alphaValue = 0
+        NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         NSAnimationContext.runAnimationGroup { context in
@@ -325,9 +329,10 @@ private final class FloatingHUDWindowController {
         panel.isFloatingPanel = false
         panel.level = .normal
         panel.collectionBehavior = [.moveToActiveSpace]
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
+        panel.isOpaque = true
+        panel.appearance = NSAppearance(named: .aqua)
+        panel.backgroundColor = .windowBackgroundColor
+        panel.hasShadow = true
         panel.isMovableByWindowBackground = true
         panel.becomesKeyOnlyIfNeeded = true
         panel.isReleasedWhenClosed = false
