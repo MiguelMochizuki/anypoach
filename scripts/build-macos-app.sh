@@ -14,9 +14,12 @@ fi
 pnpm --filter @poach/core build
 swift build --package-path "$repo_root/apps/macos" --configuration release
 mkdir -p "$app_path/Contents/MacOS"
+engine_path="$app_path/Contents/Resources/core"
+mkdir -p "$engine_path/dist"
+cp "$repo_root/packages/core/dist/"*.js "$engine_path/dist/"
+cp "$repo_root/packages/core/package.json" "$engine_path/package.json"
 cp "$repo_root/apps/macos/.build/release/Poach" "$app_path/Contents/MacOS/Poach"
 cp "$repo_root/apps/macos/Info.plist" "$app_path/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :POACHProjectRoot string $repo_root" "$app_path/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :POACHNodePath string $node_path" "$app_path/Contents/Info.plist"
 if [[ "$signing_identity" == "-" ]]; then
   codesign --force --sign - "$app_path"

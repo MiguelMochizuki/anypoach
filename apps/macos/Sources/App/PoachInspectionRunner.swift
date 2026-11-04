@@ -40,9 +40,9 @@ enum PoachInspectionError: LocalizedError {
 
 enum PoachInspectionRunner {
     static func inspect(videoURL: URL) async throws -> PoachInspection {
-        guard let projectRoot = findProjectRoot() else { throw PoachInspectionError.projectNotBuilt }
+        guard let engine = findEngine() else { throw PoachInspectionError.projectNotBuilt }
         guard let node = findNode() else { throw PoachInspectionError.nodeNotFound }
-        let entry = projectRoot.appending(path: "packages/core/dist/index.js").path
+        let entry = engine.path
         let videoPath = videoURL.path
 
         return try await Task.detached(priority: .userInitiated) {
@@ -87,17 +87,21 @@ enum PoachInspectionRunner {
         }.value
     }
 
-    private static func findProjectRoot() -> URL? {
+    private static func findEngine() -> URL? {
+        if let bundled = Bundle.main.resourceURL?.appending(path: "core/dist/index.js"),
+           FileManager.default.fileExists(atPath: bundled.path) {
+            return bundled
+        }
         if let configuredRoot = Bundle.main.object(forInfoDictionaryKey: "POACHProjectRoot") as? String {
             let root = URL(fileURLWithPath: configuredRoot, isDirectory: true)
             if FileManager.default.fileExists(atPath: root.appending(path: "packages/core/dist/index.js").path) {
-                return root
+                return root.appending(path: "packages/core/dist/index.js")
             }
         }
         var candidate = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
         for _ in 0..<10 {
             let entry = candidate.appending(path: "packages/core/dist/index.js")
-            if FileManager.default.fileExists(atPath: entry.path) { return candidate }
+            if FileManager.default.fileExists(atPath: entry.path) { return entry }
             let parent = candidate.deletingLastPathComponent()
             if parent.path == candidate.path { break }
             candidate = parent
