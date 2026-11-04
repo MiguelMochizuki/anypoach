@@ -17,6 +17,7 @@ struct FloatingHUDView: View {
     let palette: [HUDPaletteToken]
     var onCopyContext: (String) -> Void
     var onShareContext: (String) throws -> Void
+    @State private var connected = false
     @State private var showingAssistantSetup = false
     @State private var shareStatus = ""
     @State private var context = ""
@@ -72,7 +73,10 @@ struct FloatingHUDView: View {
                     .onChange(of: context) { copied = false; shareStatus = "Changes have not been shared yet." }
             }
 
+            HStack(spacing: 10) {
             Button("Continue with Codex or Claude") {
+                connected = Self.hasLiveConnector()
+                guard connected else { return }
                 do {
                     try onShareContext(implementationContext)
                     shareStatus = "Brief published locally. In your connected Codex or Claude, ask: Read my Poach brief, describe the interaction, and recreate it in my project."
@@ -82,8 +86,19 @@ struct FloatingHUDView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            Text("Uses your connected assistant. No API key needed. Your assistant can read the capture, comments, and color changes.")
-                .font(.caption).foregroundStyle(.secondary)
+            .disabled(!connected)
+            if !connected {
+                Label {
+                    Text("Connect an MCP assistant to continue.")
+                        .font(.caption)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .symbolRenderingMode(.multicolor)
+                        .foregroundStyle(.yellow)
+                }
+                .accessibilityElement(children: .combine)
+            }
+            }
             Button("Connect your assistant…") { showingAssistantSetup = true }
                 .buttonStyle(.link)
             if !shareStatus.isEmpty {
@@ -115,6 +130,12 @@ struct FloatingHUDView: View {
         .frame(width: min(isVideo ? 860 : 660, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
                height: min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80))
         .sheet(isPresented: $showingAssistantSetup) { AssistantSetupView() }
+        .task {
+            while !Task.isCancelled {
+                connected = Self.hasLiveConnector()
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            }
+        }
         .onAppear {
             if isVideo {
                 let newPlayer = AVPlayer(url: sourceURL)
@@ -124,6 +145,19 @@ struct FloatingHUDView: View {
         }
         .onChange(of: comments) { copied = false; shareStatus = "Changes have not been shared yet." }
         .onDisappear { playback.detach(); player = nil }
+    }
+
+    private static func hasLiveConnector() -> Bool {
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Caches/Poach/connections")
+        guard let entries = try? FileManager.default.contentsOfDirectory(at: directory,
+                includingPropertiesForKeys: [.contentModificationDateKey]) else { return false }
+        return entries.contains { entry in
+            guard let pid = Int32(entry.lastPathComponent), pid > 0,
+                  let modified = try? entry.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
+                  Date().timeIntervalSince(modified) < 15 else { return false }
+            return kill(pid, 0) == 0
+        }
     }
 
     private var header: some View {

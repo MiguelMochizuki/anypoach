@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { inspectImage, inspectVideo, readVideoMoment } from "@poach/core";
 import { readFile, unlink, stat } from "node:fs/promises";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -115,4 +116,31 @@ server.registerTool("poach_read_moment", {
     return { isError: true, content: [{ type: "text" as const, text: error instanceof Error ? error.message : "Could not read this moment" }] };
   }
 });
+// Each initialized stdio client owns a separate presence file. Idle clients remain
+// connected until their pipe closes. A short lease also bounds stale crash residue.
+const connections = join(homedir(), "Library/Caches/Poach/connections");
+const presence = join(connections, String(process.pid));
+let heartbeat: NodeJS.Timeout | undefined;
+function refreshPresence(): void {
+  try {
+    mkdirSync(connections, { recursive: true, mode: 0o700 });
+    writeFileSync(presence, "", { mode: 0o600 });
+  } catch (error) {
+    console.error("Could not update Poach connection status:", error instanceof Error ? error.message : error);
+  }
+}
+function disconnect(): void {
+  clearInterval(heartbeat);
+  heartbeat = undefined;
+  try { rmSync(presence, { force: true }); } catch { /* Lease expires automatically. */ }
+}
+server.server.oninitialized = () => {
+  if (heartbeat) return;
+  refreshPresence();
+  heartbeat = setInterval(refreshPresence, 5000);
+  heartbeat.unref();
+};
+server.server.onclose = disconnect;
+process.stdin.once("end", disconnect);
+process.once("exit", disconnect);
 await server.connect(transport);

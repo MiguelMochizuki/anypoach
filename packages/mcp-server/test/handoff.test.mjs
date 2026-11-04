@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, rm, access } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm, access, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -38,4 +38,45 @@ test("shared brief carries notes and visual moments through MCP", { timeout: 30_
   const expired = await client.callTool({ name: "poach_read_brief", arguments: {} });
   assert.equal(expired.isError, true);
   await assert.rejects(access(path));
+});
+
+test("connection status follows initialized clients independently", async (t) => {
+  const home = await mkdtemp(join(tmpdir(), "poach-connection-test-"));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const directory = join(home, "Library/Caches/Poach/connections");
+  const transport = () => new StdioClientTransport({
+    command: process.execPath,
+    args: [new URL("../dist/index.js", import.meta.url).pathname],
+    env: { ...process.env, HOME: home },
+    stderr: "pipe",
+  });
+  async function expectActive(count) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const files = await readdir(directory).catch(error => {
+        if (error.code === "ENOENT") return [];
+        throw error;
+      });
+      if (files.length === count) return;
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    assert.fail(`Expected ${count} active MCP sessions`);
+  }
+  const uninitialized = transport();
+  await uninitialized.start();
+  await expectActive(0);
+  await uninitialized.close();
+  const a = new Client({ name: "first", version: "1" });
+  const b = new Client({ name: "second", version: "1" });
+  try {
+    await a.connect(transport());
+    await b.connect(transport());
+    await expectActive(2);
+    await a.close();
+    await expectActive(1);
+    await b.close();
+    await expectActive(0);
+  } finally {
+    await a.close();
+    await b.close();
+  }
 });
