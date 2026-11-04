@@ -16,6 +16,7 @@ struct PoachApp: App {
     @State private var isWorking = false
     @State private var workingTitle = "Preparing your capture…"
     @State private var isRecording = false
+    @State private var loadingFile: URL?
     @State private var elapsedSeconds = 0
 
     var body: some Scene {
@@ -29,7 +30,8 @@ struct PoachApp: App {
                 onStartRecording: startRecording,
                 onStopRecording: { Task { await stopRecording() } },
                 onLoadMedia: loadMedia,
-                onDropMedia: loadMedia(at:)
+                onDropMedia: loadMedia(at:),
+                loadingFile: loadingFile
             )
             .background(HomeWindowAnchor())
             .onChange(of: defaultMode) { captureMode = PoachCaptureMode(rawValue: defaultMode) ?? .selectedPortion }
@@ -99,15 +101,15 @@ struct PoachApp: App {
         guard !isWorking, !isRecording, mediaURL.isFileURL else { return }
         workingTitle = "Analyzing your media…"
         isWorking = true
-        hudWindow.showPreparing()
+        loadingFile = mediaURL
         Task {
+            defer { loadingFile = nil; isWorking = false }
             do {
                 let result = try await PoachInspectionRunner.inspect(videoURL: mediaURL)
                 hudWindow.show(result)
             } catch {
                 showError(title: "Poach couldn't load this media", error: error)
             }
-            isWorking = false
         }
     }
 

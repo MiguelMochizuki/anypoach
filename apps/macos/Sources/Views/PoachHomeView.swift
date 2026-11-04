@@ -11,6 +11,7 @@ struct PoachHomeView: View {
     let onLoadMedia: () -> Void
 
     let onDropMedia: (URL) -> Void
+    let loadingFile: URL?
     @State private var targeted = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -78,6 +79,20 @@ struct PoachHomeView: View {
             .disabled(isWorking)
 
 
+            if let loadingFile {
+                HStack(spacing: 12) {
+                    Image(systemName: "doc").font(.title2).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(loadingFile.lastPathComponent).font(.headline).lineLimit(1)
+                        Text("Inspecting…").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    ProgressView().controlSize(.small)
+                }
+                .padding(14)
+                .background(.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
+                .accessibilityElement(children: .combine)
+            } else {
             Button(action: onLoadMedia) {
                 VStack(spacing: 6) {
                     Image(systemName: targeted ? "arrow.down.to.line" : "square.and.arrow.up")
@@ -103,8 +118,9 @@ struct PoachHomeView: View {
             } isTargeted: { targeted = $0 }
             .animation(reduceMotion ? nil : .spring(duration: 0.26, bounce: 0.15), value: targeted)
             .disabled(isWorking || isRecording)
-
+            }
         }
+        .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.1), value: loadingFile)
     }
 
     private var header: some View {
