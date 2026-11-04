@@ -326,7 +326,7 @@ private final class FloatingHUDWindowController {
             VStack(spacing: 16) {
                 ProgressView()
                 Text("Preparing your capture for review").font(.headline)
-                Text("Extracting reference frames and colors…").foregroundStyle(.secondary)
+                Text("Preparing the editor…").foregroundStyle(.secondary)
             }
             .frame(width: 660, height: 500)
             .background(Color(nsColor: .windowBackgroundColor))
@@ -346,23 +346,13 @@ private final class FloatingHUDWindowController {
     }
 
     func show(_ result: PoachInspection) {
-        let frames = result.keyframes.enumerated().map { index, frame in
-            HUDKeyframe(
-                id: index,
-                time: result.mediaType == "image" ? "Still image" : "\(frame.kind) · \(frame.timeMs) ms",
-                image: NSImage(contentsOfFile: frame.imagePath)
-            )
-        }
         let palette = result.palette.map { HUDPaletteToken(hex: $0, color: Color(hex: $0)) }
         let view = FloatingHUDView(
             sourceURL: URL(fileURLWithPath: result.sourcePath),
             isVideo: result.mediaType != "image",
-            timingToken: result.timing.token,
             palette: palette,
-            keyframes: frames,
             onCopyContext: { Self.copyContext(result, context: $0) },
             onShareContext: { try Self.shareContext(result, context: $0) },
-            onPreviewInCursor: { Self.revealKeyframes(result) },
             onClose: { [weak self] in
                 self?.panel?.orderOut(nil)
                 NSApp.windows.first { $0.title == "Poach" }?.makeKeyAndOrderFront(nil)
@@ -426,11 +416,6 @@ private final class FloatingHUDWindowController {
         \(text)
         """
         pasteboard.setString(prompt, forType: .string)
-    }
-
-    private static func revealKeyframes(_ result: PoachInspection) {
-        guard let first = result.keyframes.first else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: first.imagePath)])
     }
 
     private static func shareContext(_ result: PoachInspection, context: String) throws {

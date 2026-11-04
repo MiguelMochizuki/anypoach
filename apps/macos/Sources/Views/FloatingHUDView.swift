@@ -1,12 +1,6 @@
 import SwiftUI
 import AVKit
 
-struct HUDKeyframe: Identifiable {
-    let id: Int
-    let time: String
-    let image: NSImage?
-}
-
 struct HUDPaletteToken: Identifiable {
     let hex: String
     let color: Color
@@ -17,10 +11,10 @@ struct FloatingHUDView: View {
     let sourceURL: URL
     let isVideo: Bool
     @State private var player: AVPlayer?
-    @State private var momentNote = ""
-    let timingToken: String
+    @State private var comments: [CaptureComment] = []
+    @State private var commentsOpen = false
+    @State private var playback = CommentPlayback()
     let palette: [HUDPaletteToken]
-    let keyframes: [HUDKeyframe]
     var onCopyContext: (String) -> Void
     var onShareContext: (String) throws -> Void
     @State private var showingAssistantSetup = false
@@ -28,10 +22,10 @@ struct FloatingHUDView: View {
     @State private var context = ""
     @State private var copied = false
     @State private var colorOverrides: [String: Color] = [:]
-    var onPreviewInCursor: () -> Void
     var onClose: () -> Void
 
     var body: some View {
+        HStack(spacing: 0) {
         ScrollView {
         VStack(alignment: .leading, spacing: 18) {
             header
@@ -42,69 +36,9 @@ struct FloatingHUDView: View {
                 CaptureVideoPlayer(player: player)
                     .frame(height: 260)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                HStack {
-                    TextField("What should happen at this moment?", text: $momentNote)
-                        .textFieldStyle(.roundedBorder)
-                    Button("Add note at playhead") {
-                        player?.pause()
-                        let seconds = player?.currentTime().seconds ?? 0
-                        let time = seconds.isFinite ? max(0, seconds) : 0
-                        context += (context.isEmpty ? "" : "\n") + String(format: "[%.2fs] ", time) + momentNote
-                        momentNote = ""
-                    }
-                    .disabled(momentNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+                CommentTimeline(playback: playback, comments: $comments, isOpen: $commentsOpen)
             } else if let image = NSImage(contentsOf: sourceURL) {
                 Image(nsImage: image).resizable().aspectRatio(contentMode: .fit).frame(maxHeight: 260)
-            }
-
-            DisclosureGroup("Reference frames and estimated motion") {
-            VStack(alignment: .leading, spacing: 9) {
-                sectionLabel("MOTION")
-                HStack(spacing: 8) {
-                    Image(systemName: "waveform.path")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.tint)
-                    Text(timingToken)
-                        .font(.system(size: 13, weight: .medium, design: .rounded).monospacedDigit())
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-                .padding(.horizontal, 11)
-                .padding(.vertical, 9)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(.primary.opacity(0.055), lineWidth: 0.5)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 9) {
-                sectionLabel("KEYFRAMES")
-                HStack(spacing: 7) {
-                    ForEach(keyframes) { frame in
-                        VStack(alignment: .leading, spacing: 5) {
-                            Group {
-                                if let image = frame.image {
-                                    Image(nsImage: image).resizable().aspectRatio(contentMode: .fill)
-                                } else {
-                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .fill(.primary.opacity(0.06))
-                                        .overlay { Image(systemName: "viewfinder").foregroundStyle(.secondary) }
-                                }
-                            }
-                            .frame(height: 48)
-                            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                            Text(frame.time)
-                                .font(.system(size: 10, weight: .medium, design: .rounded).monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-
             }
 
             VStack(alignment: .leading, spacing: 9) {
@@ -148,8 +82,7 @@ struct FloatingHUDView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .keyboardShortcut(.defaultAction)
-            Text("Uses your connected assistant. No API key needed. Your notes, colors, and reference frames are available when it reads the brief.")
+            Text("Uses your connected assistant. No API key needed. Your assistant can read the capture, comments, and color changes.")
                 .font(.caption).foregroundStyle(.secondary)
             Button("Connect your assistant…") { showingAssistantSetup = true }
                 .buttonStyle(.link)
@@ -164,26 +97,33 @@ struct FloatingHUDView: View {
                 }
                 .buttonStyle(HUDButtonStyle(prominent: false))
 
-                Button(action: onPreviewInCursor) {
-                    Image(systemName: "arrow.up.right.square")
-                        .frame(width: 34, height: 30)
-                }
-                .buttonStyle(HUDButtonStyle(prominent: false))
-                .help("Show keyframes in Finder")
-                .accessibilityLabel("Show keyframes in Finder")
+
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity)
         .preferredColorScheme(.light)
         }
+        if isVideo && commentsOpen {
+            Divider()
+            CommentSidebar(playback: playback, comments: $comments, isOpen: $commentsOpen)
+                .frame(width: 255)
+        }
+        }
         .background(Color(nsColor: .windowBackgroundColor))
         .preferredColorScheme(.light)
-        .frame(width: min(660, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
+        .frame(width: min(isVideo ? 860 : 660, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
                height: min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80))
         .sheet(isPresented: $showingAssistantSetup) { AssistantSetupView() }
-        .onAppear { if isVideo { player = AVPlayer(url: sourceURL) } }
-        .onDisappear { player?.pause(); player = nil }
+        .onAppear {
+            if isVideo {
+                let newPlayer = AVPlayer(url: sourceURL)
+                player = newPlayer
+                playback.attach(newPlayer)
+            }
+        }
+        .onChange(of: comments) { copied = false; shareStatus = "Changes have not been shared yet." }
+        .onDisappear { playback.detach(); player = nil }
     }
 
     private var header: some View {
@@ -215,7 +155,7 @@ struct FloatingHUDView: View {
             guard let replacement = colorOverrides[token.hex] else { return nil }
             return "Replace \(token.hex) with \(hex(replacement))."
         }
-        return ([context] + replacements).filter { !$0.isEmpty }.joined(separator: "\n")
+        return ([context] + comments.map { String(format: "[%.2fs] %@", $0.time, $0.text) } + replacements).filter { !$0.isEmpty }.joined(separator: "\n")
     }
 
     private func hex(_ color: Color) -> String {
@@ -237,7 +177,7 @@ private struct CaptureVideoPlayer: NSViewRepresentable {
 
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
-        view.controlsStyle = .inline
+        view.controlsStyle = .none
         view.videoGravity = .resizeAspect
         view.showsFullScreenToggleButton = false
         view.player = player
