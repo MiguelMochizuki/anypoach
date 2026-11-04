@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-app_path="$repo_root/outputs/Poach.app"
+destination="$repo_root/outputs/Poach.app"
 node_path="$(command -v node || true)"
 signing_identity="${POACH_CODESIGN_IDENTITY:--}"
 if [[ -z "${POACH_CODESIGN_IDENTITY:-}" ]] && security find-identity -v -p codesigning | grep -q '"Poach Local Development"'; then
@@ -17,6 +17,10 @@ fi
 pnpm --filter @poach/core build
 pnpm --filter @poach/mcp-server build
 swift build --package-path "$repo_root/apps/macos" --configuration release
+mkdir -p "$repo_root/outputs"
+stage_dir="$(mktemp -d "$repo_root/outputs/.poach-build.XXXXXX")"
+trap 'rm -rf "$stage_dir"' EXIT
+app_path="$stage_dir/Poach.app"
 mkdir -p "$app_path/Contents/MacOS"
 engine_path="$app_path/Contents/Resources/core"
 mkdir -p "$engine_path/dist"
@@ -36,4 +40,17 @@ else
 fi
 codesign --verify --strict "$app_path"
 
-echo "Built $app_path"
+# Replacing signed executable pages in place can terminate a running Poach.
+if [[ -d "$destination" ]]; then
+  swift - "$app_path" "$destination" <<'SWIFT'
+import Darwin
+let arguments = CommandLine.arguments
+if renamex_np(arguments[1], arguments[2], UInt32(RENAME_SWAP)) != 0 {
+    perror("Could not exchange app bundles")
+    exit(1)
+}
+SWIFT
+else
+  mv "$app_path" "$destination"
+fi
+echo "Built $destination"
