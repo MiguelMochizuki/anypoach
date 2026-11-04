@@ -23,7 +23,7 @@ export function approximateTiming(
   durationMs: number,
 ): MotionTiming {
   if (durationMs <= 0 || deltas.length === 0) {
-    return { durationMs: Math.max(0, durationMs), bezier: [0.16, 1, 0.3, 1], token: `${Math.max(0, durationMs)}ms • cubic-bezier(0.16, 1, 0.3, 1)` };
+    return { durationMs: Math.max(0, durationMs), bezier: null, token: "No measurable motion in sampled frames" };
   }
   const endMs = startMs + durationMs;
   const selected = frames.map((frame, index) => ({ frame, delta: deltas[index - 1] ?? 0 }))
@@ -31,7 +31,7 @@ export function approximateTiming(
   const movement = selected.map(({ delta }) => delta);
   const total = movement.reduce((sum, value) => sum + value, 0);
   if (total < 1e-6 || selected.length < 3) {
-    return { durationMs, bezier: [0.16, 1, 0.3, 1], token: `${durationMs}ms • cubic-bezier(0.16, 1, 0.3, 1)` };
+    return { durationMs, bezier: null, token: `${durationMs}ms • insufficient samples to estimate easing` };
   }
   const cumulative = [0];
   for (const value of movement.slice(1)) cumulative.push(cumulative.at(-1)! + value);

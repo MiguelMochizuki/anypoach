@@ -129,6 +129,8 @@ export async function readVideoMoment(videoFile: string, timeMs: number): Promis
 function chooseKeyframes(frames: readonly FrameSample[], deltas: readonly number[]): readonly { kind: Keyframe["kind"]; index: number }[] {
   if (frames.length === 1) return [{ kind: "start", index: 0 }];
   const peakDelta = Math.max(...deltas);
+  // Suppress codec noise in an otherwise stationary screen recording.
+  if (peakDelta < 0.00002) return [{ kind: "start", index: 0 }];
   const peakIndex = Math.max(1, deltas.indexOf(peakDelta));
   const meaningfulThreshold = Math.max(0.008, peakDelta * 0.12);
   const firstMotionIndex = deltas.findIndex((delta) => delta >= meaningfulThreshold);
@@ -197,7 +199,7 @@ export async function inspectVideo(videoFile: string, options: ExtractOptions = 
   const motionStartMs = frames[keys[0]?.index ?? 0]?.timeMs ?? 0;
   const settled = keys.find((key) => key.kind === "settled");
   const settledTimeMs = settled ? frames[settled.index]!.timeMs : Math.round(durationSeconds * 1000);
-  const durationMs = Math.max(0, settledTimeMs - motionStartMs);
+  const durationMs = keys.length === 1 ? 0 : Math.max(0, settledTimeMs - motionStartMs);
   const timing = approximateTiming(frames, deltas, motionStartMs, durationMs);
   const paletteFrame = frames[keys.find((key) => key.kind === "settled")?.index ?? frames.length - 1]!;
   const palette = extractPalette(paletteFrame, options.paletteSize ?? 6);
@@ -247,6 +249,6 @@ export async function inspectImage(imageFile: string, options: ExtractOptions = 
     durationMs: 0,
     keyframes: [{ kind: "start", timeMs: 0, imagePath, motion: 0 }],
     palette,
-    timing: { durationMs: 0, bezier: [0.16, 1, 0.3, 1], token: "Still image · no motion duration" },
+    timing: { durationMs: 0, bezier: null, token: "Still image · no motion duration" },
   };
 }

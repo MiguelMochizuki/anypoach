@@ -42,3 +42,15 @@ test("moments between sparse frames show the frame held on screen", async (t) =>
   assert.notDeepEqual(await readVideoMoment(source, 2000), first);
   assert.deepEqual(await readVideoMoment(source, 5999), await readVideoMoment(source, 4000));
 });
+
+test("a stationary capture reports no estimated easing", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "poach-static-test-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const source = join(directory, "rest.mov");
+  await exec("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=black:size=96x64:rate=12",
+    "-t", "1", "-c:v", "libx264", source]);
+  const result = await inspectVideo(source, { outputDirectory: directory });
+  assert.deepEqual(result.keyframes.map(frame => frame.kind), ["start"]);
+  assert.equal(result.timing.durationMs, 0);
+  assert.equal(result.timing.bezier, null);
+});

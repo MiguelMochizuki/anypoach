@@ -11,7 +11,7 @@ export interface Keyframe {
 export interface MotionTiming {
   /** Time from the first meaningful change until visual settlement. */
   readonly durationMs: number;
-  readonly bezier: readonly [number, number, number, number];
+  readonly bezier: readonly [number, number, number, number] | null;
   readonly token: string;
 }
 

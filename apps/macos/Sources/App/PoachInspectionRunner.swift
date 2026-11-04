@@ -17,7 +17,7 @@ struct PoachKeyframe: Codable {
 
 struct PoachTiming: Codable {
     let durationMs: Int
-    let bezier: [Double]
+    let bezier: [Double]?
     let token: String
 }
 
