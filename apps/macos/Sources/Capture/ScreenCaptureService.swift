@@ -270,16 +270,19 @@ private final class RegionSelectionWindowController {
     func selectRegion() async throws -> SelectedRegion {
         try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
-            NSApp.hide(nil)
+            NSApp.unhide(nil)
+            NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
             for screen in NSScreen.screens {
                 guard let displayID = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value else { continue }
-                let panel = NSPanel(
+                let panel = RegionSelectionPanel(
                     contentRect: NSRect(origin: .zero, size: screen.frame.size),
                     styleMask: [.borderless, .nonactivatingPanel],
                     backing: .buffered,
                     defer: false
                 )
                 panel.level = .screenSaver
+                panel.title = "Poach — Select an area"
+                panel.hidesOnDeactivate = false
                 panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
                 panel.isOpaque = false
                 panel.backgroundColor = .clear
@@ -292,6 +295,9 @@ private final class RegionSelectionWindowController {
                 panel.setFrame(screen.frame, display: true)
                 self.panels.append(panel)
                 panel.orderFrontRegardless()
+                if screen.frame.contains(NSEvent.mouseLocation) {
+                    panel.makeKeyAndOrderFront(nil)
+                }
             }
             guard !panels.isEmpty else {
                 self.continuation = nil
@@ -318,6 +324,10 @@ private final class RegionSelectionWindowController {
         continuation?.resume(with: result)
         continuation = nil
     }
+}
+
+private final class RegionSelectionPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }
 
 private struct RegionSelectionView: View {
