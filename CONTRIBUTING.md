@@ -61,3 +61,5 @@ When validating automatic stop, let a native capture reach the full 30-second li
 Run `pnpm --filter @poach/core test` for the recording boundary regression. It requires FFmpeg/ffprobe, generates a synthetic 31.5-second clip, verifies normalization to 30 seconds and final-moment access, and checks that the import limit remains strict. Fixtures and extracted images are temporary and removed after the test.
 
 Run `pnpm --filter @poach/mcp-server test` to verify assistant handoff through a real MCP stdio client. This test uses an isolated temporary HOME, synthetic video and brief; it checks notes, color instructions, images, timestamp bounds, and expiry without touching your active shared brief.
+
+For capture diagnostics, use `log show --last 5m --style compact --predicate 'subsystem == "dev.poach.app" AND category == "CaptureLifecycle"'`. These macOS logs contain lifecycle milestones and numeric failure codes, not capture contents, notes, or source paths. A successful run reports selection requested, recording started, stop requested, file finalized, analysis completed, and review editor presented.
