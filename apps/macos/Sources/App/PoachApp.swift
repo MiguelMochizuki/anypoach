@@ -1,9 +1,11 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
+import OSLog
 
 @main
 struct PoachApp: App {
+    private static let captureLog = Logger(subsystem: "dev.poach.app", category: "CaptureLifecycle")
     @State private var hudWindow = FloatingHUDWindowController()
     @State private var recordingWindow = RecordingStatusWindowController()
     @State private var captureServiceStorage: AnyObject?
@@ -86,6 +88,7 @@ struct PoachApp: App {
 
     private func startRecording() {
         guard !isWorking, !isRecording else { return }
+        Self.captureLog.notice("Capture selection requested")
         workingTitle = "Preparing your capture…"
         isWorking = true
         Task {
@@ -101,6 +104,7 @@ struct PoachApp: App {
                 NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
                 isWorking = false
                 isRecording = true
+                Self.captureLog.notice("Recording started")
                 elapsedSeconds = 0
                 recordingWindow.show(elapsedSeconds: 0) { Task { await stopRecording() } }
 
@@ -113,6 +117,7 @@ struct PoachApp: App {
                 if isRecording { await stopRecording() }
             } catch {
                 if let captureError = error as? ScreenCaptureError, captureError.isUserCancelled {
+                    Self.captureLog.notice("Capture selection cancelled")
                     isWorking = false
                     captureServiceStorage = nil
                     NSApp.unhide(nil)
@@ -121,6 +126,7 @@ struct PoachApp: App {
                 }
                 NSApp.unhide(nil)
                 NSApp.activate(ignoringOtherApps: true)
+                Self.captureLog.error("Capture start failed: code \((error as NSError).code)")
                 showCaptureStartError(error)
                 isWorking = false
                 captureServiceStorage = nil
@@ -131,21 +137,26 @@ struct PoachApp: App {
     private func stopRecording() async {
         guard #available(macOS 15.0, *) else { return }
         guard isRecording, let service = captureServiceStorage as? ScreenCaptureService else { return }
+        Self.captureLog.notice("Recording stop requested")
         isRecording = false
         workingTitle = "Analyzing your recording…"
         isWorking = true
         recordingWindow.close()
         do {
             let videoURL = try await service.stopRecording()
+            Self.captureLog.notice("Recording file finalized")
             captureServiceStorage = nil
             NSApp.unhide(nil)
             NSApp.activate(ignoringOtherApps: true)
             hudWindow.showPreparing()
             let result = try await PoachInspectionRunner.inspect(videoURL: videoURL, isRecording: true)
+            Self.captureLog.notice("Recording analysis completed")
             hudWindow.show(result)
+            Self.captureLog.notice("Review editor presented")
         } catch {
             NSApp.unhide(nil)
             NSApp.activate(ignoringOtherApps: true)
+            Self.captureLog.error("Capture processing failed: code \((error as NSError).code)")
             showError(title: "Poach couldn't finish this capture", error: error)
             captureServiceStorage = nil
         }
