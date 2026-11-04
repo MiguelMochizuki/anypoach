@@ -14,6 +14,9 @@ struct FloatingHUDView: View {
     @State private var comments: [CaptureComment] = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var commentsOpen = false
+    @State private var sidebarWidth: CGFloat = 0
+    private let sidebarFullWidth: CGFloat = 230
+    private var editorWidth: CGFloat { min(550, (NSScreen.main?.visibleFrame.width ?? 800) - 48) }
     @State private var playback = CommentPlayback()
     let palette: [HUDPaletteToken]
     var onCopyContext: (String) -> Void
@@ -113,26 +116,48 @@ struct FloatingHUDView: View {
             }
         }
         .padding(16)
-        .frame(maxWidth: .infinity)
+        .frame(width: editorWidth)
         .preferredColorScheme(.light)
-        if isVideo && commentsOpen {
+        if isVideo && sidebarWidth > 0 {
             CommentSidebar(playback: playback, comments: $comments, isOpen: $commentsOpen)
-                .frame(width: 230)
+                .frame(width: sidebarFullWidth)
                 .overlay(alignment: .leading) { Divider() }
-                .transition(.move(edge: .trailing).combined(with: .opacity))
+                .frame(width: sidebarWidth, alignment: .leading)
+                .clipped()
+                .allowsHitTesting(commentsOpen)
         }
         }
         .background(Color.white)
         .preferredColorScheme(.light)
-        .frame(width: min(isVideo && commentsOpen ? 830 : 550, (NSScreen.main?.visibleFrame.width ?? 800) - 48))
+        .frame(width: editorWidth + sidebarWidth)
         .fixedSize(horizontal: false, vertical: true)
         .clipped()
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: commentsOpen)
+        .task(id: commentsOpen) {
+            let available = (NSScreen.main?.visibleFrame.width ?? 800) - 32 - editorWidth
+            let target = commentsOpen ? max(0, min(sidebarFullWidth, available)) : 0
+            let start = sidebarWidth
+            guard target != start else { return }
+            guard !reduceMotion else { sidebarWidth = target; return }
+            let began = CACurrentMediaTime()
+            while !Task.isCancelled {
+                let t = min(1, (CACurrentMediaTime() - began) / 0.22)
+                let eased = t * t * (3 - 2 * t)
+                sidebarWidth = (start + (target - start) * eased).rounded()
+                if t == 1 { break }
+                do { try await Task.sleep(for: .milliseconds(8)) } catch { return }
+            }
+        }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
             guard let panel = NSApp.windows.first(where: { $0.title == "Poach — Implementation brief" && $0.isVisible }),
                   panel.contentRect(forFrameRect: panel.frame).size != size else { return }
-            panel.setContentSize(size)
-            pinToEdge(panel)
+            let frameSize = panel.frameRect(forContentRect: CGRect(origin: .zero, size: size)).size
+            var frame = panel.frame
+            if UserDefaults.standard.string(forKey: "windowEdge") != "left" {
+                frame.origin.x = frame.maxX - frameSize.width
+            }
+            frame.origin.y += (frame.height - frameSize.height) / 2
+            frame.size = frameSize
+            panel.setFrame(frame, display: true)
         }
         .sheet(isPresented: $showingAssistantSetup) { AssistantSetupView() }
         .task {
