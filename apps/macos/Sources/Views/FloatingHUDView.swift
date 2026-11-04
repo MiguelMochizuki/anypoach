@@ -23,6 +23,7 @@ struct FloatingHUDView: View {
     let keyframes: [HUDKeyframe]
     var onCopyContext: (String) -> Void
     var onShareContext: (String) throws -> Void
+    @State private var showingAssistantSetup = false
     @State private var shareStatus = ""
     @State private var context = ""
     @State private var copied = false
@@ -140,7 +141,7 @@ struct FloatingHUDView: View {
             Button("Continue with Codex or Claude") {
                 do {
                     try onShareContext(implementationContext)
-                    shareStatus = "Ready for your assistant. In Codex or Claude, ask: Read my Poach brief, describe the interaction, and recreate it in my project."
+                    shareStatus = "Brief published locally. In your connected Codex or Claude, ask: Read my Poach brief, describe the interaction, and recreate it in my project."
                 } catch {
                     shareStatus = "Could not share: \(error.localizedDescription)"
                 }
@@ -150,6 +151,8 @@ struct FloatingHUDView: View {
             .keyboardShortcut(.defaultAction)
             Text("Uses your connected assistant. No API key needed. Your notes, colors, and reference frames are available when it reads the brief.")
                 .font(.caption).foregroundStyle(.secondary)
+            Button("Connect your assistant…") { showingAssistantSetup = true }
+                .buttonStyle(.link)
             if !shareStatus.isEmpty {
                 Text(shareStatus).font(.caption).foregroundStyle(.secondary)
             }
@@ -178,6 +181,7 @@ struct FloatingHUDView: View {
         .preferredColorScheme(.light)
         .frame(width: min(660, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
                height: min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80))
+        .sheet(isPresented: $showingAssistantSetup) { AssistantSetupView() }
         .onAppear { if isVideo { player = AVPlayer(url: sourceURL) } }
         .onDisappear { player?.pause(); player = nil }
     }

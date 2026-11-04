@@ -15,6 +15,7 @@ if [[ -z "$node_path" ]]; then
 fi
 
 pnpm --filter @poach/core build
+pnpm --filter @poach/mcp-server build
 swift build --package-path "$repo_root/apps/macos" --configuration release
 mkdir -p "$app_path/Contents/MacOS"
 engine_path="$app_path/Contents/Resources/core"
@@ -24,6 +25,7 @@ cp "$repo_root/packages/core/package.json" "$engine_path/package.json"
 cp "$repo_root/apps/macos/.build/release/Poach" "$app_path/Contents/MacOS/Poach"
 cp "$repo_root/apps/macos/Info.plist" "$app_path/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :POACHNodePath string $node_path" "$app_path/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :POACHMCPServerPath string $repo_root/packages/mcp-server/dist/index.js" "$app_path/Contents/Info.plist"
 if [[ "$signing_identity" == "-" ]]; then
   codesign --force --sign - "$app_path"
   echo "Development build: ad-hoc signing can invalidate Screen Recording approval after rebuilding. Set POACH_CODESIGN_IDENTITY to a stable code-signing identity." >&2
