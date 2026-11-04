@@ -23,56 +23,60 @@ struct PoachHomeView: View {
     }
 
     var body: some View {
-        ScrollView {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            Picker("Poach", selection: $settings) {
-                Label("Capture", systemImage: "record.circle").tag(false)
-                Label("Settings", systemImage: "gearshape").tag(true)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                header
+                Spacer()
+                Picker("Poach", selection: $settings) {
+                    Text("Capture").tag(false)
+                    Text("Settings").tag(true)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
             }
-            .pickerStyle(.segmented).labelsHidden().padding(.top, 18)
             if settings {
-                PoachSettingsView().padding(.top, 20)
+                ScrollView { PoachSettingsView().padding(1) }
             } else {
+                captureControls
+            }
+        }
+        .padding(16)
+        .frame(width: min(440, (NSScreen.main?.visibleFrame.width ?? 800) - 32),
+               height: min(settings ? 380 : 278, (NSScreen.main?.visibleFrame.height ?? 800) - 50),
+               alignment: .topLeading)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .preferredColorScheme(.light)
+    }
 
-            Text("Choose what to record")
-                .font(.system(size: 21, weight: .semibold, design: .rounded))
-                .foregroundStyle(.primary)
-                .padding(.top, 20)
-
-            Text(captureMode.guidance)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
-
+    private var captureControls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Recording mode").font(.subheadline.weight(.medium))
+                Spacer()
+                Text("30 s max").font(.caption).foregroundStyle(.secondary)
+            }
             Picker("Capture mode", selection: $captureMode) {
                 ForEach(PoachCaptureMode.allCases) { mode in
                     Text(mode.title).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
-            .padding(.top, 16)
+            .labelsHidden()
             .disabled(isWorking || isRecording)
 
             Button(action: isRecording ? onStopRecording : onStartRecording) {
                 Label(primaryTitle, systemImage: isRecording ? "stop.circle.fill" : (isWorking ? "hourglass" : "record.circle"))
                     .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 2)
             }
             .buttonStyle(.borderedProminent)
             .tint(isRecording ? Color.red : Color.accentColor)
             .controlSize(.large)
             .keyboardShortcut(.defaultAction)
             .disabled(isWorking)
-            .padding(.top, 18)
 
-            HStack(spacing: 12) {
-                Rectangle().fill(.quaternary).frame(height: 1)
-                Text("OR").font(.system(size: 9, weight: .semibold)).foregroundStyle(.tertiary)
-                Rectangle().fill(.quaternary).frame(height: 1)
-            }
-            .padding(.vertical, 14)
 
             Button(action: onLoadMedia) {
                 VStack(spacing: 6) {
@@ -100,25 +104,13 @@ struct PoachHomeView: View {
             .animation(reduceMotion ? nil : .spring(duration: 0.26, bounce: 0.15), value: targeted)
             .disabled(isWorking || isRecording)
 
-            Text("Record up to 30 seconds. Stop whenever you have the interaction.")
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-                .padding(.top, 14)
-
-            }
         }
-        .padding(22)
-        }
-        .frame(width: min(600, (NSScreen.main?.visibleFrame.width ?? 800) - 32),
-               height: min(680, (NSScreen.main?.visibleFrame.height ?? 800) - 50))
-        .background(Color(nsColor: .windowBackgroundColor))
-        .preferredColorScheme(.light)
     }
 
     private var header: some View {
-        HStack(spacing: 13) {
+        HStack(spacing: 8) {
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(LinearGradient(colors: [Color(red: 0.28, green: 0.66, blue: 0.60), Color(red: 0.18, green: 0.43, blue: 0.53)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 PoachPouchShape()
                     .stroke(.white, style: StrokeStyle(lineWidth: 1.45, lineCap: .round, lineJoin: .round))
@@ -126,17 +118,9 @@ struct PoachHomeView: View {
                     .stroke(.white.opacity(0.9), style: StrokeStyle(lineWidth: 1.05, lineCap: .round, lineJoin: .round))
                 PoachLootPixels().fill(.white)
             }
-            .frame(width: 48, height: 48)
+            .frame(width: 30, height: 30)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Poach")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                Text("Interface motion, made tangible.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
+            Text("Poach").font(.headline)
         }
     }
 

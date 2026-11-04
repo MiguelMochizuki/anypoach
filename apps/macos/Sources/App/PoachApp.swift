@@ -43,7 +43,7 @@ struct PoachApp: App {
                 }
             }
         }
-        .defaultSize(width: 600, height: 680)
+        .defaultSize(width: 440, height: 278)
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
 

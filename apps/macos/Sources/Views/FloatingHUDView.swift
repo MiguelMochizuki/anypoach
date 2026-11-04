@@ -28,14 +28,12 @@ struct FloatingHUDView: View {
     var body: some View {
         HStack(spacing: 0) {
         ScrollView {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 12) {
             header
 
-            Text("Review the capture, add what matters, then continue with your assistant.")
-                .font(.body).foregroundStyle(.secondary)
             if isVideo {
                 CaptureVideoPlayer(player: player)
-                    .frame(height: 260)
+                    .frame(height: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 CommentTimeline(playback: playback, comments: $comments, isOpen: $commentsOpen)
             } else if let image = NSImage(contentsOf: sourceURL) {
@@ -115,20 +113,20 @@ struct FloatingHUDView: View {
 
             }
         }
-        .padding(18)
+        .padding(16)
         .frame(maxWidth: .infinity)
         .preferredColorScheme(.light)
         }
         if isVideo && commentsOpen {
             Divider()
             CommentSidebar(playback: playback, comments: $comments, isOpen: $commentsOpen)
-                .frame(width: 255)
+                .frame(width: 230)
         }
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .preferredColorScheme(.light)
-        .frame(width: min(isVideo ? 860 : 660, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
-               height: min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80))
+        .frame(width: min(isVideo ? 750 : 550, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
+               height: min(615, (NSScreen.main?.visibleFrame.height ?? 800) - 80))
         .sheet(isPresented: $showingAssistantSetup) { AssistantSetupView() }
         .task {
             while !Task.isCancelled {
