@@ -38,7 +38,7 @@ The generated app bundle is written to `outputs/Poach.app`. Re-run the build scr
 
 Development builds use ad-hoc signing by default. Rebuilding can invalidate the previous Screen Recording approval. If Poach is already enabled but macOS denies capture, remove the old entry in Screen & System Audio Recording, add the current app, then quit and reopen it.
 
-For a stable signing identity, run `POACH_CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" bash scripts/build-macos-app.sh`. The identity and private key must already be installed in your Keychain. GitHub binary releases should use Developer ID signing and Apple notarization; App Store publication is not required. This build command signs the bundle but does not notarize it. The current bundle also references the local Node.js executable and project directory, so it is not yet a standalone redistributable release.
+For a stable signing identity, run `POACH_CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" bash scripts/build-macos-app.sh`. The identity and private key must already be installed in your Keychain. GitHub binary releases should use Developer ID signing and Apple notarization; App Store publication is not required. This build command signs the bundle but does not notarize it. The analysis engine is bundled inside the app. Node.js, FFmpeg, and ffprobe are still external runtime requirements, so it is not yet a standalone redistributable release.
 
 ## Build the TypeScript packages
 

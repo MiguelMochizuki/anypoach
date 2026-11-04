@@ -26,7 +26,7 @@ swift build --package-path apps/macos
 
 To build a Finder-openable app bundle, run `bash scripts/build-macos-app.sh`. It creates `outputs/Poach.app`, which is ignored by Git.
 
-Set `POACH_CODESIGN_IDENTITY` to an installed code-signing identity to preserve the app's signing identity across builds. The default ad-hoc signature can require renewed Screen Recording approval after each rebuild. Developer ID builds enable the hardened runtime and request a secure timestamp. GitHub binary distribution additionally requires a notarization and dependency-packaging step; the development bundle currently references this checkout and its Node.js installation.
+Set `POACH_CODESIGN_IDENTITY` to an installed code-signing identity to preserve the app's signing identity across builds. The default ad-hoc signature can require renewed Screen Recording approval after each rebuild. Developer ID builds enable the hardened runtime and request a secure timestamp. GitHub binary distribution additionally requires a notarization and dependency-packaging step; the development bundle includes the analysis engine but still requires an external Node.js installation and FFmpeg tools.
 
 ## Project conventions
 
