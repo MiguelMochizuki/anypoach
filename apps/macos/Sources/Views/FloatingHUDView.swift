@@ -119,7 +119,7 @@ struct FloatingHUDView: View {
         .frame(width: editorWidth)
         .preferredColorScheme(.light)
         if isVideo && sidebarWidth > 0 {
-            CommentSidebar(playback: playback, comments: $comments, isOpen: $commentsOpen)
+            CommentSidebar(playback: playback, comments: $comments)
                 .frame(width: sidebarFullWidth)
                 .overlay(alignment: .leading) { Divider() }
                 .frame(width: sidebarWidth, alignment: .leading)

@@ -144,19 +144,13 @@ struct CommentTimeline: View {
 struct CommentSidebar: View {
     let playback: CommentPlayback
     @Binding var comments: [CaptureComment]
-    @Binding var isOpen: Bool
     @State private var draft = ""
     @State private var anchor: Double?
     @FocusState private var composing: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Comments").font(.headline)
-                Spacer()
-                Button { isOpen = false } label: { Image(systemName: "sidebar.right") }
-                    .buttonStyle(.plain).accessibilityLabel("Close comments")
-            }
+            Text("Comments").font(.headline)
             Divider()
                 VStack(alignment: .leading, spacing: 14) {
                     if comments.isEmpty { Text("Comments you add appear here.").foregroundStyle(.secondary) }
