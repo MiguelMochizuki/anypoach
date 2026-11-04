@@ -69,7 +69,7 @@ final class ScreenCaptureService: NSObject, SCRecordingOutputDelegate, SCContent
     private var didFinish = false
     private var recordingError: Error?
 
-    func startRecording(mode: PoachCaptureMode) async throws {
+    func startRecording(mode: PoachCaptureMode, beforeCapture: @MainActor () async throws -> Void) async throws {
         let selectedRegion: SelectedRegion?
         let filter: SCContentFilter
         if mode == .selectedPortion {
@@ -92,6 +92,7 @@ final class ScreenCaptureService: NSObject, SCRecordingOutputDelegate, SCContent
         } else {
             filter = try await chooseContent(for: mode).filter
             selectedRegion = nil
+            try await beforeCapture()
         }
         let selectedRect: CGRect?
         selectedRect = selectedRegion?.rect
