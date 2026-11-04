@@ -1,0 +1,15 @@
+node_modules/
+.turbo/
+dist/
+.build/
+.DS_Store
+.serena/
+.semble/
+.env
+.env.*
+*.p12
+*.p8
+*.key
+outputs/Poach.app/
+*.mp4
+*.mov
