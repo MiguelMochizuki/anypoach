@@ -27,7 +27,6 @@ struct FloatingHUDView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-        ScrollView {
         VStack(alignment: .leading, spacing: 12) {
             header
 
@@ -65,7 +64,7 @@ struct FloatingHUDView: View {
             VStack(alignment: .leading, spacing: 9) {
                 Text("Instructions").font(.headline)
                 TextField("What should your assistant build or change?", text: $context, axis: .vertical)
-                    .lineLimit(3...5)
+                    .lineLimit(nil)
                     .textFieldStyle(.roundedBorder)
                     .accessibilityLabel("Instructions")
                     .onChange(of: context) { copied = false; shareStatus = "Changes have not been shared yet." }
@@ -116,7 +115,6 @@ struct FloatingHUDView: View {
         .padding(16)
         .frame(maxWidth: .infinity)
         .preferredColorScheme(.light)
-        }
         if isVideo && commentsOpen {
             Divider()
             CommentSidebar(playback: playback, comments: $comments, isOpen: $commentsOpen)
@@ -125,8 +123,14 @@ struct FloatingHUDView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .preferredColorScheme(.light)
-        .frame(width: min(isVideo ? 750 : 550, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
-               height: min(615, (NSScreen.main?.visibleFrame.height ?? 800) - 80))
+        .frame(width: min(isVideo && commentsOpen ? 830 : 550, (NSScreen.main?.visibleFrame.width ?? 800) - 48))
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            guard let panel = NSApp.windows.first(where: { $0.title == "Poach — Implementation brief" && $0.isVisible }),
+                  panel.contentRect(forFrameRect: panel.frame).size != size else { return }
+            panel.setContentSize(size)
+            pinToEdge(panel)
+        }
         .sheet(isPresented: $showingAssistantSetup) { AssistantSetupView() }
         .task {
             while !Task.isCancelled {

@@ -42,15 +42,15 @@ struct PoachHomeView: View {
                 .fixedSize()
             }
             if settings {
-                ScrollView { PoachSettingsView().padding(1) }
+                PoachSettingsView().padding(1)
             } else {
                 captureControls
             }
         }
         .padding(16)
         .frame(width: min(440, (NSScreen.main?.visibleFrame.width ?? 800) - 32),
-               height: min(settings ? 380 : 278, (NSScreen.main?.visibleFrame.height ?? 800) - 50),
                alignment: .topLeading)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color(nsColor: .windowBackgroundColor))
         .preferredColorScheme(.light)
     }

@@ -77,7 +77,6 @@ struct MCPConnectorView: View {
                     }
                     .padding(.horizontal, 12).padding(.vertical, 7)
                     Divider()
-                    ScrollView {
                         Text(verbatim: configuration)
                             .font(.system(size: 12, design: .monospaced))
                             .lineSpacing(3)
@@ -85,8 +84,6 @@ struct MCPConnectorView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                    }
-                    .frame(height: assistant == "Codex" ? 120 : 160)
                 }
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 9))
                 .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(.quaternary) }

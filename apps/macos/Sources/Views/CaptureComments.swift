@@ -150,7 +150,6 @@ struct CommentSidebar: View {
                     .buttonStyle(.plain).accessibilityLabel("Close comments")
             }
             Divider()
-            ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if comments.isEmpty { Text("Comments you add appear here.").foregroundStyle(.secondary) }
                     ForEach(comments) { comment in
@@ -162,11 +161,10 @@ struct CommentSidebar: View {
                         }.buttonStyle(.plain)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
-            }
             Divider()
             Text("Comment at \(timestamp(anchor ?? playback.time))").font(.caption.monospacedDigit())
             TextField("Write a comment…", text: $draft, axis: .vertical)
-                .textFieldStyle(.roundedBorder).lineLimit(2...5).focused($composing)
+                .textFieldStyle(.roundedBorder).lineLimit(nil).focused($composing)
                 .onChange(of: composing) {
                     if composing && draft.isEmpty { playback.pause(); anchor = playback.time }
                 }
