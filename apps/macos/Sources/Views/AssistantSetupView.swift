@@ -76,7 +76,7 @@ struct MCPConnectorView: View {
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
+                            .padding(.horizontal, 12).padding(.bottom, 12)
                 }
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 9))
 
@@ -108,14 +108,22 @@ struct PoachSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if assistant == "Codex" {
-            LabeledContent("Window position") {
+            HStack {
+                Text("Window position")
+                Spacer()
                 PoachSegments(label: "Window position", selection: $edge, choices: [("left", "Left"), ("right", "Right")])
                     .frame(width: 140)
             }
             }
-            Picker("Default recording mode", selection: $defaultMode) {
-                ForEach(PoachCaptureMode.allCases) { mode in Text(mode.title).tag(mode.rawValue) }
-            }.pickerStyle(.menu)
+            HStack {
+                Text("Default recording mode")
+                Spacer()
+                Picker("Default recording mode", selection: $defaultMode) {
+                    ForEach(PoachCaptureMode.allCases) { mode in Text(mode.title).tag(mode.rawValue) }
+                }
+                .labelsHidden().pickerStyle(.menu).buttonStyle(.plain).fixedSize()
+            }
+            .frame(height: 24)
             MCPConnectorView()
         }
         .onChange(of: edge) {
