@@ -6,6 +6,8 @@
     <string>en</string>
     <key>CFBundleExecutable</key>
     <string>Poach</string>
+    <key>CFBundleIconFile</key>
+    <string>Poach.icns</string>
     <key>CFBundleIdentifier</key>
     <string>dev.poach.app</string>
     <key>CFBundleInfoDictionaryVersion</key>
