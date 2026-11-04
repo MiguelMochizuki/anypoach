@@ -1,4 +1,5 @@
 import SwiftUI
+import AVKit
 
 struct HUDKeyframe: Identifiable {
     let id: Int
@@ -13,6 +14,10 @@ struct HUDPaletteToken: Identifiable {
 }
 
 struct FloatingHUDView: View {
+    let sourceURL: URL
+    let isVideo: Bool
+    @State private var player: AVPlayer?
+    @State private var momentNote = ""
     let timingToken: String
     let palette: [HUDPaletteToken]
     let keyframes: [HUDKeyframe]
@@ -26,9 +31,33 @@ struct FloatingHUDView: View {
     var onClose: () -> Void
 
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 18) {
             header
 
+            Text("Review the capture, add what matters, then continue with your assistant.")
+                .font(.body).foregroundStyle(.secondary)
+            if isVideo {
+                VideoPlayer(player: player)
+                    .frame(height: 260)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                HStack {
+                    TextField("What should happen at this moment?", text: $momentNote)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Add note at playhead") {
+                        player?.pause()
+                        let seconds = player?.currentTime().seconds ?? 0
+                        let time = seconds.isFinite ? max(0, seconds) : 0
+                        context += (context.isEmpty ? "" : "\n") + String(format: "[%.2fs] ", time) + momentNote
+                        momentNote = ""
+                    }
+                    .disabled(momentNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            } else if let image = NSImage(contentsOf: sourceURL) {
+                Image(nsImage: image).resizable().aspectRatio(contentMode: .fit).frame(maxHeight: 260)
+            }
+
+            DisclosureGroup("Reference frames and estimated motion") {
             VStack(alignment: .leading, spacing: 9) {
                 sectionLabel("MOTION")
                 HStack(spacing: 8) {
@@ -75,6 +104,8 @@ struct FloatingHUDView: View {
                 }
             }
 
+            }
+
             VStack(alignment: .leading, spacing: 9) {
                 sectionLabel("PALETTE")
                 HStack(spacing: 7) {
@@ -106,15 +137,19 @@ struct FloatingHUDView: View {
                     .onChange(of: context) { copied = false; shareStatus = "Changes have not been shared yet." }
             }
 
-            Button("Share with assistant via MCP") {
+            Button("Continue with Codex or Claude") {
                 do {
                     try onShareContext(implementationContext)
-                    shareStatus = "Shared. Ask your connected assistant to read the Poach brief."
+                    shareStatus = "Ready for your assistant. In Codex or Claude, ask: Read my Poach brief, describe the interaction, and recreate it in my project."
                 } catch {
                     shareStatus = "Could not share: \(error.localizedDescription)"
                 }
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .keyboardShortcut(.defaultAction)
+            Text("Uses your connected assistant. No API key needed. Your notes, colors, and reference frames are available when it reads the brief.")
+                .font(.caption).foregroundStyle(.secondary)
             if !shareStatus.isEmpty {
                 Text(shareStatus).font(.caption).foregroundStyle(.secondary)
             }
@@ -124,8 +159,7 @@ struct FloatingHUDView: View {
                     Label(copied ? "Prompt copied" : "Copy Prompt", systemImage: copied ? "checkmark" : "doc.on.doc")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(HUDButtonStyle(prominent: true))
-                .keyboardShortcut(.defaultAction)
+                .buttonStyle(HUDButtonStyle(prominent: false))
 
                 Button(action: onPreviewInCursor) {
                     Image(systemName: "arrow.up.right.square")
@@ -137,18 +171,13 @@ struct FloatingHUDView: View {
             }
         }
         .padding(18)
-        .frame(width: 340)
-        .background {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .strokeBorder(.white.opacity(0.15), lineWidth: 0.5)
-                }
-                .shadow(color: .black.opacity(0.16), radius: 28, x: 0, y: 14)
-                .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
-        }
+        .frame(maxWidth: .infinity)
         .preferredColorScheme(.light)
+        }
+        .frame(width: min(660, (NSScreen.main?.visibleFrame.width ?? 800) - 48),
+               height: min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80))
+        .onAppear { if isVideo { player = AVPlayer(url: sourceURL) } }
+        .onDisappear { player?.pause(); player = nil }
     }
 
     private var header: some View {
@@ -159,23 +188,15 @@ struct FloatingHUDView: View {
                 .frame(width: 34, height: 34)
                 .background(Color.accentColor.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
-                Text("Motion captured")
+                Text("Review your capture")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(.primary)
-                Text("Ready to inspect")
+                Text("Make a brief for your assistant")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 24, height: 24)
-                    .background(.primary.opacity(0.06), in: Circle())
-            }
-            .buttonStyle(.plain)
-            .help("Close")
+
         }
     }
 

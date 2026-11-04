@@ -285,6 +285,8 @@ private final class FloatingHUDWindowController {
         }
         let palette = result.palette.map { HUDPaletteToken(hex: $0, color: Color(hex: $0)) }
         let view = FloatingHUDView(
+            sourceURL: URL(fileURLWithPath: result.sourcePath),
+            isVideo: result.mediaType != "image",
             timingToken: result.timing.token,
             palette: palette,
             keyframes: frames,
@@ -298,7 +300,11 @@ private final class FloatingHUDWindowController {
         panel.title = "Poach — Implementation brief"
         panel.contentView = NSHostingView(rootView: view.id(UUID()))
         panel.setContentSize(panel.contentView?.fittingSize ?? NSSize(width: 340, height: 370))
-        panel.center()
+        if let screen = NSScreen.main {
+            let visible = screen.visibleFrame
+            panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2,
+                                         y: visible.midY - panel.frame.height / 2))
+        }
         panel.alphaValue = 0
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
@@ -311,14 +317,14 @@ private final class FloatingHUDWindowController {
 
     private func makePanel() -> NSPanel {
         let panel = EditableBriefPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 340, height: 370),
-            styleMask: [.borderless, .nonactivatingPanel],
+            contentRect: NSRect(x: 0, y: 0, width: 660, height: 720),
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        panel.isFloatingPanel = false
+        panel.level = .normal
+        panel.collectionBehavior = [.moveToActiveSpace]
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
