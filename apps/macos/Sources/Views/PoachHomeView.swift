@@ -57,7 +57,6 @@ struct PoachHomeView: View {
             HStack {
                 Text("What do you want to record?").font(.headline)
                 Spacer()
-                if targeted { Text("30 s max").font(.caption).foregroundStyle(.secondary) }
             }
             .frame(height: 24)
             PoachSegments(label: "What do you want to record?", selection: $captureMode,
@@ -91,8 +90,8 @@ struct PoachHomeView: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 17, weight: .medium))
                         .frame(width: 34, height: 34)
-                        .background(.black.opacity(0.055), in: RoundedRectangle(cornerRadius: 9))
-                        .foregroundStyle(targeted ? Color.accentColor : .primary)
+                        .background(Color(white: targeted ? 0.915 : 0.895), in: RoundedRectangle(cornerRadius: 9))
+                        .foregroundStyle(.primary)
                         .keyframeAnimator(initialValue: 0.0, trigger: dragEntry) { [animate = targeted && !reduceMotion] icon, displacement in
                             let offset = animate ? displacement : 0
                             icon.rotationEffect(.degrees(offset * 1.6))
@@ -104,14 +103,14 @@ struct PoachHomeView: View {
                             CubicKeyframe(0.9, duration: 0.05)
                             CubicKeyframe(0.0, duration: 0.065)
                         }
-                    Text(targeted ? "Release to load" : "Drop an image or video")
+                    Text("Drop an image or video")
                         .font(.system(size: 13, weight: .semibold))
                     Text("or click to browse").font(.caption).foregroundStyle(.secondary)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity)
                 .frame(height: 99)
-                .background(targeted ? Color(white: 0.96) : Color.white,
+                .background(targeted ? Color(white: 0.70) : Color.white,
                             in: RoundedRectangle(cornerRadius: 14))
                 .contentShape(Rectangle())
             }
