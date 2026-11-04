@@ -36,7 +36,7 @@ Poach opens a normal app window and adds a pouch control to the menu bar. Choose
 
 The generated app bundle is written to `outputs/Poach.app`. Re-run the build script after changing the Swift sources.
 
-Development builds use ad-hoc signing by default. Rebuilding can invalidate the previous Screen Recording approval. If Poach is already enabled but macOS denies capture, remove the old entry in Screen & System Audio Recording, add the current app, then quit and reopen it.
+Development builds automatically reuse an installed identity named `Poach Local Development`; otherwise they use ad-hoc signing. Rebuilding can invalidate the previous Screen Recording approval. If Poach is already enabled but macOS denies capture, remove the old entry in Screen & System Audio Recording, add the current app, then quit and reopen it.
 
 For a stable signing identity, run `POACH_CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" bash scripts/build-macos-app.sh`. The identity and private key must already be installed in your Keychain. GitHub binary releases should use Developer ID signing and Apple notarization; App Store publication is not required. This build command signs the bundle but does not notarize it. The analysis engine is bundled inside the app. Node.js, FFmpeg, and ffprobe are still external runtime requirements, so it is not yet a standalone redistributable release.
 
@@ -90,3 +90,5 @@ The shared snapshot is stored locally at `~/Library/Caches/Poach/active-brief.js
 Palette swatches in the brief are editable. Color replacements and implementation context are included when copying or sharing; share again after edits. Each newly analyzed capture starts a fresh editor. The MCP tool includes up to three PNG keyframes by default (5 MB each maximum); pass `includeKeyframes: false` for metadata only. Missing keyframes are reported explicitly.
 
 To register the local server with Codex after building, use `codex mcp add poach -- node /absolute/path/to/poach/packages/mcp-server/dist/index.js`. Reload the assistant connection if the tool is not yet visible. Ask it to call `poach_read_brief`, inspect the images, and implement the component in your current project.
+
+A local development certificate is valid for development on the Mac where it is trusted. It is not a substitute for Developer ID signing and notarization of GitHub releases. Preserve its private key in Keychain across builds. Moving from an ad-hoc build to this certificate requires one fresh Screen Recording approval.
