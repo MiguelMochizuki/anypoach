@@ -2,7 +2,6 @@ import { spawn } from "node:child_process";
 import { mkdtemp, mkdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, extname, join, resolve } from "node:path";
-import { deflateSync } from "node:zlib";
 import { extractPalette } from "./palette.js";
 import { approximateTiming, pixelDifference } from "./motion.js";
 import type { ExtractOptions, FrameSample, InspectionResult, Keyframe } from "./types.js";
@@ -65,39 +64,16 @@ async function readFrame(videoPath: string, timeSeconds: number, width: number):
   throw lastError instanceof Error ? lastError : new Error("Could not decode a video frame");
 }
 
-function pngChunk(type: string, data: Buffer): Buffer {
-  const typeBuffer = Buffer.from(type, "ascii");
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(data.length);
-  const crcInput = Buffer.concat([typeBuffer, data]);
-  let crc = 0xffffffff;
-  for (const byte of crcInput) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
-  }
-  const checksum = Buffer.alloc(4);
-  checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
-  return Buffer.concat([length, typeBuffer, data, checksum]);
-}
-
-function encodePNG(frame: FrameSample): Buffer {
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(frame.width, 0);
-  header.writeUInt32BE(frame.height, 4);
-  header[8] = 8; // 8 bits per channel
-  header[9] = 2; // truecolor RGB
-  const scanlines = Buffer.alloc(frame.height * (frame.width * 3 + 1));
-  for (let row = 0; row < frame.height; row += 1) {
-    const destination = row * (frame.width * 3 + 1);
-    scanlines[destination] = 0; // PNG filter: None
-    frame.pixels.copy(scanlines, destination + 1, row * frame.width * 3, (row + 1) * frame.width * 3);
-  }
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    pngChunk("IHDR", header),
-    pngChunk("IDAT", deflateSync(scanlines, { level: 6 })),
-    pngChunk("IEND", Buffer.alloc(0)),
+async function referencePNG(sourcePath: string, timeMs: number): Promise<Buffer> {
+  const png = await run("ffmpeg", [
+    "-v", "error", "-ss", (timeMs / 1000).toFixed(3), "-i", sourcePath,
+    "-frames:v", "1", "-vf", "scale=w='min(1280,iw)':h='min(1280,ih)':force_original_aspect_ratio=decrease",
+    "-f", "image2pipe", "-vcodec", "png", "pipe:1",
   ]);
+  if (!png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    throw new Error(`Could not decode reference image at ${timeMs} ms`);
+  }
+  return png;
 }
 
 function chooseKeyframes(frames: readonly FrameSample[], deltas: readonly number[]): readonly { kind: Keyframe["kind"]; index: number }[] {
@@ -159,7 +135,7 @@ export async function inspectVideo(videoFile: string, options: ExtractOptions = 
   for (const { kind, index } of keys) {
     const frame = frames[index]!;
     const imagePath = join(outputDirectory, `${safeBase}-${kind}-${frame.timeMs}ms.png`);
-    await writeFile(imagePath, encodePNG(frame));
+    await writeFile(imagePath, await referencePNG(sourcePath, frame.timeMs));
     keyframes.push({ kind, timeMs: frame.timeMs, imagePath, motion: index === 0 ? 0 : deltas[index - 1] ?? 0 });
   }
   const motionStartMs = frames[keys[0]?.index ?? 0]?.timeMs ?? 0;
@@ -207,7 +183,7 @@ export async function inspectImage(imageFile: string, options: ExtractOptions = 
   await mkdir(outputDirectory, { recursive: true });
   const safeBase = basename(sourcePath, extension).replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 48) || "image";
   const imagePath = join(outputDirectory, `${safeBase}-image.png`);
-  await writeFile(imagePath, encodePNG(frame));
+  await writeFile(imagePath, await referencePNG(sourcePath, 0));
   const palette = extractPalette(frame, options.paletteSize ?? 6);
   return {
     mediaType: "image",
