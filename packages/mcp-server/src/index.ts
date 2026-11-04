@@ -92,7 +92,7 @@ server.registerTool("poach_read_brief", {
     }
     return { content, structuredContent: brief };
   } catch (error) {
-    return { isError: true, content: [{ type: "text" as const, text: `No readable shared brief. Use Share with assistant via MCP in Poach. ${error instanceof Error ? error.message : ""}` }] };
+    return { isError: true, content: [{ type: "text" as const, text: `No readable shared brief. Choose Continue with Codex or Claude in Poach. ${error instanceof Error ? error.message : ""}` }] };
   }
 });
 server.registerTool("poach_read_moment", {
