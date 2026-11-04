@@ -474,7 +474,19 @@ private struct HomeWindowAnchor: NSViewRepresentable {
     final class Anchor: NSView {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            if let window { DispatchQueue.main.async { pinToEdge(window) } }
+            NotificationCenter.default.removeObserver(self)
+            guard let window else { return }
+            for event in [NSWindow.didResizeNotification, NSWindow.didBecomeKeyNotification,
+                          NSWindow.didChangeScreenNotification] {
+                NotificationCenter.default.addObserver(self, selector: #selector(realign),
+                                                       name: event, object: window)
+            }
+            realign()
+        }
+
+        @objc private func realign() {
+            guard let window else { return }
+            DispatchQueue.main.async { pinToEdge(window) }
         }
     }
     func makeNSView(context: Context) -> Anchor { Anchor() }
