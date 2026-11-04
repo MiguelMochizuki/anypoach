@@ -42,7 +42,7 @@ struct FloatingHUDView: View {
             }
 
             VStack(alignment: .leading, spacing: 9) {
-                sectionLabel("PALETTE")
+                Text("Colors").font(.headline)
                 HStack(spacing: 7) {
                     ForEach(palette) { token in
                         VStack(alignment: .leading, spacing: 5) {
@@ -64,11 +64,11 @@ struct FloatingHUDView: View {
             }
 
             VStack(alignment: .leading, spacing: 9) {
-                sectionLabel("IMPLEMENTATION CONTEXT")
-                TextField("Describe the behavior, framework, or changes…", text: $context, axis: .vertical)
+                Text("Instructions").font(.headline)
+                TextField("What should your assistant build or change?", text: $context, axis: .vertical)
                     .lineLimit(3...5)
                     .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Implementation context")
+                    .accessibilityLabel("Instructions")
                     .onChange(of: context) { copied = false; shareStatus = "Changes have not been shared yet." }
             }
 
@@ -164,12 +164,6 @@ struct FloatingHUDView: View {
             Int((rgb.greenComponent * 255).rounded()), Int((rgb.blueComponent * 255).rounded()))
     }
 
-    private func sectionLabel(_ title: String) -> some View {
-        Text(title)
-            .font(.system(size: 9, weight: .bold, design: .rounded))
-            .tracking(1.1)
-            .foregroundStyle(.tertiary)
-    }
 }
 
 private struct CaptureVideoPlayer: NSViewRepresentable {
