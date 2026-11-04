@@ -44,7 +44,6 @@ enum PoachInspectionRunner {
         guard let node = findNode() else { throw PoachInspectionError.nodeNotFound }
         let entry = projectRoot.appending(path: "packages/core/dist/index.js").path
         let videoPath = videoURL.path
-        let rootPath = projectRoot.path
 
         return try await Task.detached(priority: .userInitiated) {
             let process = Process()
@@ -54,7 +53,10 @@ enum PoachInspectionRunner {
                 "import { inspectImage, inspectVideo } from \(Self.jsString(entry)); const inspect = /\\.(png|jpe?g|webp|tiff?|bmp)$/i.test(process.argv[1]) ? inspectImage : inspectVideo; try { const result = await inspect(process.argv[1]); process.stdout.write(JSON.stringify(result)); } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }",
                 videoPath,
             ]
-            process.currentDirectoryURL = URL(fileURLWithPath: rootPath)
+            // Node resolves cwd during bootstrap. A checkout under Documents can
+            // block there on macOS privacy checks before our script even starts.
+            // All inputs and imports are absolute, so no project cwd is needed.
+            process.currentDirectoryURL = FileManager.default.temporaryDirectory
             var environment = ProcessInfo.processInfo.environment
             let bundledPath = environment["PATH", default: ""]
             environment["PATH"] = [bundledPath, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].joined(separator: ":")
