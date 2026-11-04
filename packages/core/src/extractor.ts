@@ -69,29 +69,42 @@ export async function inspectRecording(videoFile: string): Promise<InspectionRes
   return inspectVideo(clippedPath);
 }
 
-async function readFrame(videoPath: string, timeSeconds: number, width: number): Promise<FrameSample> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const actualTime = Math.max(0, timeSeconds - attempt * 0.2);
-    try {
-      const frame = await run("ffmpeg", [
-        "-v", "error", "-ss", actualTime.toFixed(3), "-i", videoPath, "-frames:v", "1",
-        "-vf", `scale=${width}:-2:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1",
-      ]);
-      const height = frame.length / (width * 3);
-      if (!Number.isInteger(height) || height < 1) throw new Error(`Could not decode frame at ${Math.round(actualTime * 1000)} ms`);
-      return { timeMs: Math.round(actualTime * 1000), pixels: frame, width, height, channels: 3 };
-    } catch (error) {
-      lastError = error;
-      if (attempt === 3 || (error instanceof Error && error.message.startsWith("Could not start ffmpeg:"))) throw error;
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error("Could not decode a video frame");
+// ScreenCaptureKit may store one frame for several seconds of unchanged pixels.
+// Resolve the frame already on screen, then seek between its PTS and its predecessor.
+async function presentationTimes(sourcePath: string): Promise<number[]> {
+  const data = await run("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_packets",
+    "-show_entries", "format=start_time:packet=pts_time", "-of", "json", sourcePath]);
+  const probe = JSON.parse(data.toString("utf8")) as { format?: { start_time?: string }; packets?: { pts_time?: string }[] };
+  const start = Number(probe.format?.start_time) || 0;
+  const times = [...new Set((probe.packets ?? []).map(packet => Number(packet.pts_time) - start).filter(Number.isFinite))].sort((a, b) => a - b);
+  if (!times.length) throw new Error("Recording has no timestamped video frames");
+  return times;
 }
 
-async function referencePNG(sourcePath: string, timeMs: number): Promise<Buffer> {
+function seekForMoment(times: readonly number[], seconds: number): number {
+  let low = 0;
+  let high = times.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (times[middle]! <= seconds) low = middle + 1;
+    else high = middle;
+  }
+  return low < 2 ? 0 : Math.max(0, (times[low - 1]! + times[low - 2]!) / 2);
+}
+
+async function readFrame(videoPath: string, seek: number, width: number): Promise<FrameSample> {
+  const frame = await run("ffmpeg", [
+    "-v", "error", "-ss", seek.toFixed(6), "-i", videoPath, "-frames:v", "1",
+    "-vf", `scale=${width}:-2:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1",
+  ]);
+  const height = frame.length / (width * 3);
+  if (!Number.isInteger(height) || height < 1) throw new Error(`Could not decode frame at ${Math.round(seek * 1000)} ms`);
+  return { timeMs: Math.round(seek * 1000), pixels: frame, width, height, channels: 3 };
+}
+
+async function referencePNG(sourcePath: string, timeMs: number, seek = timeMs / 1000): Promise<Buffer> {
   const png = await run("ffmpeg", [
-    "-v", "error", "-ss", (timeMs / 1000).toFixed(3), "-i", sourcePath,
+    "-v", "error", "-ss", seek.toFixed(6), "-i", sourcePath,
     "-frames:v", "1", "-vf", "scale=w='min(1280,iw)':h='min(1280,ih)':force_original_aspect_ratio=decrease",
     "-f", "image2pipe", "-vcodec", "png", "pipe:1",
   ]);
@@ -110,7 +123,7 @@ export async function readVideoMoment(videoFile: string, timeMs: number): Promis
   if (!info.isFile() || info.size > MAX_VIDEO_BYTES) throw new Error("Recording must be a file no larger than 512 MiB");
   const duration = parseDuration(await run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "json", sourcePath]));
   if (timeMs >= duration * 1000) throw new Error("Timestamp must be before the end of the recording");
-  return referencePNG(sourcePath, timeMs);
+  return referencePNG(sourcePath, timeMs, seekForMoment(await presentationTimes(sourcePath), timeMs / 1000));
 }
 
 function chooseKeyframes(frames: readonly FrameSample[], deltas: readonly number[]): readonly { kind: Keyframe["kind"]; index: number }[] {
@@ -156,10 +169,16 @@ export async function inspectVideo(videoFile: string, options: ExtractOptions = 
   const sampleWidth = Math.max(48, Math.min(256, Math.round(options.sampleWidth ?? DEFAULT_SAMPLE_WIDTH)));
   const sampleRate = Math.max(2, Math.min(24, Math.round(options.samplesPerSecond ?? DEFAULT_SAMPLES_PER_SECOND)));
   const sampleCount = Math.max(2, Math.min(720, Math.ceil(durationSeconds * sampleRate)));
+  const times = await presentationTimes(sourcePath);
+  let previousSeek: number | undefined;
   const frames: FrameSample[] = [];
   for (let index = 0; index < sampleCount; index += 1) {
     const time = Math.min(durationSeconds - 0.001, (index / (sampleCount - 1)) * durationSeconds);
-    frames.push(await readFrame(sourcePath, Math.max(0, time), sampleWidth));
+    const timeMs = Math.round(Math.max(0, time) * 1000);
+    const seek = seekForMoment(times, timeMs / 1000);
+    const frame = seek === previousSeek ? frames[frames.length - 1]! : await readFrame(sourcePath, seek, sampleWidth);
+    frames.push({ ...frame, timeMs });
+    previousSeek = seek;
   }
   const deltas = frames.slice(1).map((frame, index) => pixelDifference(frames[index]!, frame));
   const keys = chooseKeyframes(frames, deltas);
@@ -172,7 +191,7 @@ export async function inspectVideo(videoFile: string, options: ExtractOptions = 
   for (const { kind, index } of keys) {
     const frame = frames[index]!;
     const imagePath = join(outputDirectory, `${safeBase}-${kind}-${frame.timeMs}ms.png`);
-    await writeFile(imagePath, await referencePNG(sourcePath, frame.timeMs));
+    await writeFile(imagePath, await referencePNG(sourcePath, frame.timeMs, seekForMoment(times, frame.timeMs / 1000)));
     keyframes.push({ kind, timeMs: frame.timeMs, imagePath, motion: index === 0 ? 0 : deltas[index - 1] ?? 0 });
   }
   const motionStartMs = frames[keys[0]?.index ?? 0]?.timeMs ?? 0;

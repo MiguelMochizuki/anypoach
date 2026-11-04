@@ -30,3 +30,15 @@ test("native recorder overrun is clipped while imported videos stay bounded", { 
   assert.deepEqual([...frame.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
   await assert.rejects(readVideoMoment(result.sourcePath, 30_000));
 });
+
+test("moments between sparse frames show the frame held on screen", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "poach-sparse-test-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const source = join(directory, "sparse.mov");
+  await exec("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "testsrc2=size=96x64:rate=1/2",
+    "-frames:v", "3", "-c:v", "libx264", source]);
+  const first = await readVideoMoment(source, 0);
+  assert.deepEqual(await readVideoMoment(source, 1999), first);
+  assert.notDeepEqual(await readVideoMoment(source, 2000), first);
+  assert.deepEqual(await readVideoMoment(source, 5999), await readVideoMoment(source, 4000));
+});
