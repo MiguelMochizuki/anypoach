@@ -220,7 +220,7 @@ private final class RecordingStatusWindowController {
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
                 .preferredColorScheme(.light)
             )
-            countdownPanel.orderFrontRegardless()
+            countdownPanel.makeKeyAndOrderFront(nil)
             try await Task.sleep(for: .seconds(1))
             if cancelled { throw ScreenCaptureError.selectionCancelled }
         }
@@ -254,7 +254,7 @@ private final class RecordingStatusWindowController {
     }
 
     private func makePanel() -> NSPanel {
-        let panel = NSPanel(
+        let panel = EditableBriefPanel(
             contentRect: NSRect(x: 0, y: 0, width: 260, height: 58),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
