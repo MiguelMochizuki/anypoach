@@ -65,12 +65,13 @@ struct FloatingHUDView: View {
                 Text("Instructions").font(.headline)
                 TextField("What should your assistant build or change?", text: $context, axis: .vertical)
                     .lineLimit(nil)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .padding(9)
+                    .background(Color(white: 0.96), in: RoundedRectangle(cornerRadius: 6))
                     .accessibilityLabel("Instructions")
                     .onChange(of: context) { copied = false; shareStatus = "Changes have not been shared yet." }
             }
 
-            HStack(spacing: 10) {
             Button("Continue with Codex or Claude") {
                 connected = Self.hasLiveConnector()
                 guard connected else { return }
@@ -81,10 +82,10 @@ struct FloatingHUDView: View {
                     shareStatus = "Could not share: \(error.localizedDescription)"
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(PoachActionStyle(fill: .blue, foreground: .white))
             .disabled(!connected)
             if !connected {
+                Button { showingAssistantSetup = true } label: {
                 Label {
                     Text("Connect an MCP assistant to continue.")
                         .font(.caption)
@@ -93,21 +94,19 @@ struct FloatingHUDView: View {
                         .symbolRenderingMode(.multicolor)
                         .foregroundStyle(.yellow)
                 }
-                .accessibilityElement(children: .combine)
+                .foregroundStyle(Color(red: 0.46, green: 0.38, blue: 0.10))
+                }.buttonStyle(.plain).accessibilityHint("Opens Settings")
             }
-            }
-            Button("Open Settings…") { showingAssistantSetup = true }
-                .buttonStyle(.link)
             if !shareStatus.isEmpty {
                 Text(shareStatus).font(.caption).foregroundStyle(.secondary)
             }
 
             HStack(spacing: 9) {
                 Button(action: { onCopyContext(implementationContext); copied = true }) {
-                    Label(copied ? "Prompt copied" : "Copy Prompt", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    Text(copied ? "Prompt copied" : "Copy Prompt")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(HUDButtonStyle(prominent: false))
+                .buttonStyle(PoachActionStyle())
 
 
             }
@@ -121,7 +120,7 @@ struct FloatingHUDView: View {
                 .frame(width: 230)
         }
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.white)
         .preferredColorScheme(.light)
         .frame(width: min(isVideo && commentsOpen ? 830 : 550, (NSScreen.main?.visibleFrame.width ?? 800) - 48))
         .fixedSize(horizontal: false, vertical: true)
@@ -164,11 +163,6 @@ struct FloatingHUDView: View {
 
     private var header: some View {
         HStack(spacing: 11) {
-            Image(systemName: "waveform.path.ecg.rectangle")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 34, height: 34)
-                .background(Color.accentColor.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text("Review your capture")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
@@ -182,7 +176,7 @@ struct FloatingHUDView: View {
                 player?.pause()
                 onClose()
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(PoachActionStyle())
         }
     }
 
@@ -221,28 +215,5 @@ private struct CaptureVideoPlayer: NSViewRepresentable {
     static func dismantleNSView(_ view: AVPlayerView, coordinator: ()) {
         view.player?.pause()
         view.player = nil
-    }
-}
-
-private struct HUDButtonStyle: ButtonStyle {
-    let prominent: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
-            .foregroundStyle(prominent ? Color.white : Color.primary)
-            .padding(.horizontal, prominent ? 11 : 0)
-            .frame(height: 30)
-            .background {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(prominent ? Color.accentColor : Color.primary.opacity(0.055))
-                    .opacity(configuration.isPressed ? 0.8 : 1)
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(.white.opacity(prominent ? 0.12 : 0.08), lineWidth: 0.5)
-            }
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }

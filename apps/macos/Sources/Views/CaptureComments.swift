@@ -86,6 +86,7 @@ struct CommentTimeline: View {
             Button { playback.toggle() } label: {
                 Image(systemName: playback.playing ? "pause.fill" : "play.fill").frame(width: 20)
             }
+            .buttonStyle(.plain)
             .accessibilityLabel(playback.playing ? "Pause" : "Play")
             VStack(spacing: 0) {
                 Slider(value: Binding(get: { playback.time }, set: { playback.seek($0) }),
@@ -113,16 +114,18 @@ struct CommentTimeline: View {
                             .position(x: min(max(width / 2, markerX(comment, width: geometry.size.width)), geometry.size.width - width / 2), y: -32)
                             .allowsHitTesting(false)
                     }
-                }.frame(height: 18)
+                }.frame(height: comments.isEmpty ? 0 : 18)
             }
             Text(timestamp(playback.time)).font(.caption.monospacedDigit())
             Button {
                 isOpen.toggle()
                 if isOpen { playback.pause() }
             } label: {
-                Image(systemName: isOpen ? "bubble.left.fill" : "bubble.left")
+                Image(systemName: isOpen ? "circle.inset.filled" : "circle")
+                    .font(.system(size: 22))
                     .frame(width: 24, height: 24)
             }
+            .buttonStyle(.plain)
             .help(isOpen ? "Hide comments" : "Show comments")
             .accessibilityLabel(isOpen ? "Hide comments" : "Show comments")
         }

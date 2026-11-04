@@ -242,25 +242,18 @@ private final class RecordingStatusWindowController {
     func countDown() async throws {
         var cancelled = false
         let countdownPanel = makePanel()
-        countdownPanel.setContentSize(NSSize(width: 260, height: 150))
+        countdownPanel.setContentSize(NSSize(width: 120, height: 120))
         pinToEdge(countdownPanel)
         NSApp.unhide(nil)
         NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
         defer { countdownPanel.orderOut(nil) }
         for count in stride(from: 3, through: 1, by: -1) {
             countdownPanel.contentView = NSHostingView(rootView:
-                VStack(spacing: 10) {
-                    Text("Recording starts in")
-                    Text("\(count)").font(.system(size: 48, weight: .bold, design: .rounded))
-                        .foregroundStyle(.red)
-                    Button { cancelled = true } label: {
-                        Image(systemName: "xmark").padding(6)
-                    }
-                    .accessibilityLabel("Cancel recording")
+                Button { cancelled = true } label: { PoachCountdown(count: count) }
+                    .buttonStyle(.plain)
                     .keyboardShortcut(.cancelAction)
-                }
-                .frame(width: 260, height: 150)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+                    .accessibilityHint("Cancel recording")
+                    .help("Cancel countdown")
                 .preferredColorScheme(.light)
             )
             countdownPanel.makeKeyAndOrderFront(nil)
@@ -397,7 +390,9 @@ private final class FloatingHUDWindowController {
         panel.collectionBehavior = [.moveToActiveSpace]
         panel.isOpaque = true
         panel.appearance = NSAppearance(named: .aqua)
-        panel.backgroundColor = .windowBackgroundColor
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.backgroundColor = .white
         panel.hasShadow = true
         panel.isMovable = false
         panel.becomesKeyOnlyIfNeeded = true

@@ -29,20 +29,16 @@ struct PoachHomeView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 header
                 Spacer()
-                Picker("Poach", selection: $settings) {
-                    Text("Capture").tag(false)
-                    Text("Settings").tag(true)
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .fixedSize()
+                PoachSegments(label: "Poach", selection: $settings, choices: [(false, "Capture"), (true, "Settings")])
+                    .frame(width: 144)
+
             }
             if settings {
-                PoachSettingsView().padding(1)
+                PoachSettingsView()
             } else {
                 captureControls
             }
@@ -51,35 +47,26 @@ struct PoachHomeView: View {
         .frame(width: min(440, (NSScreen.main?.visibleFrame.width ?? 800) - 32),
                alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.white)
         .preferredColorScheme(.light)
     }
 
     private var captureControls: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("What do you want to record?").font(.headline)
                 Spacer()
-                Text("30 s max").font(.caption).foregroundStyle(.secondary)
+                if targeted { Text("30 s max").font(.caption).foregroundStyle(.secondary) }
             }
-            Picker("What do you want to record?", selection: $captureMode) {
-                ForEach(PoachCaptureMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            .frame(height: 24)
+            PoachSegments(label: "What do you want to record?", selection: $captureMode,
+                          choices: PoachCaptureMode.allCases.map { ($0, $0.title) })
             .disabled(isWorking || isRecording)
 
             Button(action: isRecording ? onStopRecording : onStartRecording) {
-                Label(primaryTitle, systemImage: isRecording ? "stop.circle.fill" : (isWorking ? "hourglass" : "record.circle"))
-                    .font(.system(size: 13, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 2)
+                Text(primaryTitle).frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(isRecording ? Color.red : Color.accentColor)
-            .controlSize(.large)
+            .buttonStyle(PoachActionStyle(fill: isRecording ? .red : .blue, foreground: .white))
             .keyboardShortcut(.defaultAction)
             .disabled(isWorking)
 
@@ -100,18 +87,19 @@ struct PoachHomeView: View {
             } else {
             Button(action: onLoadMedia) {
                 VStack(spacing: 6) {
-                    Image(systemName: targeted ? "arrow.down.to.line" : "square.and.arrow.up")
+                    Image(systemName: "arrow.up")
                         .font(.system(size: 17, weight: .medium))
                         .frame(width: 34, height: 34)
                         .background(.black.opacity(0.055), in: RoundedRectangle(cornerRadius: 9))
                         .scaleEffect(targeted && !reduceMotion ? 1.08 : 1)
-                    Text(targeted ? "Release to load" : "Drop an image or video")
+                    Text(targeted ? "Drop an image or video" : "Release to load")
                         .font(.system(size: 13, weight: .semibold))
                     Text("or click to browse").font(.caption).foregroundStyle(.secondary)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity)
-                .background(targeted ? Color.accentColor.opacity(0.12) : Color.black.opacity(0.035),
+                .frame(height: 99)
+                .background(targeted ? Color(white: 0.96) : Color.white,
                             in: RoundedRectangle(cornerRadius: 14))
                 .contentShape(Rectangle())
             }
@@ -135,7 +123,7 @@ struct PoachHomeView: View {
         HStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(LinearGradient(colors: [Color(red: 0.28, green: 0.66, blue: 0.60), Color(red: 0.18, green: 0.43, blue: 0.53)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .fill(Color(red: 0.263, green: 0.561, blue: 0.557))
                 PoachPouchShape()
                     .stroke(.white, style: StrokeStyle(lineWidth: 1.45, lineCap: .round, lineJoin: .round))
                 PoachBagDetails()
@@ -160,24 +148,17 @@ struct PoachRecordingStatusView: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle().fill(.red).frame(width: 8, height: 8)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Recording screen")
-                    .font(.system(size: 12, weight: .semibold))
-                Text("\(String(format: "%d:%02d", elapsedSeconds / 60, elapsedSeconds % 60)) of 0:30 max")
-                    .font(.system(size: 10, design: .monospaced).monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
+            Text("Recording screen").font(.system(size: 13, weight: .semibold))
+                .accessibilityValue("\(elapsedSeconds) of 30 seconds")
             Spacer(minLength: 4)
             Button("Stop") { onStop() }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-                .controlSize(.small)
+                .buttonStyle(PoachActionStyle(fill: .red, foreground: .white))
                 .keyboardShortcut(.defaultAction)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(width: 260)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.white, in: RoundedRectangle(cornerRadius: 14))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(.white.opacity(0.7), lineWidth: 0.5)

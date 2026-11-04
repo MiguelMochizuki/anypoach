@@ -46,47 +46,40 @@ struct MCPConnectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Label("MCP", systemImage: "link")
+                Text("MCP")
                     .font(.headline)
                     .accessibilityLabel("MCP connection")
                 Spacer()
-                Picker("Assistant", selection: $assistant) {
-                    Text("Codex").tag("Codex")
-                    Text("Claude Desktop").tag("Claude Desktop")
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .fixedSize()
+                PoachSegments(label: "Assistant", selection: $assistant,
+                              choices: [("Codex", "Codex"), ("Claude Desktop", "Claude")])
+                    .frame(width: 180)
                 .onChange(of: assistant) { copied = false }
             }
             if let configuration {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack {
-                        Label(assistant == "Codex" ? "Terminal" : "claude_desktop_config.json",
-                              systemImage: assistant == "Codex" ? "terminal" : "curlybraces")
-                            .font(.caption.monospaced()).foregroundStyle(.secondary)
+                        Text(assistant == "Codex" ? "Terminal" : "claude_desktop_config.json").font(.caption)
                         Spacer()
                         Button {
                             NSPasteboard.general.clearContents()
                             copied = NSPasteboard.general.setString(configuration, forType: .string)
                         } label: {
-                            Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                            Text(copied ? "Copied" : "Copy")
                         }
-                        .controlSize(.small)
+                        .buttonStyle(PoachActionStyle())
                         .accessibilityLabel(copied ? "Copied" : assistant == "Codex" ? "Copy Codex command" : "Copy Claude configuration")
                     }
                     .padding(.horizontal, 12).padding(.vertical, 7)
-                    Divider()
                         Text(verbatim: configuration)
-                            .font(.system(size: 12, design: .monospaced))
-                            .lineSpacing(3)
+                            .font(.system(size: 12))
+                            .lineSpacing(1)
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
                 }
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 9))
-                .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(.quaternary) }
+
                 Text(assistant == "Codex"
                      ? "Run in Terminal, then reopen Codex to load Poach."
                      : "In Claude Desktop settings, choose Developer → Edit Config. Merge the poach entry into mcpServers, then restart Claude.")
@@ -98,8 +91,8 @@ struct MCPConnectorView: View {
             }
         }
         .padding(12)
-        .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 14))
-        .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.quaternary) }
+        .background(Color(white: 0.97), in: RoundedRectangle(cornerRadius: 14))
+
     }
 
     private func quote(_ value: String) -> String {
@@ -108,22 +101,21 @@ struct MCPConnectorView: View {
 }
 
 struct PoachSettingsView: View {
+    @AppStorage("setupAssistant") private var assistant = "Codex"
     @AppStorage("windowEdge") private var edge = "right"
     @AppStorage("defaultCaptureMode") private var defaultMode = PoachCaptureMode.selectedPortion.rawValue
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if assistant == "Codex" {
             LabeledContent("Window position") {
-                Picker("Window position", selection: $edge) {
-                    Text("Left").tag("left")
-                    Text("Right").tag("right")
-                }
-                .labelsHidden().pickerStyle(.segmented).frame(width: 140)
+                PoachSegments(label: "Window position", selection: $edge, choices: [("left", "Left"), ("right", "Right")])
+                    .frame(width: 140)
+            }
             }
             Picker("Default recording mode", selection: $defaultMode) {
                 ForEach(PoachCaptureMode.allCases) { mode in Text(mode.title).tag(mode.rawValue) }
             }.pickerStyle(.menu)
-            Divider()
             MCPConnectorView()
         }
         .onChange(of: edge) {

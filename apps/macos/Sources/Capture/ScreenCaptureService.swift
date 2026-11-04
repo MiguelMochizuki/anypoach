@@ -407,23 +407,14 @@ private struct RegionSelectionView: View {
                     .allowsHitTesting(countdownValue == nil)
 
                 if let countdownValue {
-                    Text("\(countdownValue)")
-                        .font(.system(size: 96, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(.white)
-                        .contentTransition(.numericText())
-                        .padding(42)
-                        .background(.regularMaterial, in: Circle())
-                        .overlay {
-                            Circle().strokeBorder(.red.opacity(0.9), lineWidth: 5)
-                        }
-                        .shadow(color: .black.opacity(0.28), radius: 26, y: 10)
+                    PoachCountdown(count: countdownValue)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .accessibilityLabel("Recording starts in \(countdownValue) seconds")
                         .allowsHitTesting(false)
                 }
 
                 VStack(spacing: 10) {
-                    Label(countdownValue != nil ? "Get ready — recording starts shortly" : selection == nil ? "Drag to select an area" : "Ready to record", systemImage: "viewfinder")
+                    Text(countdownValue != nil ? "Get ready — recording starts shortly" : selection == nil ? "Drag to select an area" : "Ready to record")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.primary)
 
@@ -434,8 +425,8 @@ private struct RegionSelectionView: View {
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 14, weight: .semibold))
-                                .frame(width: 44, height: 44)
-                                .background(Color.black.opacity(0.07), in: Circle())
+                                .frame(width: 44, height: 32)
+                                .background(Color(white: 0.93), in: RoundedRectangle(cornerRadius: 9))
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -446,10 +437,11 @@ private struct RegionSelectionView: View {
                         Button {
                             beginCountdown()
                         } label: {
-                            Image(systemName: "record.circle.fill")
-                                .font(.system(size: 40, weight: .regular))
-                                .foregroundStyle(.red)
-                                .frame(width: 52, height: 52)
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.white)
+                                .frame(width: 44, height: 32)
+                                .background(Color.red, in: RoundedRectangle(cornerRadius: 9))
                                 .contentTransition(.symbolEffect(.replace))
                         }
                         .buttonStyle(.plain)
@@ -459,7 +451,7 @@ private struct RegionSelectionView: View {
                         .keyboardShortcut(.defaultAction)
                     }
                 }
-                .padding(12)
+                .frame(width: 262, height: 116)
                 .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
