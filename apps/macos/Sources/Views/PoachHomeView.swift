@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PoachHomeView: View {
     let isWorking: Bool
@@ -111,11 +112,14 @@ struct PoachHomeView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .dropDestination(for: URL.self) { urls, _ in
-                guard !isWorking, !isRecording, urls.count == 1, let url = urls.first, url.isFileURL else { return false }
-                onDropMedia(url)
+            .onDrop(of: [.fileURL], isTargeted: $targeted) { providers in
+                guard !isWorking, !isRecording, providers.count == 1, let file = providers.first else { return false }
+                _ = file.loadDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { data, _ in
+                    guard let data, let url = URL(dataRepresentation: data, relativeTo: nil), url.isFileURL else { return }
+                    DispatchQueue.main.async { onDropMedia(url) }
+                }
                 return true
-            } isTargeted: { targeted = $0 }
+            }
             .animation(reduceMotion ? nil : .spring(duration: 0.26, bounce: 0.15), value: targeted)
             .disabled(isWorking || isRecording)
             }
