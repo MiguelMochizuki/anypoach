@@ -17,19 +17,14 @@ struct PoachHomeView: View {
     }
 
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 0) {
             header
-
-            Text("CAPTURE")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .tracking(1.1)
-                .foregroundStyle(.tertiary)
-                .padding(.top, 28)
 
             Text("Choose what to record")
                 .font(.system(size: 21, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary)
-                .padding(.top, 5)
+                .padding(.top, 20)
 
             Text(captureMode.guidance)
                 .font(.system(size: 12))
@@ -74,15 +69,17 @@ struct PoachHomeView: View {
             .buttonStyle(.plain)
             .disabled(isWorking || isRecording)
 
-            Spacer(minLength: 0)
-
             Text("Record up to 30 seconds. Stop whenever you have the interaction.")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .padding(.top, 14)
+
+            MCPConnectorView().padding(.top, 18)
         }
-        .padding(26)
-        .frame(width: 440, height: 360)
+        .padding(22)
+        }
+        .frame(width: min(600, (NSScreen.main?.visibleFrame.width ?? 800) - 32),
+               height: min(680, (NSScreen.main?.visibleFrame.height ?? 800) - 50))
         .background(Color(nsColor: .windowBackgroundColor))
         .preferredColorScheme(.light)
     }
