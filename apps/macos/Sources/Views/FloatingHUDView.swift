@@ -12,6 +12,7 @@ struct FloatingHUDView: View {
     let isVideo: Bool
     @State private var player: AVPlayer?
     @State private var comments: [CaptureComment] = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var commentsOpen = false
     @State private var playback = CommentPlayback()
     let palette: [HUDPaletteToken]
@@ -115,15 +116,18 @@ struct FloatingHUDView: View {
         .frame(maxWidth: .infinity)
         .preferredColorScheme(.light)
         if isVideo && commentsOpen {
-            Divider()
             CommentSidebar(playback: playback, comments: $comments, isOpen: $commentsOpen)
                 .frame(width: 230)
+                .overlay(alignment: .leading) { Divider() }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
         }
         }
         .background(Color.white)
         .preferredColorScheme(.light)
         .frame(width: min(isVideo && commentsOpen ? 830 : 550, (NSScreen.main?.visibleFrame.width ?? 800) - 48))
         .fixedSize(horizontal: false, vertical: true)
+        .clipped()
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: commentsOpen)
         .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
             guard let panel = NSApp.windows.first(where: { $0.title == "Poach — Implementation brief" && $0.isVisible }),
                   panel.contentRect(forFrameRect: panel.frame).size != size else { return }

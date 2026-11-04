@@ -84,7 +84,10 @@ struct CommentTimeline: View {
     var body: some View {
         HStack(spacing: 10) {
             Button { playback.toggle() } label: {
-                Image(systemName: playback.playing ? "pause.fill" : "play.fill").frame(width: 20)
+                Image(systemName: playback.playing ? "pause.fill" : "play.fill")
+                    .font(.system(size: 14))
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(playback.playing ? "Pause" : "Play")
@@ -122,8 +125,10 @@ struct CommentTimeline: View {
                 if isOpen { playback.pause() }
             } label: {
                 Image(systemName: isOpen ? "bubble.left.fill" : "bubble.left")
-                    .font(.system(size: 22))
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
                     .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help(isOpen ? "Hide comments" : "Show comments")
