@@ -87,17 +87,28 @@ final class ScreenCaptureService: NSObject, SCRecordingOutputDelegate, SCContent
             let poachApplications = content.applications.filter {
                 $0.processID == ProcessInfo.processInfo.processIdentifier || $0.bundleIdentifier == Bundle.main.bundleIdentifier
             }
+            guard !poachApplications.isEmpty else { throw ScreenCaptureError.selectionFailed("Poach could not exclude its windows from this display.") }
             filter = SCContentFilter(display: display, excludingApplications: poachApplications, exceptingWindows: [])
             selectedRegion = region
         } else {
-            let picked = try await chooseContent(for: mode).filter
-            if #available(macOS 15.2, *), mode == .fullScreen {
-                guard let display = picked.includedDisplays.first else { throw ScreenCaptureError.noDisplay }
-                let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-                let excluded = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
-                filter = SCContentFilter(display: display, excludingApplications: excluded, exceptingWindows: [])
+            if mode == .window {
+                filter = try await chooseContent(for: mode).filter
             } else {
-                filter = picked
+                let display: SCDisplay
+                let content: SCShareableContent
+                if #available(macOS 15.2, *) {
+                    let picked = try await chooseContent(for: mode).filter
+                    guard let selected = picked.includedDisplays.first else { throw ScreenCaptureError.noDisplay }
+                    display = selected
+                    content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+                } else {
+                    // Older pickers do not expose their selected display for application filtering.
+                    content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+                    display = try chooseDisplay(from: content.displays)
+                }
+                let excluded = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
+                guard !excluded.isEmpty else { throw ScreenCaptureError.selectionFailed("Poach could not exclude its windows from this display.") }
+                filter = SCContentFilter(display: display, excludingApplications: excluded, exceptingWindows: [])
             }
             selectedRegion = nil
             try await beforeCapture()
@@ -166,6 +177,25 @@ final class ScreenCaptureService: NSObject, SCRecordingOutputDelegate, SCContent
         self.stream = nil
         self.outputURL = nil
         return outputURL
+    }
+
+    private func chooseDisplay(from displays: [SCDisplay]) throws -> SCDisplay {
+        guard let first = displays.first else { throw ScreenCaptureError.noDisplay }
+        guard displays.count > 1 else { return first }
+        let choices = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 240, height: 26))
+        for (index, display) in displays.enumerated() {
+            let screen = NSScreen.screens.first {
+                ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == display.displayID
+            }
+            choices.addItem(withTitle: screen?.localizedName ?? "Display \(index + 1)")
+        }
+        let alert = NSAlert()
+        alert.messageText = "Choose a display"
+        alert.accessoryView = choices
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { throw ScreenCaptureError.selectionCancelled }
+        return displays[choices.indexOfSelectedItem]
     }
 
     private func chooseContent(for mode: PoachCaptureMode) async throws -> ContentFilterBox {
