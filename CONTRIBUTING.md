@@ -69,3 +69,5 @@ Shortcut validation: with Poach running, physically press Command–Shift–P fr
 When checking the assistant setup sheet, verify both client tabs, copied shell quoting for paths with spaces, preserved existing Claude server entries, and the missing-server message. The native packaging script builds both TypeScript packages before embedding the local server path; the server and its dependencies remain in the checkout for development.
 
 When checking video comments, post at two different times, close and reopen the sidebar, and select the earlier comment. Verify the player seeks to that moment and both timestamps appear in the copied prompt or shared brief.
+
+Motion-analysis checks include stationary video. Verify that a quiet recording yields one resting frame, zero motion duration, and a null easing estimate in the assistant brief.

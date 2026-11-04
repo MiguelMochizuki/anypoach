@@ -48,7 +48,7 @@ pnpm build
 pnpm exec turbo run typecheck
 ```
 
-The core currently limits input videos to 30 seconds and 512 MiB. Analysis defaults to 12 downscaled samples per second. Keyframe PNGs are written to a temporary `poach-*` directory unless an output directory is supplied.
+The core currently limits input videos to 30 seconds and 512 MiB. Analysis defaults to 12 downscaled samples per second. Stationary captures produce a single resting frame and a zero motion duration. The timing field `bezier` is null when the sampled evidence cannot support an easing estimate. Keyframe PNGs are written to a temporary `poach-*` directory unless an output directory is supplied.
 
 ## Run the MCP server
 
