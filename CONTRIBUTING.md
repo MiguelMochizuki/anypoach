@@ -53,3 +53,5 @@ By submitting a contribution, you agree that it is provided under the [Apache Li
 The explicit MCP share action writes one replaceable snapshot under `~/Library/Caches/Poach/active-brief.json`. Keep this format compatible with `poach_read_brief`, preserve user-only permissions, and document changes to the 24-hour validity period. Expired snapshots are removed on read.
 
 The review window uses AVKit for local video playback. Playhead notes are appended as timestamped text to the editable implementation context and included in the explicitly shared snapshot. Poach does not call an LLM API; the connected assistant interprets the capture evidence.
+
+`poach_read_moment` only accesses the active explicitly shared video and enforces the same 24-hour validity period. It returns reference pixels directly, without retaining additional image files. Keep this scope when extending assistant inspection.

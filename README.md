@@ -92,3 +92,5 @@ Palette swatches in the brief are editable. Color replacements and implementatio
 To register the local server with Codex after building, use `codex mcp add poach -- node /absolute/path/to/poach/packages/mcp-server/dist/index.js`. Reload the assistant connection if the tool is not yet visible. Ask it to call `poach_read_brief`, inspect the images, and implement the component in your current project.
 
 A local development certificate is valid for development on the Mac where it is trusted. It is not a substitute for Developer ID signing and notarization of GitHub releases. Preserve its private key in Keychain across builds. Moving from an ad-hoc build to this certificate requires one fresh Screen Recording approval.
+
+Assistants can call `poach_read_moment` with `timeMs` to inspect an exact moment from the currently shared video, including moments mentioned in your notes. It returns a reference PNG without saving another file. Timestamps must be before the clip ends; expired briefs and still-image briefs are rejected. This lets your chosen LLM interpret behavior without Poach requiring an API key.
