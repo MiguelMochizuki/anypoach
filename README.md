@@ -96,3 +96,5 @@ A local development certificate is valid for development on the Mac where it is 
 Assistants can call `poach_read_moment` with `timeMs` to inspect an exact moment from the currently shared video, including moments mentioned in your notes. It returns a reference PNG without saving another file. Timestamps must be before the clip ends; expired briefs and still-image briefs are rejected. This lets your chosen LLM interpret behavior without Poach requiring an API key.
 
 Recordings that run slightly past 30 seconds while ScreenCaptureKit finishes stopping are trimmed to 30 seconds before analysis. The editor and shared brief use that trimmed video. The original and trimmed files remain in temporary storage; imported videos still enforce the 30-second limit without trimming.
+
+Poach registers **Command–Shift–P** while running: it opens selected-area capture when idle and stops an active recording. The menu-bar panel reports if registration fails. The shortcut registers only that chord; it does not install a general keyboard monitor. Capture buttons remain available.
