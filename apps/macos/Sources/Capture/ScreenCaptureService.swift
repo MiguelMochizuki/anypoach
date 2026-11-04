@@ -438,8 +438,8 @@ private struct RegionSelectionView: View {
                 }
                 .shadow(color: .black.opacity(0.18), radius: 18, x: 0, y: 8)
                 .padding(.bottom, 26)
-                .padding(.trailing, 18)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, alignment: UserDefaults.standard.string(forKey: "windowEdge") == "left" ? .leading : .trailing)
                 .allowsHitTesting(true)
             }
             .frame(width: geometry.size.width, height: geometry.size.height)

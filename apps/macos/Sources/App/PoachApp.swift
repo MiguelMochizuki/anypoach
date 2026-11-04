@@ -11,7 +11,8 @@ struct PoachApp: App {
     @State private var hudWindow = FloatingHUDWindowController()
     @State private var recordingWindow = RecordingStatusWindowController()
     @State private var captureServiceStorage: AnyObject?
-    @State private var captureMode = PoachCaptureMode.selectedPortion
+    @State private var captureMode = PoachCaptureMode(rawValue: UserDefaults.standard.string(forKey: "defaultCaptureMode") ?? "") ?? .selectedPortion
+    @AppStorage("defaultCaptureMode") private var defaultMode = PoachCaptureMode.selectedPortion.rawValue
     @State private var isWorking = false
     @State private var workingTitle = "Preparing your capture…"
     @State private var isRecording = false
@@ -31,6 +32,7 @@ struct PoachApp: App {
                 onDropMedia: loadMedia(at:)
             )
             .background(HomeWindowAnchor())
+            .onChange(of: defaultMode) { captureMode = PoachCaptureMode(rawValue: defaultMode) ?? .selectedPortion }
             .onAppear {
                 hotKeyAvailable = captureHotKey.register {
                     if isRecording { Task { await stopRecording() } }
@@ -239,7 +241,7 @@ private final class RecordingStatusWindowController {
         var cancelled = false
         let countdownPanel = makePanel()
         countdownPanel.setContentSize(NSSize(width: 260, height: 150))
-        pinToRight(countdownPanel)
+        pinToEdge(countdownPanel)
         NSApp.unhide(nil)
         NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
         defer { countdownPanel.orderOut(nil) }
@@ -271,10 +273,7 @@ private final class RecordingStatusWindowController {
         panel.contentView = NSHostingView(rootView: PoachRecordingStatusView(elapsedSeconds: elapsedSeconds) { [weak self] in
             self?.stopAction?()
         })
-        if let screen = NSScreen.main {
-            let frame = screen.visibleFrame
-            panel.setFrameOrigin(NSPoint(x: frame.maxX - panel.frame.width - 24, y: frame.maxY - panel.frame.height - 24))
-        }
+        pinToEdge(panel)
         panel.orderFrontRegardless()
         self.panel = panel
     }
@@ -342,7 +341,7 @@ private final class FloatingHUDWindowController {
             .preferredColorScheme(.light)
         )
         panel.setContentSize(NSSize(width: 660, height: 500))
-        pinToRight(panel)
+        pinToEdge(panel)
         NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
         panel.makeKeyAndOrderFront(nil)
         self.panel = panel
@@ -372,7 +371,7 @@ private final class FloatingHUDWindowController {
         panel.title = "Poach — Implementation brief"
         panel.contentView = NSHostingView(rootView: view.id(UUID()))
         panel.setContentSize(panel.contentView?.fittingSize ?? NSSize(width: 340, height: 370))
-        pinToRight(panel)
+        pinToEdge(panel)
         panel.alphaValue = 0
         NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
         NSApp.activate(ignoringOtherApps: true)
@@ -461,10 +460,11 @@ private extension Color {
 }
 
 @MainActor
-private func pinToRight(_ window: NSWindow) {
+func pinToEdge(_ window: NSWindow) {
     guard let visible = (window.screen ?? NSScreen.main)?.visibleFrame else { return }
     window.isMovable = false
-    window.setFrameOrigin(NSPoint(x: max(visible.minX, visible.maxX - window.frame.width - 16),
+    let left = UserDefaults.standard.string(forKey: "windowEdge") == "left"
+    window.setFrameOrigin(NSPoint(x: left ? visible.minX + 16 : max(visible.minX, visible.maxX - window.frame.width - 16),
                                   y: max(visible.minY, visible.midY - window.frame.height / 2)))
 }
 
@@ -472,7 +472,7 @@ private struct HomeWindowAnchor: NSViewRepresentable {
     final class Anchor: NSView {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            if let window { DispatchQueue.main.async { pinToRight(window) } }
+            if let window { DispatchQueue.main.async { pinToEdge(window) } }
         }
     }
     func makeNSView(context: Context) -> Anchor { Anchor() }

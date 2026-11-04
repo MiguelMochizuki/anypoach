@@ -14,6 +14,8 @@ struct PoachHomeView: View {
     @State private var targeted = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @State private var settings = false
+
     private var primaryTitle: String {
         if isRecording { return "Stop and inspect · \(clock(elapsedSeconds)) / 0:30" }
         if isWorking { return workingTitle }
@@ -24,6 +26,14 @@ struct PoachHomeView: View {
         ScrollView {
         VStack(alignment: .leading, spacing: 0) {
             header
+            Picker("Poach", selection: $settings) {
+                Label("Capture", systemImage: "record.circle").tag(false)
+                Label("Settings", systemImage: "gearshape").tag(true)
+            }
+            .pickerStyle(.segmented).labelsHidden().padding(.top, 18)
+            if settings {
+                PoachSettingsView().padding(.top, 20)
+            } else {
 
             Text("Choose what to record")
                 .font(.system(size: 21, weight: .semibold, design: .rounded))
@@ -95,7 +105,7 @@ struct PoachHomeView: View {
                 .foregroundStyle(.tertiary)
                 .padding(.top, 14)
 
-            MCPConnectorView().padding(.top, 18)
+            }
         }
         .padding(22)
         }

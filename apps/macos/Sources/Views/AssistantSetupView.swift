@@ -6,7 +6,7 @@ struct AssistantSetupView: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 16) {
-            MCPConnectorView()
+            PoachSettingsView()
             Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
         }
         .padding(20)
@@ -17,7 +17,7 @@ struct AssistantSetupView: View {
 }
 
 struct MCPConnectorView: View {
-    @State private var assistant = "Codex"
+    @AppStorage("setupAssistant") private var assistant = "Codex"
     @State private var copied = false
 
     private var serverPath: String? {
@@ -113,5 +113,32 @@ struct MCPConnectorView: View {
 
     private func quote(_ value: String) -> String {
         "'" + value.replacingOccurrences(of: "'", with: "'\"'\"'") + "'"
+    }
+}
+
+struct PoachSettingsView: View {
+    @AppStorage("windowEdge") private var edge = "right"
+    @AppStorage("defaultCaptureMode") private var defaultMode = PoachCaptureMode.selectedPortion.rawValue
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            LabeledContent("Window position") {
+                Picker("Window position", selection: $edge) {
+                    Text("Left").tag("left")
+                    Text("Right").tag("right")
+                }
+                .labelsHidden().pickerStyle(.segmented).frame(width: 140)
+            }
+            Picker("Default recording mode", selection: $defaultMode) {
+                ForEach(PoachCaptureMode.allCases) { mode in Text(mode.title).tag(mode.rawValue) }
+            }.pickerStyle(.menu)
+            Divider()
+            MCPConnectorView()
+        }
+        .onChange(of: edge) {
+            for window in NSApp.windows where window.title == "Poach" || window.title == "Poach — Implementation brief" {
+                pinToEdge(window)
+            }
+        }
     }
 }

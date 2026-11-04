@@ -99,7 +99,7 @@ struct FloatingHUDView: View {
                 .accessibilityElement(children: .combine)
             }
             }
-            Button("Connect your assistant…") { showingAssistantSetup = true }
+            Button("Open Settings…") { showingAssistantSetup = true }
                 .buttonStyle(.link)
             if !shareStatus.isEmpty {
                 Text(shareStatus).font(.caption).foregroundStyle(.secondary)
