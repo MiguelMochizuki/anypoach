@@ -14,6 +14,8 @@ struct PoachHomeView: View {
     let onDropMedia: (URL) -> Void
     let loadingFile: URL?
     @State private var targeted = false
+    @State private var hovering = false
+    private var highlightDropZone: Bool { (hovering || targeted) && !isWorking && !isRecording }
     @State private var dragEntry = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -90,7 +92,7 @@ struct PoachHomeView: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 17, weight: .medium))
                         .frame(width: 34, height: 34)
-                        .background(Color(white: targeted ? 0.915 : 0.895), in: RoundedRectangle(cornerRadius: 9))
+                        .background(Color(white: highlightDropZone ? 0.915 : 0.895), in: RoundedRectangle(cornerRadius: 9))
                         .foregroundStyle(.primary)
                         .keyframeAnimator(initialValue: 0.0, trigger: dragEntry) { [animate = targeted && !reduceMotion] icon, displacement in
                             let offset = animate ? displacement : 0
@@ -110,10 +112,13 @@ struct PoachHomeView: View {
                 .padding(12)
                 .frame(maxWidth: .infinity)
                 .frame(height: 99)
-                .background(targeted ? Color(white: 0.70) : Color.white,
+                .background(highlightDropZone ? Color(white: 0.70) : Color.white,
                             in: RoundedRectangle(cornerRadius: 14))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: highlightDropZone)
                 .contentShape(Rectangle())
             }
+            .onHover { hovering = $0 }
+            .onDisappear { hovering = false }
             .buttonStyle(.plain)
             .onDrop(of: [.fileURL], isTargeted: $targeted) { providers in
                 guard !isWorking, !isRecording, providers.count == 1, let file = providers.first else { return false }
