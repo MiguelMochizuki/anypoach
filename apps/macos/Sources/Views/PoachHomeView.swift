@@ -21,7 +21,11 @@ struct PoachHomeView: View {
     private var primaryTitle: String {
         if isRecording { return "Stop and inspect · \(clock(elapsedSeconds)) / 0:30" }
         if isWorking { return workingTitle }
-        return captureMode == .selectedPortion ? "Select area to record" : "Start recording"
+        switch captureMode {
+        case .selectedPortion: return "Select an area…"
+        case .fullScreen: return "Choose a screen…"
+        case .window: return "Choose a window…"
+        }
     }
 
     var body: some View {
@@ -54,11 +58,11 @@ struct PoachHomeView: View {
     private var captureControls: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Recording mode").font(.subheadline.weight(.medium))
+                Text("What do you want to record?").font(.headline)
                 Spacer()
                 Text("30 s max").font(.caption).foregroundStyle(.secondary)
             }
-            Picker("Capture mode", selection: $captureMode) {
+            Picker("What do you want to record?", selection: $captureMode) {
                 ForEach(PoachCaptureMode.allCases) { mode in
                     Text(mode.title).tag(mode)
                 }

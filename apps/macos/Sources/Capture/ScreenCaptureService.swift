@@ -12,9 +12,9 @@ enum PoachCaptureMode: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .selectedPortion: "Selected portion"
+        case .selectedPortion: "Screen area"
         case .fullScreen: "Full screen"
-        case .window: "Window"
+        case .window: "App window"
         }
     }
 
