@@ -6,6 +6,8 @@ import OSLog
 @main
 struct PoachApp: App {
     private static let captureLog = Logger(subsystem: "dev.poach.app", category: "CaptureLifecycle")
+    @State private var captureHotKey = PoachHotKey()
+    @State private var hotKeyAvailable = true
     @State private var hudWindow = FloatingHUDWindowController()
     @State private var recordingWindow = RecordingStatusWindowController()
     @State private var captureServiceStorage: AnyObject?
@@ -27,6 +29,15 @@ struct PoachApp: App {
                 onStopRecording: { Task { await stopRecording() } },
                 onLoadMedia: loadMedia
             )
+            .onAppear {
+                hotKeyAvailable = captureHotKey.register {
+                    if isRecording { Task { await stopRecording() } }
+                    else if !isWorking {
+                        captureMode = .selectedPortion
+                        startRecording()
+                    }
+                }
+            }
         }
         .defaultSize(width: 440, height: 360)
         .windowStyle(.hiddenTitleBar)
@@ -41,6 +52,10 @@ struct PoachApp: App {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isWorking)
+
+                Text(hotKeyAvailable ? "⌘⇧P — Select area or stop recording" : "⌘⇧P is unavailable. Use the recording button.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 Button("Load video or image…", action: loadMedia)
                     .buttonStyle(.plain)
