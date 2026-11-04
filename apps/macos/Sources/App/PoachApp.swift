@@ -8,7 +8,8 @@ struct PoachApp: App {
     private static let captureLog = Logger(subsystem: "dev.poach.app", category: "CaptureLifecycle")
     @State private var captureHotKey = PoachHotKey()
     @State private var hotKeyAvailable = true
-    @State private var hudWindow = FloatingHUDWindowController()
+    @NSApplicationDelegateAdaptor(PoachAppDelegate.self) private var appDelegate
+    private var hudWindow: FloatingHUDWindowController { appDelegate.editor }
     @State private var recordingWindow = RecordingStatusWindowController()
     @State private var captureServiceStorage: AnyObject?
     @State private var captureMode = PoachCaptureMode(rawValue: UserDefaults.standard.string(forKey: "defaultCaptureMode") ?? "") ?? .selectedPortion
@@ -319,8 +320,40 @@ private final class RecordingStatusWindowController {
 }
 
 @MainActor
-private final class FloatingHUDWindowController {
+private final class PoachAppDelegate: NSObject, NSApplicationDelegate {
+    let editor = FloatingHUDWindowController()
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        !editor.revealEditor()
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        editor.hideHomeWhileEditing()
+    }
+}
+
+@MainActor
+private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
+
+    func hideHomeWhileEditing() {
+        guard panel != nil else { return }
+        NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
+    }
+
+    func revealEditor() -> Bool {
+        guard let panel else { return false }
+        hideHomeWhileEditing()
+        if panel.isMiniaturized { panel.deminiaturize(nil) }
+        panel.makeKeyAndOrderFront(nil)
+        return true
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let closing = notification.object as? NSWindow, closing === panel else { return }
+        panel = nil
+        NSApp.windows.first { $0.title == "Poach" }?.makeKeyAndOrderFront(nil)
+    }
 
     func showPreparing() {
         let panel = self.panel ?? makePanel()
@@ -344,8 +377,7 @@ private final class FloatingHUDWindowController {
 
     func dismissPreparing() {
         guard panel?.title == "Poach — Preparing your brief" else { return }
-        panel?.orderOut(nil)
-        NSApp.windows.first { $0.title == "Poach" }?.makeKeyAndOrderFront(nil)
+        panel?.close()
     }
 
     func show(_ result: PoachInspection) {
@@ -357,8 +389,7 @@ private final class FloatingHUDWindowController {
             onCopyContext: { Self.copyContext(result, context: $0) },
             onShareContext: { try Self.shareContext(result, context: $0) },
             onClose: { [weak self] in
-                self?.panel?.orderOut(nil)
-                NSApp.windows.first { $0.title == "Poach" }?.makeKeyAndOrderFront(nil)
+                self?.panel?.close()
             }
         )
 
@@ -385,6 +416,8 @@ private final class FloatingHUDWindowController {
             backing: .buffered,
             defer: false
         )
+        panel.delegate = self
+        panel.hidesOnDeactivate = false
         panel.isFloatingPanel = false
         panel.level = .normal
         panel.collectionBehavior = [.moveToActiveSpace]
