@@ -83,7 +83,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and review expectations, and [A
 
 ## Share a capture with an assistant
 
-In the review window, play the video and use **Add note at playhead** to append timestamped instructions. Edit the palette or add implementation context, then choose **Continue with Codex or Claude**. Ask a connected assistant to call `poach_read_brief`. Share again after editing to replace the shared snapshot. **Copy Prompt** also works without MCP.
+In the review window, click the speech bubble beside the video timeline. Playback pauses and the comments sidebar opens on the right. Write a comment and choose **Post comment**. Its text appears briefly above its marker. Click a marker or sidebar comment to return to that moment. Posted comments are included in the prompt and the shared brief in time order. Edit the palette or add implementation context, then choose **Continue with Codex or Claude**. Ask a connected assistant to call `poach_read_brief`. Share again after editing to replace the shared snapshot. **Copy Prompt** also works without MCP.
 
 The shared snapshot is stored locally at `~/Library/Caches/Poach/active-brief.json` with user-only permissions. It contains context and inspection metadata, including local keyframe paths. It expires after 24 hours and is deleted when the MCP tool next reads an expired snapshot; it is not automatically deleted while Poach is idle. Sharing does not itself upload media, but your connected assistant can receive the returned data.
 
