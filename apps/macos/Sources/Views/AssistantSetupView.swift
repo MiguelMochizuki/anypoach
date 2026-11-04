@@ -46,10 +46,10 @@ struct MCPConnectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Image(systemName: "point.3.connected.trianglepath.dotted")
-                    .foregroundStyle(.indigo)
+                Image(systemName: "link")
+                    .foregroundStyle(.secondary)
                     .frame(width: 32, height: 32)
-                    .background(Color.indigo.opacity(0.09), in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 8))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Connect your assistant").font(.headline)
@@ -107,7 +107,7 @@ struct MCPConnectorView: View {
             }
         }
         .padding(16)
-        .background(Color.indigo.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 14))
         .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.quaternary) }
     }
 
