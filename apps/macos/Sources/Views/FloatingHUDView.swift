@@ -38,7 +38,7 @@ struct FloatingHUDView: View {
             Text("Review the capture, add what matters, then continue with your assistant.")
                 .font(.body).foregroundStyle(.secondary)
             if isVideo {
-                VideoPlayer(player: player)
+                CaptureVideoPlayer(player: player)
                     .frame(height: 260)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 HStack {
@@ -219,6 +219,28 @@ struct FloatingHUDView: View {
             .font(.system(size: 9, weight: .bold, design: .rounded))
             .tracking(1.1)
             .foregroundStyle(.tertiary)
+    }
+}
+
+private struct CaptureVideoPlayer: NSViewRepresentable {
+    let player: AVPlayer?
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.controlsStyle = .inline
+        view.videoGravity = .resizeAspect
+        view.showsFullScreenToggleButton = false
+        view.player = player
+        return view
+    }
+
+    func updateNSView(_ view: AVPlayerView, context: Context) {
+        if view.player !== player { view.player = player }
+    }
+
+    static func dismantleNSView(_ view: AVPlayerView, coordinator: ()) {
+        view.player?.pause()
+        view.player = nil
     }
 }
 
