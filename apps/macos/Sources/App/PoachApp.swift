@@ -141,7 +141,7 @@ struct PoachApp: App {
             NSApp.unhide(nil)
             NSApp.activate(ignoringOtherApps: true)
             hudWindow.showPreparing()
-            let result = try await PoachInspectionRunner.inspect(videoURL: videoURL)
+            let result = try await PoachInspectionRunner.inspect(videoURL: videoURL, isRecording: true)
             hudWindow.show(result)
         } catch {
             NSApp.unhide(nil)

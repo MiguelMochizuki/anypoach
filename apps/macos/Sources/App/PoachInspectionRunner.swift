@@ -39,7 +39,7 @@ enum PoachInspectionError: LocalizedError {
 }
 
 enum PoachInspectionRunner {
-    static func inspect(videoURL: URL) async throws -> PoachInspection {
+    static func inspect(videoURL: URL, isRecording: Bool = false) async throws -> PoachInspection {
         guard let engine = findEngine() else { throw PoachInspectionError.projectNotBuilt }
         guard let node = findNode() else { throw PoachInspectionError.nodeNotFound }
         let entry = engine.path
@@ -50,8 +50,8 @@ enum PoachInspectionRunner {
             process.executableURL = node
             process.arguments = [
                 "--input-type=module", "-e",
-                "import { inspectImage, inspectVideo } from \(Self.jsString(entry)); const inspect = /\\.(png|jpe?g|webp|tiff?|bmp)$/i.test(process.argv[1]) ? inspectImage : inspectVideo; try { const result = await inspect(process.argv[1]); process.stdout.write(JSON.stringify(result)); } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }",
-                videoPath,
+                "import { inspectImage, inspectVideo, inspectRecording } from \(Self.jsString(entry)); const inspect = /\\.(png|jpe?g|webp|tiff?|bmp)$/i.test(process.argv[1]) ? inspectImage : (process.argv[2] === 'recording' ? inspectRecording : inspectVideo); try { const result = await inspect(process.argv[1]); process.stdout.write(JSON.stringify(result)); } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }",
+                videoPath, isRecording ? "recording" : "import",
             ]
             // Node resolves cwd during bootstrap. A checkout under Documents can
             // block there on macOS privacy checks before our script even starts.

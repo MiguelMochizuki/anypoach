@@ -44,6 +44,31 @@ function parseDuration(output: Buffer): number {
   return duration;
 }
 
+/** Normalize recorder shutdown latency without relaxing the imported-video limit. */
+export async function inspectRecording(videoFile: string): Promise<InspectionResult> {
+  const sourcePath = resolve(videoFile);
+  if (![".mov", ".mp4"].includes(extname(sourcePath).toLowerCase())) {
+    throw new Error("Recording must be an MP4 or MOV file");
+  }
+  const file = await stat(sourcePath);
+  if (!file.isFile() || file.size > MAX_VIDEO_BYTES) throw new Error("Recording exceeds the 512 MiB limit");
+  const probe = await run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "json", sourcePath]);
+  const metadata = JSON.parse(probe.toString("utf8")) as { format?: { duration?: string } };
+  const duration = Number(metadata.format?.duration);
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Recording has no valid duration");
+  if (duration <= MAX_DURATION_SECONDS) return inspectVideo(sourcePath);
+
+  const directory = await mkdtemp(join(tmpdir(), "poach-recording-"));
+  const clippedPath = join(directory, "recording.mp4");
+  // Re-encode the boundary: stream copy may retain packets beyond 30 seconds.
+  await run("ffmpeg", [
+    "-v", "error", "-i", sourcePath, "-map", "0:v:0", "-an",
+    "-t", String(MAX_DURATION_SECONDS), "-vf", "fps=30",
+    "-c:v", "libx264", "-preset", "fast", "-crf", "18", clippedPath,
+  ]);
+  return inspectVideo(clippedPath);
+}
+
 async function readFrame(videoPath: string, timeSeconds: number, width: number): Promise<FrameSample> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 4; attempt += 1) {
