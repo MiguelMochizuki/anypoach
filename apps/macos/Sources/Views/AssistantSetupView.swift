@@ -46,15 +46,9 @@ struct MCPConnectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Image(systemName: "link")
-                    .foregroundStyle(.secondary)
-                    .frame(width: 32, height: 32)
-                    .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 8))
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Connect your assistant").font(.headline)
-                    Text("Share capture briefs over MCP.").font(.caption).foregroundStyle(.secondary)
-                }
+                Label("MCP", systemImage: "link")
+                    .font(.headline)
+                    .accessibilityLabel("MCP connection")
                 Spacer()
                 Picker("Assistant", selection: $assistant) {
                     Text("Codex").tag("Codex")
@@ -106,7 +100,7 @@ struct MCPConnectorView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(16)
+        .padding(12)
         .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 14))
         .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.quaternary) }
     }
@@ -121,7 +115,7 @@ struct PoachSettingsView: View {
     @AppStorage("defaultCaptureMode") private var defaultMode = PoachCaptureMode.selectedPortion.rawValue
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 12) {
             LabeledContent("Window position") {
                 Picker("Window position", selection: $edge) {
                     Text("Left").tag("left")
