@@ -10,6 +10,10 @@ struct PoachHomeView: View {
     let onStopRecording: () -> Void
     let onLoadMedia: () -> Void
 
+    let onDropMedia: (URL) -> Void
+    @State private var targeted = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var primaryTitle: String {
         if isRecording { return "Stop and inspect · \(clock(elapsedSeconds)) / 0:30" }
         if isWorking { return workingTitle }
@@ -61,12 +65,29 @@ struct PoachHomeView: View {
             .padding(.vertical, 14)
 
             Button(action: onLoadMedia) {
-                Label("Load video or image…", systemImage: "photo.on.rectangle.angled")
-                    .font(.system(size: 12, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+                VStack(spacing: 6) {
+                    Image(systemName: targeted ? "arrow.down.to.line" : "square.and.arrow.up")
+                        .font(.system(size: 17, weight: .medium))
+                        .frame(width: 34, height: 34)
+                        .background(.black.opacity(0.055), in: RoundedRectangle(cornerRadius: 9))
+                        .scaleEffect(targeted && !reduceMotion ? 1.08 : 1)
+                    Text(targeted ? "Release to load" : "Drop an image or video")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("or click to browse").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity)
+                .background(targeted ? Color.accentColor.opacity(0.12) : Color.black.opacity(0.035),
+                            in: RoundedRectangle(cornerRadius: 14))
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .dropDestination(for: URL.self) { urls, _ in
+                guard !isWorking, !isRecording, urls.count == 1, let url = urls.first, url.isFileURL else { return false }
+                onDropMedia(url)
+                return true
+            } isTargeted: { targeted = $0 }
+            .animation(reduceMotion ? nil : .spring(duration: 0.26, bounce: 0.15), value: targeted)
             .disabled(isWorking || isRecording)
 
             Text("Record up to 30 seconds. Stop whenever you have the interaction.")

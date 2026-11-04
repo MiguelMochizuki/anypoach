@@ -27,7 +27,8 @@ struct PoachApp: App {
                 captureMode: $captureMode,
                 onStartRecording: startRecording,
                 onStopRecording: { Task { await stopRecording() } },
-                onLoadMedia: loadMedia
+                onLoadMedia: loadMedia,
+                onDropMedia: loadMedia(at:)
             )
             .background(HomeWindowAnchor())
             .onAppear {
@@ -89,6 +90,11 @@ struct PoachApp: App {
         picker.canChooseFiles = true
         guard picker.runModal() == .OK, let mediaURL = picker.url else { return }
 
+        loadMedia(at: mediaURL)
+    }
+
+    private func loadMedia(at mediaURL: URL) {
+        guard !isWorking, !isRecording, mediaURL.isFileURL else { return }
         workingTitle = "Analyzing your media…"
         isWorking = true
         hudWindow.showPreparing()
