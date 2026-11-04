@@ -59,3 +59,5 @@ The review window uses AVKit for local video playback. Playhead notes are append
 When validating automatic stop, let a native capture reach the full 30-second limit and verify the resulting clip with ffprobe. ScreenCaptureKit shutdown can add extra frames; the app uses `inspectRecording` to trim that overrun, while file imports use the strict `inspectVideo` limit. Confirm the returned source path points to the trimmed clip so playback and MCP moments use the same timeline.
 
 Run `pnpm --filter @poach/core test` for the recording boundary regression. It requires FFmpeg/ffprobe, generates a synthetic 31.5-second clip, verifies normalization to 30 seconds and final-moment access, and checks that the import limit remains strict. Fixtures and extracted images are temporary and removed after the test.
+
+Run `pnpm --filter @poach/mcp-server test` to verify assistant handoff through a real MCP stdio client. This test uses an isolated temporary HOME, synthetic video and brief; it checks notes, color instructions, images, timestamp bounds, and expiry without touching your active shared brief.
