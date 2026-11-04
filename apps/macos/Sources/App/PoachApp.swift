@@ -72,6 +72,7 @@ struct PoachApp: App {
 
         workingTitle = "Analyzing your media…"
         isWorking = true
+        hudWindow.showPreparing()
         Task {
             do {
                 let result = try await PoachInspectionRunner.inspect(videoURL: mediaURL)
@@ -139,6 +140,7 @@ struct PoachApp: App {
             captureServiceStorage = nil
             NSApp.unhide(nil)
             NSApp.activate(ignoringOtherApps: true)
+            hudWindow.showPreparing()
             let result = try await PoachInspectionRunner.inspect(videoURL: videoURL)
             hudWindow.show(result)
         } catch {
@@ -151,6 +153,7 @@ struct PoachApp: App {
     }
 
     private func showError(title: String, error: Error) {
+        hudWindow.dismissPreparing()
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = error.localizedDescription
@@ -274,6 +277,32 @@ private final class RecordingStatusWindowController {
 @MainActor
 private final class FloatingHUDWindowController {
     private var panel: NSPanel?
+
+    func showPreparing() {
+        let panel = self.panel ?? makePanel()
+        panel.title = "Poach — Preparing your brief"
+        panel.contentView = NSHostingView(rootView:
+            VStack(spacing: 16) {
+                ProgressView()
+                Text("Preparing your capture for review").font(.headline)
+                Text("Extracting reference frames and colors…").foregroundStyle(.secondary)
+            }
+            .frame(width: 660, height: 500)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .preferredColorScheme(.light)
+        )
+        panel.setContentSize(NSSize(width: 660, height: 500))
+        panel.center()
+        NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
+        panel.makeKeyAndOrderFront(nil)
+        self.panel = panel
+    }
+
+    func dismissPreparing() {
+        guard panel?.title == "Poach — Preparing your brief" else { return }
+        panel?.orderOut(nil)
+        NSApp.windows.first { $0.title == "Poach" }?.makeKeyAndOrderFront(nil)
+    }
 
     func show(_ result: PoachInspection) {
         let frames = result.keyframes.enumerated().map { index, frame in
