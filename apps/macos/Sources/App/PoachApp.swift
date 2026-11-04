@@ -156,7 +156,7 @@ struct PoachApp: App {
         isRecording = false
         workingTitle = "Analyzing your recording…"
         isWorking = true
-        recordingWindow.close()
+        recordingWindow.showFinishing()
         do {
             let videoURL = try await service.stopRecording()
             Self.captureLog.notice("Recording file finalized")
@@ -164,6 +164,7 @@ struct PoachApp: App {
             NSApp.unhide(nil)
             NSApp.activate(ignoringOtherApps: true)
             hudWindow.showPreparing()
+            recordingWindow.close()
             let result = try await PoachInspectionRunner.inspect(videoURL: videoURL, isRecording: true)
             Self.captureLog.notice("Recording analysis completed")
             hudWindow.show(result)
@@ -171,6 +172,7 @@ struct PoachApp: App {
         } catch {
             NSApp.unhide(nil)
             NSApp.activate(ignoringOtherApps: true)
+            recordingWindow.close()
             Self.captureLog.error("Capture processing failed: code \((error as NSError).code)")
             showError(title: "Poach couldn't finish this capture", error: error)
             captureServiceStorage = nil
@@ -274,6 +276,19 @@ private final class RecordingStatusWindowController {
         panel.contentView = NSHostingView(rootView: PoachRecordingStatusView(elapsedSeconds: elapsedSeconds) { [weak self] in
             self?.stopAction?()
         })
+    }
+
+    func showFinishing() {
+        stopAction = nil
+        panel?.contentView = NSHostingView(rootView:
+            HStack {
+                ProgressView().controlSize(.small)
+                Text("Finishing recording…")
+            }
+            .frame(width: 260, height: 58)
+            .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+            .preferredColorScheme(.light)
+        )
     }
 
     func close() {
