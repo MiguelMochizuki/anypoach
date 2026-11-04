@@ -51,3 +51,5 @@ Set `POACH_CODESIGN_IDENTITY` to an installed code-signing identity to preserve 
 By submitting a contribution, you agree that it is provided under the [Apache License 2.0](LICENSE). No separate contribution agreement is required.
 
 The explicit MCP share action writes one replaceable snapshot under `~/Library/Caches/Poach/active-brief.json`. Keep this format compatible with `poach_read_brief`, preserve user-only permissions, and document changes to the 24-hour validity period. Expired snapshots are removed on read.
+
+The review window uses AVKit for local video playback. Playhead notes are appended as timestamped text to the editable implementation context and included in the explicitly shared snapshot. Poach does not call an LLM API; the connected assistant interprets the capture evidence.
