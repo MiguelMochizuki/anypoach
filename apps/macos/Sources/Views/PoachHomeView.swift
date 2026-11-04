@@ -93,8 +93,8 @@ struct PoachHomeView: View {
                         .frame(width: 34, height: 34)
                         .background(.black.opacity(0.055), in: RoundedRectangle(cornerRadius: 9))
                         .foregroundStyle(targeted ? Color.accentColor : .primary)
-                        .keyframeAnimator(initialValue: 0.0, trigger: dragEntry) { icon, displacement in
-                            let offset = targeted && !reduceMotion ? displacement : 0
+                        .keyframeAnimator(initialValue: 0.0, trigger: dragEntry) { [animate = targeted && !reduceMotion] icon, displacement in
+                            let offset = animate ? displacement : 0
                             icon.rotationEffect(.degrees(offset * 1.6))
                                 .offset(x: offset)
                         } keyframes: { _ in
