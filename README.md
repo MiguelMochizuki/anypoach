@@ -4,7 +4,7 @@ Poach is a native macOS tool and local MCP server for turning short interface re
 
 ## What works today
 
-- The macOS app records a selected portion, display, or window for up to 30 seconds with ScreenCaptureKit, including the mouse pointer and click indicators, then analyzes it locally and opens a floating results HUD.
+- The macOS app records a selected portion, display, or window for up to 30 seconds with ScreenCaptureKit, including the mouse pointer and click indicators, then analyzes it locally and opens the opaque review editor.
 - You can also load existing videos and still images from the app.
 - The MCP server exposes `poach_inspect` for local video files.
 - The MCP server exposes `poach_inspect_image` for local still images.
@@ -94,3 +94,5 @@ To register the local server with Codex after building, use `codex mcp add poach
 A local development certificate is valid for development on the Mac where it is trusted. It is not a substitute for Developer ID signing and notarization of GitHub releases. Preserve its private key in Keychain across builds. Moving from an ad-hoc build to this certificate requires one fresh Screen Recording approval.
 
 Assistants can call `poach_read_moment` with `timeMs` to inspect an exact moment from the currently shared video, including moments mentioned in your notes. It returns a reference PNG without saving another file. Timestamps must be before the clip ends; expired briefs and still-image briefs are rejected. This lets your chosen LLM interpret behavior without Poach requiring an API key.
+
+Recordings that run slightly past 30 seconds while ScreenCaptureKit finishes stopping are trimmed to 30 seconds before analysis. The editor and shared brief use that trimmed video. The original and trimmed files remain in temporary storage; imported videos still enforce the 30-second limit without trimming.

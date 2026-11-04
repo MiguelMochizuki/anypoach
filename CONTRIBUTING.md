@@ -55,3 +55,5 @@ The explicit MCP share action writes one replaceable snapshot under `~/Library/C
 The review window uses AVKit for local video playback. Playhead notes are appended as timestamped text to the editable implementation context and included in the explicitly shared snapshot. Poach does not call an LLM API; the connected assistant interprets the capture evidence.
 
 `poach_read_moment` only accesses the active explicitly shared video and enforces the same 24-hour validity period. It returns reference pixels directly, without retaining additional image files. Keep this scope when extending assistant inspection.
+
+When validating automatic stop, let a native capture reach the full 30-second limit and verify the resulting clip with ffprobe. ScreenCaptureKit shutdown can add extra frames; the app uses `inspectRecording` to trim that overrun, while file imports use the strict `inspectVideo` limit. Confirm the returned source path points to the trimmed clip so playback and MCP moments use the same timeline.
