@@ -32,7 +32,7 @@ bash scripts/build-macos-app.sh
 open outputs/Poach.app
 ```
 
-Poach opens a normal app window and adds a pouch control to the menu bar. Choose a capture mode, start recording, and stop within 30 seconds. Poach hides its own window while recording, then analyzes the clip and displays keyframes, timing, and colors in the HUD. Use **Load video or image…** to inspect an existing media file instead.
+Poach opens a compact Capture tab at the edge of the screen and adds a pouch control to the menu bar. Choose a recording mode, or drop a video or image onto the import area. Clicking the import area opens a file picker. After inspection, the editor opens with playback, timestamped comments, colors, and instructions for your assistant.
 
 The generated app bundle is written to `outputs/Poach.app`. Re-run the build script after changing the Swift sources.
 
