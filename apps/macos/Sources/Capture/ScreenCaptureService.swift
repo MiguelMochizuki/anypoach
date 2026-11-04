@@ -76,7 +76,7 @@ final class ScreenCaptureService: NSObject, SCRecordingOutputDelegate, SCContent
             let region = try await RegionSelectionWindowController.shared.selectRegion()
             let content: SCShareableContent
             do {
-                content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+                content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
             } catch {
                 if Self.isPermissionDenied(error) { throw ScreenCaptureError.permissionDenied }
                 throw error
@@ -85,12 +85,20 @@ final class ScreenCaptureService: NSObject, SCRecordingOutputDelegate, SCContent
                 throw ScreenCaptureError.noDisplay
             }
             let poachApplications = content.applications.filter {
-                $0.processID == ProcessInfo.processInfo.processIdentifier
+                $0.processID == ProcessInfo.processInfo.processIdentifier || $0.bundleIdentifier == Bundle.main.bundleIdentifier
             }
             filter = SCContentFilter(display: display, excludingApplications: poachApplications, exceptingWindows: [])
             selectedRegion = region
         } else {
-            filter = try await chooseContent(for: mode).filter
+            let picked = try await chooseContent(for: mode).filter
+            if #available(macOS 15.2, *), mode == .fullScreen {
+                guard let display = picked.includedDisplays.first else { throw ScreenCaptureError.noDisplay }
+                let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+                let excluded = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
+                filter = SCContentFilter(display: display, excludingApplications: excluded, exceptingWindows: [])
+            } else {
+                filter = picked
+            }
             selectedRegion = nil
             try await beforeCapture()
         }
@@ -287,7 +295,8 @@ private final class RegionSelectionWindowController {
                 panel.isOpaque = false
                 panel.backgroundColor = .clear
                 panel.hasShadow = false
-                panel.becomesKeyOnlyIfNeeded = true
+                panel.becomesKeyOnlyIfNeeded = false
+                panel.isMovable = false
                 panel.contentView = NSHostingView(rootView: RegionSelectionView(
                     onSelect: { [weak self] rect in self?.finish(.success(SelectedRegion(displayID: displayID, rect: rect))) },
                     onCancel: { [weak self] in self?.finish(.failure(ScreenCaptureError.selectionCancelled)) }
@@ -384,9 +393,9 @@ private struct RegionSelectionView: View {
                 }
 
                 VStack(spacing: 10) {
-                    Label(countdownValue != nil ? "Get ready — recording starts shortly" : selection == nil ? "Drag to select an area" : "Adjust the area, then start recording", systemImage: "viewfinder")
+                    Label(countdownValue != nil ? "Get ready — recording starts shortly" : selection == nil ? "Drag to select an area" : "Ready to record", systemImage: "viewfinder")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
 
                     HStack(spacing: 10) {
                         Button {
@@ -396,9 +405,11 @@ private struct RegionSelectionView: View {
                             Image(systemName: "xmark")
                                 .font(.system(size: 14, weight: .semibold))
                                 .frame(width: 44, height: 44)
+                                .background(Color.black.opacity(0.07), in: Circle())
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .background(.quaternary, in: Circle())
+                        .keyboardShortcut(.cancelAction)
                         .accessibilityLabel("Cancel area selection")
                         .help("Cancel")
 
@@ -419,13 +430,16 @@ private struct RegionSelectionView: View {
                     }
                 }
                 .padding(12)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(.white.opacity(0.6), lineWidth: 0.5)
+                        .strokeBorder(.black.opacity(0.15), lineWidth: 1)
+                        .allowsHitTesting(false)
                 }
                 .shadow(color: .black.opacity(0.18), radius: 18, x: 0, y: 8)
                 .padding(.bottom, 26)
+                .padding(.trailing, 18)
+                .frame(maxWidth: .infinity, alignment: .trailing)
                 .allowsHitTesting(true)
             }
             .frame(width: geometry.size.width, height: geometry.size.height)

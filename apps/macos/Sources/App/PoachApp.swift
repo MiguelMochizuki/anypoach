@@ -29,6 +29,7 @@ struct PoachApp: App {
                 onStopRecording: { Task { await stopRecording() } },
                 onLoadMedia: loadMedia
             )
+            .background(HomeWindowAnchor())
             .onAppear {
                 hotKeyAvailable = captureHotKey.register {
                     if isRecording { Task { await stopRecording() } }
@@ -232,7 +233,7 @@ private final class RecordingStatusWindowController {
         var cancelled = false
         let countdownPanel = makePanel()
         countdownPanel.setContentSize(NSSize(width: 260, height: 150))
-        countdownPanel.center()
+        pinToRight(countdownPanel)
         NSApp.unhide(nil)
         NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
         defer { countdownPanel.orderOut(nil) }
@@ -305,6 +306,7 @@ private final class RecordingStatusWindowController {
             backing: .buffered,
             defer: false
         )
+        panel.isMovable = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.isOpaque = false
@@ -334,7 +336,7 @@ private final class FloatingHUDWindowController {
             .preferredColorScheme(.light)
         )
         panel.setContentSize(NSSize(width: 660, height: 500))
-        panel.center()
+        pinToRight(panel)
         NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
         panel.makeKeyAndOrderFront(nil)
         self.panel = panel
@@ -364,11 +366,7 @@ private final class FloatingHUDWindowController {
         panel.title = "Poach — Implementation brief"
         panel.contentView = NSHostingView(rootView: view.id(UUID()))
         panel.setContentSize(panel.contentView?.fittingSize ?? NSSize(width: 340, height: 370))
-        if let screen = NSScreen.main {
-            let visible = screen.visibleFrame
-            panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2,
-                                         y: visible.midY - panel.frame.height / 2))
-        }
+        pinToRight(panel)
         panel.alphaValue = 0
         NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
         NSApp.activate(ignoringOtherApps: true)
@@ -394,7 +392,7 @@ private final class FloatingHUDWindowController {
         panel.appearance = NSAppearance(named: .aqua)
         panel.backgroundColor = .windowBackgroundColor
         panel.hasShadow = true
-        panel.isMovableByWindowBackground = true
+        panel.isMovable = false
         panel.becomesKeyOnlyIfNeeded = true
         panel.isReleasedWhenClosed = false
         return panel
@@ -454,4 +452,23 @@ private extension Color {
             opacity: 1
         )
     }
+}
+
+@MainActor
+private func pinToRight(_ window: NSWindow) {
+    guard let visible = (window.screen ?? NSScreen.main)?.visibleFrame else { return }
+    window.isMovable = false
+    window.setFrameOrigin(NSPoint(x: max(visible.minX, visible.maxX - window.frame.width - 16),
+                                  y: max(visible.minY, visible.midY - window.frame.height / 2)))
+}
+
+private struct HomeWindowAnchor: NSViewRepresentable {
+    final class Anchor: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let window { DispatchQueue.main.async { pinToRight(window) } }
+        }
+    }
+    func makeNSView(context: Context) -> Anchor { Anchor() }
+    func updateNSView(_ view: Anchor, context: Context) {}
 }
