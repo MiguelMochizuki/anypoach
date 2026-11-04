@@ -5,6 +5,9 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 app_path="$repo_root/outputs/Poach.app"
 node_path="$(command -v node || true)"
 signing_identity="${POACH_CODESIGN_IDENTITY:--}"
+if [[ -z "${POACH_CODESIGN_IDENTITY:-}" ]] && security find-identity -v -p codesigning | grep -q '"Poach Local Development"'; then
+  signing_identity="Poach Local Development"
+fi
 
 if [[ -z "$node_path" ]]; then
   echo "Node.js 20 or newer is required to build the Poach app." >&2
@@ -24,6 +27,8 @@ cp "$repo_root/apps/macos/Info.plist" "$app_path/Contents/Info.plist"
 if [[ "$signing_identity" == "-" ]]; then
   codesign --force --sign - "$app_path"
   echo "Development build: ad-hoc signing can invalidate Screen Recording approval after rebuilding. Set POACH_CODESIGN_IDENTITY to a stable code-signing identity." >&2
+elif [[ "$signing_identity" == "Poach Local Development" ]]; then
+  codesign --force --options runtime --timestamp=none --sign "$signing_identity" "$app_path"
 else
   codesign --force --options runtime --timestamp --sign "$signing_identity" "$app_path"
 fi
