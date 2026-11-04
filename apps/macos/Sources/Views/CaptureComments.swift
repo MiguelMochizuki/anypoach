@@ -121,7 +121,7 @@ struct CommentTimeline: View {
                 isOpen.toggle()
                 if isOpen { playback.pause() }
             } label: {
-                Image(systemName: isOpen ? "circle.inset.filled" : "circle")
+                Image(systemName: isOpen ? "bubble.left.fill" : "bubble.left")
                     .font(.system(size: 22))
                     .frame(width: 24, height: 24)
             }

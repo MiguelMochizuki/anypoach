@@ -26,7 +26,7 @@ struct FloatingHUDView: View {
     var onClose: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .top, spacing: 0) {
         VStack(alignment: .leading, spacing: 12) {
             header
 
