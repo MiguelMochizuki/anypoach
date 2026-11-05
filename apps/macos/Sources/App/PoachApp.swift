@@ -336,21 +336,60 @@ private final class PoachAppDelegate: NSObject, NSApplicationDelegate {
 private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
 
+    private var returningToCapture = false
+
     func hideHomeWhileEditing() {
-        guard panel != nil else { return }
+        guard panel != nil, !returningToCapture else { return }
         NSApp.windows.filter { $0.title == "Poach" }.forEach { $0.orderOut(nil) }
     }
 
     func revealEditor() -> Bool {
         guard let panel else { return false }
+        if returningToCapture { return true }
         hideHomeWhileEditing()
         if panel.isMiniaturized { panel.deminiaturize(nil) }
         panel.makeKeyAndOrderFront(nil)
         return true
     }
 
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard sender === panel, sender.title == "Poach — Implementation brief",
+              let home = NSApp.windows.first(where: { $0.title == "Poach" }) else { return true }
+        guard !returningToCapture else { return false }
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return true }
+
+        returningToCapture = true
+        pinToEdge(home)
+        home.animationBehavior = .none
+        let destination = home.frame
+        sender.ignoresMouseEvents = true
+        // Freeze the current editor layout so controls shrink together during the return.
+        if let content = sender.contentView,
+           let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+            content.cacheDisplay(in: content.bounds, to: bitmap)
+            let image = NSImage(size: content.bounds.size)
+            image.addRepresentation(bitmap)
+            let preview = NSImageView(frame: content.bounds)
+            preview.image = image
+            preview.imageScaling = .scaleProportionallyUpOrDown
+            sender.contentView = preview
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.26
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            sender.animator().setFrame(destination, display: true)
+        } completionHandler: {
+            Task { @MainActor [weak self, weak sender] in
+                guard let self, let sender, self.panel === sender else { return }
+                sender.close()
+            }
+        }
+        return false
+    }
+
     func windowWillClose(_ notification: Notification) {
         guard let closing = notification.object as? NSWindow, closing === panel else { return }
+        returningToCapture = false
         panel = nil
         NSApp.windows.first { $0.title == "Poach" }?.makeKeyAndOrderFront(nil)
     }
@@ -389,7 +428,7 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
             onCopyContext: { Self.copyContext(result, context: $0) },
             onShareContext: { try Self.shareContext(result, context: $0) },
             onClose: { [weak self] in
-                self?.panel?.close()
+                self?.panel?.performClose(nil)
             }
         )
 
@@ -416,6 +455,7 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
+        panel.animationBehavior = .none
         panel.delegate = self
         panel.hidesOnDeactivate = false
         panel.isFloatingPanel = false
