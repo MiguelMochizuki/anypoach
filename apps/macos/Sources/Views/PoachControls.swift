@@ -1,10 +1,10 @@
 import SwiftUI
 
 enum PoachPalette {
-    static let canvas = Color(red: 0.91, green: 0.89, blue: 0.85)
-    static let panel = Color(red: 0.95, green: 0.93, blue: 0.90)
-    static let inset = Color(red: 0.86, green: 0.83, blue: 0.78)
-    static let cocoa = Color(red: 0.40, green: 0.25, blue: 0.18)
+    static let canvas = Color(white: 0.91)
+    static let panel = Color(white: 0.96)
+    static let inset = Color(white: 0.85)
+    static let ink = Color(white: 0.17)
 }
 
 struct PoachSegments<Value: Hashable>: View {
@@ -27,7 +27,7 @@ struct PoachSegments<Value: Hashable>: View {
                         .background {
                             if selection == value {
                                 RoundedRectangle(cornerRadius: 5)
-                                    .fill(PoachPalette.cocoa)
+                                    .fill(PoachPalette.ink)
                                     .matchedGeometryEffect(id: "selection", in: indicator)
                             }
                         }

@@ -90,7 +90,7 @@ struct FloatingHUDView: View {
                     shareStatus = "Could not share: \(error.localizedDescription)"
                 }
             }
-            .buttonStyle(PoachActionStyle(fill: PoachPalette.cocoa, foreground: .white))
+            .buttonStyle(PoachActionStyle(fill: PoachPalette.ink, foreground: .white))
             .disabled(!connected)
             if !connected {
                 Button { showingAssistantSetup = true } label: {

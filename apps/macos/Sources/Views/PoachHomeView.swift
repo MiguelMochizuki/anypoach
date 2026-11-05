@@ -61,7 +61,7 @@ struct PoachHomeView: View {
                alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
         .background(PoachPalette.canvas)
-        .tint(PoachPalette.cocoa)
+        .tint(PoachPalette.ink)
         .preferredColorScheme(.light)
     }
 
@@ -79,7 +79,7 @@ struct PoachHomeView: View {
             Button(action: isRecording ? onStopRecording : onStartRecording) {
                 Text(primaryTitle).frame(maxWidth: .infinity)
             }
-            .buttonStyle(PoachActionStyle(fill: isRecording ? .red : PoachPalette.cocoa, foreground: .white))
+            .buttonStyle(PoachActionStyle(fill: isRecording ? .red : PoachPalette.ink, foreground: .white))
             .keyboardShortcut(.defaultAction)
             .disabled(isWorking)
 
@@ -187,7 +187,7 @@ struct PoachRecordingStatusView: View {
                 .strokeBorder(.white.opacity(0.7), lineWidth: 0.5)
         }
         .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 6)
-        .tint(PoachPalette.cocoa)
+        .tint(PoachPalette.ink)
         .preferredColorScheme(.light)
     }
 }
