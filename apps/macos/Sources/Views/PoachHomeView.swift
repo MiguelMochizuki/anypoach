@@ -14,6 +14,7 @@ struct PoachHomeView: View {
 
     let onDropMedia: (URL) -> Void
     let loadingFile: URL?
+    @ObservedObject var status: InspectionStatus
     @State private var targeted = false
     @State private var hovering = false
     private var highlightDropZone: Bool { (hovering || targeted) && !isWorking && !isRecording }
@@ -85,14 +86,13 @@ struct PoachHomeView: View {
 
 
             if let loadingFile {
-                HStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "doc").font(.title2).foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(loadingFile.lastPathComponent).font(.headline).lineLimit(1)
-                        Text(workingTitle).font(.caption).foregroundStyle(.secondary)
+                        InspectionStatusLabel(status: status)
                     }
                     Spacer()
-                    ProgressView().controlSize(.small)
                 }
                 .padding(14)
                 .background(.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))

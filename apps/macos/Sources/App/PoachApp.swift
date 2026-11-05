@@ -18,6 +18,7 @@ struct PoachApp: App {
     @State private var workingTitle = "Preparing your capture…"
     @State private var isRecording = false
     @State private var loadingFile: URL?
+    @StateObject private var importStatus = InspectionStatus()
     @State private var elapsedSeconds = 0
 
     var body: some Scene {
@@ -33,7 +34,7 @@ struct PoachApp: App {
                 onStopRecording: { Task { await stopRecording() } },
                 onLoadMedia: loadMedia,
                 onDropMedia: loadMedia(at:),
-                loadingFile: loadingFile
+                loadingFile: loadingFile, status: importStatus
             )
             .background(HomeWindowAnchor())
             .onChange(of: defaultMode) { captureMode = PoachCaptureMode(rawValue: defaultMode) ?? .selectedPortion }
@@ -99,11 +100,12 @@ struct PoachApp: App {
         guard !isWorking, !isRecording, mediaURL.isFileURL else { return }
         workingTitle = "Opening file…"
         isWorking = true
+        importStatus.steps = ["Opening file…"]
         loadingFile = mediaURL
         Task {
             defer { loadingFile = nil; isWorking = false }
             do {
-                let result = try await PoachInspectionRunner.inspect(videoURL: mediaURL) { workingTitle = $0 }
+                let result = try await PoachInspectionRunner.inspect(videoURL: mediaURL) { importStatus.steps.append($0) }
                 hudWindow.show(result)
             } catch {
                 showError(title: "Poach couldn't load this media", error: error)
@@ -176,7 +178,7 @@ struct PoachApp: App {
             hudWindow.showPreparing()
             recordingWindow.close()
             let result = try await PoachInspectionRunner.inspect(videoURL: videoURL, isRecording: true) { stage in
-                hudWindow.preparation.message = stage
+                hudWindow.preparation.steps.append(stage)
             }
             Self.captureLog.notice("Recording analysis completed")
             hudWindow.show(result)
@@ -449,12 +451,11 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
     }
 
     func showPreparing() {
-        preparation.message = "Opening recording…"
+        preparation.steps = ["Opening recording…"]
         let panel = self.panel ?? makePanel()
         panel.title = "Poach — Preparing your brief"
         panel.contentView = NSHostingView(rootView:
             VStack(spacing: 16) {
-                ProgressView()
                 Text("Preparing your capture for review").font(.headline)
                 InspectionStatusLabel(status: preparation)
             }
@@ -620,14 +621,28 @@ private struct HomeWindowAnchor: NSViewRepresentable {
 }
 
 @MainActor
-private final class InspectionStatus: ObservableObject {
-    @Published var message = ""
+final class InspectionStatus: ObservableObject {
+    @Published var steps: [String] = []
 }
 
-private struct InspectionStatusLabel: View {
+struct InspectionStatusLabel: View {
     @ObservedObject var status: InspectionStatus
 
     var body: some View {
-        Text(status.message).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 5) {
+            ForEach(Array(status.steps.enumerated()), id: \.offset) { index, step in
+                let active = index == status.steps.count - 1
+                HStack(spacing: 7) {
+                    if active {
+                        ProgressView().controlSize(.mini).frame(width: 14)
+                    } else {
+                        Image(systemName: "checkmark").frame(width: 14)
+                    }
+                    Text(active ? step : step.replacingOccurrences(of: "…", with: ""))
+                }
+                .foregroundStyle(active ? Color.primary : Color.secondary)
+            }
+        }
+        .font(.caption)
     }
 }
