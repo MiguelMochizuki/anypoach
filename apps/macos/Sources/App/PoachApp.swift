@@ -362,29 +362,52 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
         pinToEdge(home)
         home.animationBehavior = .none
         let destination = home.frame
-        sender.ignoresMouseEvents = true
-        // Freeze the current editor layout so controls shrink together during the return.
-        if let content = sender.contentView,
-           let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
-            content.cacheDisplay(in: content.bounds, to: bitmap)
-            let image = NSImage(size: content.bounds.size)
-            image.addRepresentation(bitmap)
-            let preview = NSImageView(frame: content.bounds)
-            preview.image = image
-            preview.imageScaling = .scaleProportionallyUpOrDown
-            sender.contentView = preview
+        guard let content = sender.contentView, let captureContent = home.contentView,
+              let editorImage = snapshot(content), let captureImage = snapshot(captureContent) else {
+            returningToCapture = false
+            return true
         }
+
+        // Use a single surface while resizing. Both layouts keep their native text size.
+        let surface = NSView(frame: content.bounds)
+        surface.wantsLayer = true
+        surface.layer?.backgroundColor = NSColor.white.cgColor
+        surface.layer?.masksToBounds = true
+        let capture = NSImageView(image: captureImage)
+        let editor = NSImageView(image: editorImage)
+        let alignLeft = UserDefaults.standard.string(forKey: "windowEdge") == "left"
+        for view in [capture, editor] {
+            view.setFrameOrigin(NSPoint(x: alignLeft ? 0 : surface.bounds.maxX - view.frame.width,
+                                        y: surface.bounds.maxY - view.frame.height))
+            view.autoresizingMask = [alignLeft ? .maxXMargin : .minXMargin, .minYMargin]
+            surface.addSubview(view)
+        }
+        sender.contentView = surface
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.26
+            context.duration = 0.30
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             sender.animator().setFrame(destination, display: true)
+            editor.animator().alphaValue = 0
         } completionHandler: {
             Task { @MainActor [weak self, weak sender] in
                 guard let self, let sender, self.panel === sender else { return }
+                // Put the live view underneath its matching last frame before retiring the panel.
+                home.setFrame(destination, display: true)
+                home.order(.below, relativeTo: sender.windowNumber)
+                home.displayIfNeeded()
                 sender.close()
             }
         }
         return false
+    }
+
+    private func snapshot(_ view: NSView) -> NSImage? {
+        view.layoutSubtreeIfNeeded()
+        guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return nil }
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        let image = NSImage(size: view.bounds.size)
+        image.addRepresentation(bitmap)
+        return image
     }
 
     func windowWillClose(_ notification: Notification) {
