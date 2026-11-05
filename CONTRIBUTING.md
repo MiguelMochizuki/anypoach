@@ -73,3 +73,5 @@ When checking video comments, post at two different times, close and reopen the 
 Motion-analysis checks include stationary video. Verify that a quiet recording yields one resting frame, zero motion duration, and a null easing estimate in the assistant brief.
 
 When changing the local dropzone benchmark, check the PNG success path, MP4 refusal, drag cancellation, and Replay in a browser. Use the server command in the README.
+
+Run `pnpm run build:connectors` after MCP changes. To exercise the bundled server rather than the development entry point, set `POACH_TEST_SERVER` to the absolute path to the packaged server.mjs and run `node --test packages/mcp-server/test/handoff.test.mjs`. For Claude, unzip the .mcpb into a temporary directory first. The tests use synthetic media and an isolated Poach cache.

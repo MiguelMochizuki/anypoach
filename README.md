@@ -106,3 +106,13 @@ Open **Settings** to choose a window edge, a default recording mode, and a Codex
 From the project root, run `python3 -m http.server 8741 --bind 127.0.0.1 --directory apps/benchmark` and open [the local benchmark](http://127.0.0.1:8741/). Record the drop zone and both sample files using Poach’s **Screen area** mode. Drag **mood.png** into the target to see progress, or **demo.mp4** to see the size-limit response. **Replay** resets the demo. Both files and the progress indicator are simulated locally.
 
 [Context meter](http://127.0.0.1:8741/context-meter.html) runs on the same benchmark server. Hover a category to isolate its token count. Use **Compact** and **Undo** to compare totals.
+
+### Install the local assistant connectors
+
+On your Mac, install Node.js 20.19 or later and FFmpeg (including ffprobe), then run
+`pnpm install` and `pnpm run build:connectors` from this checkout.
+
+- **Codex:** run `codex plugin marketplace add "$PWD/outputs/connectors/marketplace"`, then `codex plugin add poach@poach-local`. Keep the generated directory in place; rebuild and reinstall if you move it. If you previously registered the standalone Poach server, disable that entry before testing the plugin on its own.
+- **Claude Desktop:** open Settings → Extensions → Advanced settings → Install Extension, choose `outputs/connectors/Poach.mcpb`, and enable Poach. This is a locally built, unsigned extension.
+
+Open a new chat, share a capture from Poach, and paste its chat handoff. Ask the assistant to read the shared brief and describe a specific timestamp. The packages contain server code, not your recordings. When you request a handoff, the connected assistant receives the requested evidence.
