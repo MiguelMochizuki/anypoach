@@ -36,7 +36,7 @@ struct PoachHomeView: View {
             HStack {
                 header
                 Spacer()
-                PoachSegments(label: "Poach", selection: $settings, choices: [(false, "Capture"), (true, "Settings")])
+                PoachSegments(label: "Poach", selection: $settings, choices: [(false, "Capture"), (true, "Settings")], underlined: true)
                     .frame(width: 144)
 
             }
@@ -122,8 +122,12 @@ struct PoachHomeView: View {
                 .padding(12)
                 .frame(maxWidth: .infinity)
                 .frame(height: 99)
-                .background(highlightDropZone ? PoachPalette.inset : PoachPalette.panel,
-                            in: RoundedRectangle(cornerRadius: 14))
+                .background(PoachPalette.canvas)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(highlightDropZone ? PoachPalette.ink : PoachPalette.outline)
+                        .allowsHitTesting(false)
+                }
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: highlightDropZone)
                 .contentShape(Rectangle())
             }

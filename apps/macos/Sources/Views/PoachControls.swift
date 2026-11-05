@@ -1,10 +1,11 @@
 import SwiftUI
 
 enum PoachPalette {
-    static let canvas = Color(white: 0.91)
-    static let panel = Color(white: 0.96)
-    static let inset = Color(white: 0.85)
-    static let ink = Color(white: 0.17)
+    static let canvas = Color(red: 247/255, green: 247/255, blue: 245/255)
+    static let panel = Color(red: 0.98, green: 0.98, blue: 0.97)
+    static let inset = Color(red: 0.93, green: 0.93, blue: 0.92)
+    static let ink = Color(red: 41/255, green: 41/255, blue: 39/255)
+    static let outline = Color(red: 216/255, green: 216/255, blue: 211/255)
 }
 
 struct PoachSegments<Value: Hashable>: View {
@@ -13,6 +14,7 @@ struct PoachSegments<Value: Hashable>: View {
     let label: String
     @Binding var selection: Value
     let choices: [(Value, String)]
+    var underlined = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -22,12 +24,16 @@ struct PoachSegments<Value: Hashable>: View {
                 } label: {
                     Text(title)
                         .font(.system(size: 12, weight: selection == value ? .semibold : .regular))
-                        .foregroundStyle(selection == value ? Color.white : .primary)
+                        .foregroundStyle(PoachPalette.ink)
                         .frame(maxWidth: .infinity, minHeight: 22)
-                        .background {
-                            if selection == value {
+                        .background(alignment: .bottom) {
+                            if selection == value && underlined {
+                                Capsule().fill(PoachPalette.ink)
+                                    .frame(width: 22, height: 2)
+                                    .matchedGeometryEffect(id: "selection", in: indicator)
+                            } else if selection == value {
                                 RoundedRectangle(cornerRadius: 5)
-                                    .fill(PoachPalette.ink)
+                                    .fill(Color.white)
                                     .matchedGeometryEffect(id: "selection", in: indicator)
                             }
                         }
@@ -39,7 +45,7 @@ struct PoachSegments<Value: Hashable>: View {
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: selection)
         .padding(1)
-        .background(PoachPalette.inset, in: RoundedRectangle(cornerRadius: 6))
+        .background(underlined ? Color.clear : PoachPalette.inset, in: RoundedRectangle(cornerRadius: 6))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
