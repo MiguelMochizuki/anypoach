@@ -16,7 +16,11 @@ struct PoachPouchShape: Shape {
         path.addCurve(to: CGPoint(x: 14.7, y: 12.9), control1: CGPoint(x: 12.1, y: 16.4), control2: CGPoint(x: 14.7, y: 15.6))
         path.addCurve(to: CGPoint(x: 11.4, y: 7.55), control1: CGPoint(x: 14.7, y: 10.8), control2: CGPoint(x: 13.1, y: 8.7))
         path.closeSubpath()
-        return path.applying(CGAffineTransform(scaleX: rect.width / 18, y: rect.height / 18))
+        let tilt = CGAffineTransform(translationX: 9, y: 9)
+            .rotated(by: .pi / 15)
+            .translatedBy(x: -9, y: -9)
+        return path.applying(tilt)
+            .applying(CGAffineTransform(scaleX: rect.width / 18, y: rect.height / 18))
             .applying(CGAffineTransform(translationX: rect.minX, y: rect.minY))
     }
 }

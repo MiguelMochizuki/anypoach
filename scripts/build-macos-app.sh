@@ -31,6 +31,12 @@ cp "$repo_root/apps/macos/.build/release/Poach" "$app_path/Contents/MacOS/Poach"
 cp "$repo_root/apps/macos/Info.plist" "$app_path/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :POACHNodePath string $node_path" "$app_path/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :POACHMCPServerPath string $repo_root/packages/mcp-server/dist/index.js" "$app_path/Contents/Info.plist"
+if xcrun --find actool >/dev/null 2>&1; then
+  xcrun actool "$repo_root/apps/macos/Assets/Poach.icon" --compile "$app_path/Contents/Resources" \
+    --platform macosx --minimum-deployment-target 14.0 --app-icon Poach \
+    --output-partial-info-plist "$stage_dir/icon.plist"
+  /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string Poach" "$app_path/Contents/Info.plist"
+fi
 if [[ "$signing_identity" == "-" ]]; then
   codesign --force --sign - "$app_path"
   echo "Development build: ad-hoc signing can invalidate Screen Recording approval after rebuilding. Set POACH_CODESIGN_IDENTITY to a stable code-signing identity." >&2

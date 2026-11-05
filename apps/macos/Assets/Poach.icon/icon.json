@@ -1,0 +1,5 @@
+{
+  "fill": {"solid": "srgb:0.95686,0.92549,0.87843,1.00000"},
+  "groups": [{"layers": [{"image-name": "Pouch.png", "name": "Pouch", "glass": false, "position": {"scale": 0.68, "translation-in-points": [0, 0]}}], "name": "Pouch"}],
+  "supported-platforms": {"squares": "shared"}
+}
