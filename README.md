@@ -1,34 +1,38 @@
-<img src="apps/macos/Assets/PoachIcon.png" width="80" alt="Poach pouch icon">
+<p align="center"><img src="apps/macos/Assets/PoachIcon.png" width="88" alt="Poach pouch icon"></p>
+<h1 align="center">Poach</h1>
+<p align="center">Record an interaction on your Mac. Show Codex or Claude exactly what to build.</p>
+<p align="center"><strong><a href="https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach-arm64.zip">Download for Apple silicon</a></strong> · <a href="docs/media/poach-demo.mp4">Watch the demo</a></p>
 
-# Poach
+<p align="center"><a href="docs/media/poach-demo.mp4"><img src="docs/media/poach-demo.gif" width="420" alt="Poach records a context meter responding to the pointer, then opens the clip for comments and handoff."></a></p>
 
-Record an interface interaction, leave a note at the moment that matters, and ask Codex or Claude to build what you saw. Your assistant can inspect individual video frames through Poach’s MCP connector.
+## Get started
 
-[![Demo showing Poach’s recording controls, the captured context meter responding to the pointer, and the editor with the chat handoff](docs/media/poach-demo.gif)](docs/media/poach-demo.mp4)
+1. **Install Poach.** Unzip the download and move **Poach.app** to Applications. Recording requires macOS 15 or later. On macOS 14, you can import images and videos.
+2. **Connect your assistant.** Install its MCP connector below, then open a new chat.
 
-[Watch the demo video](docs/media/poach-demo.mp4) · [Download Poach Beta 2](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach-arm64.zip)
+   | Assistant | Setup |
+   | --- | --- |
+   | [Codex installer](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach-Codex-upgrade.zip) | Unzip and double-click **Install Codex.command**. |
+   | [Claude Desktop extension](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach.mcpb) | Open **Settings → Extensions → Advanced settings → Install Extension**. Select the downloaded file and enable Poach. |
 
-## Install on your Mac
+3. **Share a moment.** Record up to 30 seconds or drop a file into Poach. Pause the clip, add a timestamped comment, then choose **Copy handoff for chat** and paste it into your conversation. Try *“Recreate the hover effect I marked at two seconds.”*
 
-Use an Apple silicon Mac with macOS 15 or later for screen recording. On macOS 14, you can import videos and images. The beta includes Node.js and FFmpeg. Sign in to GitHub with an account that has access to the private release.
+<details>
+<summary>Download and first-launch help</summary>
 
-Unzip **Poach-arm64.zip**, move **Poach.app** to Applications, and open it. This beta uses a local signing certificate. If macOS blocks the first launch, review it under **System Settings → Privacy & Security → Open Anyway**. When you first record, allow Poach in **Screen & System Audio Recording** and reopen it if prompted.
+Sign in to a GitHub account with access to the private beta. The app includes its runtime and video tools.
 
-## Connect your assistant
+This beta is locally signed. If macOS blocks it, review **System Settings → Privacy & Security → Open Anyway**. To record, grant Poach access under **Screen & System Audio Recording** and reopen it if prompted.
 
-| Assistant | Install the MCP connector |
-| --- | --- |
-| Codex | Download the [Codex installer](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach-Codex-upgrade.zip), unzip it, and double-click **Install Codex.command**. It also updates an older local Poach installation. Open a new Codex chat. |
-| Claude Desktop | Download the [Claude extension](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach.mcpb). In **Settings → Extensions → Advanced settings → Install Extension**, select the file and enable Poach. Open a new Claude chat. |
+Keep Poach in Applications so the connector can find it. If the handoff button is disabled, open a new chat with the connector enabled. Manual connector settings are available in Poach’s **Settings** tab.
 
-Keep Poach in Applications so both connectors can find it. Poach’s **Settings** tab also offers a configuration you can copy for manual setup.
+</details>
 
-## Try your first handoff
+<details>
+<summary>What does my assistant receive?</summary>
 
-1. In Poach, select a screen area, full screen, or window and record up to 30 seconds. You can also drop an image or a video onto the Capture tab.
-2. In the editor, pause on an interaction and click the comment icon. Add a timestamped note, adjust the colors, or describe what you want your assistant to build.
-3. Choose **Copy handoff for chat** and paste it into your connected conversation. Try asking, “What changes when the pointer hovers over Files at two seconds?” If the button is disabled, open a chat with the connector enabled.
+Poach processes media on your Mac. When the assistant reads a handoff, it receives the requested frames and notes. A new handoff replaces the previous one. Each expires after 24 hours.
 
-Poach processes media on your Mac. When your assistant reads a handoff, it receives the requested frames and notes. Sharing again replaces the previous brief. Each brief expires after 24 hours.
+</details>
 
 [Contributing and local development](CONTRIBUTING.md) · [License](LICENSE)
