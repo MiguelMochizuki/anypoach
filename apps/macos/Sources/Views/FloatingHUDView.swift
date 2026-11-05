@@ -20,13 +20,11 @@ struct FloatingHUDView: View {
     @State private var playback = CommentPlayback()
     let status: InspectionStatus
     let palette: [HUDPaletteToken]
-    var onCopyContext: (String) -> Void
     var onShareContext: (String) throws -> String
     @State private var connected = false
     @State private var showingAssistantSetup = false
     @State private var shareStatus = ""
     @State private var context = ""
-    @State private var copied = false
     @State private var colorOverrides: [String: Color] = [:]
     var onClose: () -> Void
 
@@ -53,7 +51,7 @@ struct FloatingHUDView: View {
                         VStack(alignment: .leading, spacing: 5) {
                             ColorPicker("Replace \(token.hex)", selection: Binding(
                                 get: { colorOverrides[token.hex] ?? token.color },
-                                set: { colorOverrides[token.hex] = $0; copied = false; shareStatus = "Changes have not been shared yet." }
+                                set: { colorOverrides[token.hex] = $0; shareStatus = "Changes have not been shared yet." }
                             ), supportsOpacity: false)
                             .labelsHidden()
                             Text(hex(colorOverrides[token.hex] ?? token.color))
@@ -76,7 +74,7 @@ struct FloatingHUDView: View {
                     .padding(9)
                     .background(PoachPalette.panel, in: RoundedRectangle(cornerRadius: 6))
                     .accessibilityLabel("Instructions")
-                    .onChange(of: context) { copied = false; shareStatus = "Changes have not been shared yet." }
+                    .onChange(of: context) { shareStatus = "Changes have not been shared yet." }
             }
 
             Button("Copy handoff for chat") {
@@ -87,7 +85,7 @@ struct FloatingHUDView: View {
                     let message = "Use Poach MCP to call poach_read_brief with briefId \(id). Verify the returned briefId matches before using its images and notes. Recreate the recorded interaction in this project. For video details, call poach_read_moment with the same briefId and timeMs."
                     NSPasteboard.general.clearContents()
                     let copied = NSPasteboard.general.setString(message, forType: .string)
-                    shareStatus = copied ? "Copied. Paste into the Codex or Claude chat where you want to work." : "Clipboard unavailable. Click Copy handoff to try again."
+                    shareStatus = copied ? "Handoff copied." : "Clipboard unavailable. Click Copy handoff to try again."
 
                 } catch {
                     shareStatus = "Could not share: \(error.localizedDescription)"
@@ -108,22 +106,10 @@ struct FloatingHUDView: View {
                 .foregroundStyle(Color(red: 0.46, green: 0.38, blue: 0.10))
                 }.buttonStyle(.plain).accessibilityHint("Opens Settings")
             }
-            if connected && shareStatus.isEmpty {
-                Text("Paste the handoff into your chosen Codex or Claude chat.").font(.caption).foregroundStyle(.secondary)
-            }
             if !shareStatus.isEmpty {
                 Text(shareStatus).font(.caption).foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 9) {
-                Button(action: { onCopyContext(implementationContext); copied = true }) {
-                    Text(copied ? "Prompt copied" : "Copy Prompt")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PoachActionStyle())
-
-
-            }
         }
         .padding(16)
         .frame(width: editorWidth)
@@ -183,7 +169,7 @@ struct FloatingHUDView: View {
                 playback.attach(newPlayer)
             }
         }
-        .onChange(of: comments) { copied = false; shareStatus = "Changes have not been shared yet." }
+        .onChange(of: comments) { shareStatus = "Changes have not been shared yet." }
         .onDisappear { playback.detach(); player = nil }
     }
 

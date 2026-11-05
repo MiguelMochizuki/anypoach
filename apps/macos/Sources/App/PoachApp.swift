@@ -485,7 +485,6 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
             isVideo: result.mediaType != "image",
             status: status,
             palette: palette,
-            onCopyContext: { Self.copyContext(result, context: $0) },
             onShareContext: { try Self.shareContext(result, context: $0) },
             onClose: { [weak self] in
                 self?.panel?.performClose(nil)
@@ -531,25 +530,6 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
         panel.becomesKeyOnlyIfNeeded = true
         panel.isReleasedWhenClosed = false
         return panel
-    }
-
-    private static func copyContext(_ result: PoachInspection, context: String) {
-        guard let data = try? JSONEncoder().encode(result), let text = String(data: data, encoding: .utf8) else { return }
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        let prompt = """
-        Recreate the UI component described by this Poach capture in the current project.
-        Inspect the referenced keyframes before implementing. Preserve the observed layout,
-        colors, pointer-triggered behavior, and motion. Timing and easing are estimates;
-        distinguish visible evidence from assumptions and ask about ambiguous behavior.
-
-        Additional context from the user:
-        \(context.isEmpty ? "No additional context." : context)
-
-        Capture evidence (local file paths require access to this Mac):
-        \(text)
-        """
-        pasteboard.setString(prompt, forType: .string)
     }
 
     private static func shareContext(_ result: PoachInspection, context: String) throws -> String {
