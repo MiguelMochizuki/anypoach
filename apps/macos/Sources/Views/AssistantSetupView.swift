@@ -99,6 +99,16 @@ struct MCPConnectorView: View {
 }
 
 struct PoachSettingsView: View {
+    var storageVisible = true
+    var captureBusy = false
+    @State private var usage: CaptureStorage.Usage?
+    @State private var storageError: String?
+
+    private func refreshStorage() {
+        do { usage = try CaptureStorage.scan(); storageError = nil }
+        catch { usage = nil; storageError = error.localizedDescription }
+    }
+
     @AppStorage("setupAssistant") private var assistant = "Codex"
     @AppStorage("windowEdge") private var edge = "right"
     @AppStorage("defaultCaptureMode") private var defaultMode = PoachCaptureMode.selectedPortion.rawValue
@@ -123,7 +133,25 @@ struct PoachSettingsView: View {
             }
             .frame(height: 24)
             MCPConnectorView()
+            Divider()
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("Storage").font(.headline)
+                    if let usage {
+                        Text("\(usage.total.formatted(.byteCount(style: .file))) used · \(usage.unused.formatted(.byteCount(style: .file))) unused")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Button("Clear unused captures") {
+                    do { try CaptureStorage.clear(); refreshStorage() }
+                    catch { refreshStorage(); storageError = error.localizedDescription }
+                }
+                .disabled(captureBusy || usage?.removable.isEmpty != false)
+            }
+            if let storageError { Text(storageError).font(.caption).foregroundStyle(.secondary) }
         }
+        .task(id: storageVisible && !captureBusy) { if storageVisible && !captureBusy { refreshStorage() } }
         .onChange(of: edge) {
             for window in NSApp.windows where window.title == "Poach" || window.title == "Poach — Implementation brief" {
                 pinToEdge(window)

@@ -181,7 +181,7 @@ struct PoachApp: App {
                 hudWindow.preparation.steps.append(stage)
             }
             Self.captureLog.notice("Recording analysis completed")
-            hudWindow.show(result, status: hudWindow.preparation)
+            hudWindow.show(result, status: hudWindow.preparation, original: videoURL)
             Self.captureLog.notice("Review editor presented")
         } catch {
             NSApp.unhide(nil)
@@ -446,6 +446,7 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         guard let closing = notification.object as? NSWindow, closing === panel else { return }
         returningToCapture = false
+        CaptureStorage.openPaths = []
         panel = nil
         NSApp.windows.first { $0.title == "Poach" }?.makeKeyAndOrderFront(nil)
     }
@@ -475,7 +476,8 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
         panel?.close()
     }
 
-    func show(_ result: PoachInspection, status: InspectionStatus) {
+    func show(_ result: PoachInspection, status: InspectionStatus, original: URL? = nil) {
+        CaptureStorage.openPaths = [result.sourcePath] + result.keyframes.map(\.imagePath) + [original?.path].compactMap { $0 }
         status.finish()
         let palette = result.palette.map { HUDPaletteToken(hex: $0, color: Color(hex: $0)) }
         let view = FloatingHUDView(

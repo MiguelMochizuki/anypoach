@@ -48,7 +48,7 @@ struct PoachHomeView: View {
                     .allowsHitTesting(!settings)
                     .accessibilityHidden(settings)
                     .disabled(settings)
-                PoachSettingsView()
+                PoachSettingsView(storageVisible: settings, captureBusy: isWorking || isRecording)
                     .opacity(settings ? 1 : 0)
                     .allowsHitTesting(settings)
                     .accessibilityHidden(!settings)
