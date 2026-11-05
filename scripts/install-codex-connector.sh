@@ -15,7 +15,8 @@ command -v codex >/dev/null || { echo "Open or install Codex first, then run thi
 mkdir -p "$market"
 ditto "$source_dir/marketplace" "$market"
 # plutil quotes the destination path correctly, including spaces and Unicode.
-plutil -replace mcpServers.poach.args.0 -string "$plugin/launch-connector.sh" "$plugin/.mcp.json"
+plutil -replace mcpServers.poach.args -json '[]' "$plugin/.mcp.json"
+plutil -insert mcpServers.poach.args.0 -string "$plugin/launch-connector.sh" "$plugin/.mcp.json"
 plutil -convert json "$plugin/.mcp.json"
 # Codex rejects an existing marketplace name when the registered source changes.
 # Only migrate Poach's local registration. Leave remote and unrelated sources alone.
