@@ -1,0 +1,61 @@
+name: Test downloaded beta on macOS
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Private release tag to test
+        required: true
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: macos-15
+    steps:
+      - name: Install release assets without a source checkout
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" -p Poach-arm64.zip -p Poach.mcpb -p Poach-Codex.zip
+          mkdir -p "$HOME/Applications" claude
+          ditto -x -k Poach-arm64.zip "$HOME/Applications"
+          ditto -x -k Poach-Codex.zip .
+          unzip -q Poach.mcpb -d claude
+      - name: Open the app and exercise both connector launchers
+        run: |
+          export PATH=/usr/bin:/bin
+          app="$HOME/Applications/Poach.app"
+          codesign --verify --deep --strict "$app"
+          open "$app"
+          sleep 2
+          pgrep -x Poach
+          resources="$app/Contents/Resources"
+          export PATH="$resources/runtime/bin:$PATH"
+          ffmpeg -v error -loop 1 -i "$resources/Pouch.png" -t 1 -vf scale=96:96 -c:v mpeg4 -pix_fmt yuv420p "$RUNNER_TEMP/sample.mp4"
+          export PATH=/usr/bin:/bin
+          for launcher in "Poach Codex/marketplace/plugins/poach/launch-connector.sh" claude/launch-connector.sh; do
+            "$resources/runtime/bin/node" --input-type=module - "$launcher" "$RUNNER_TEMP/sample.mp4" <<'JS'
+          import {spawn} from 'node:child_process';
+          import {createInterface} from 'node:readline';
+          import assert from 'node:assert/strict';
+          const server = spawn('/bin/bash', [process.argv[2]], {stdio:['pipe','pipe','inherit']});
+          const lines = createInterface({input: server.stdout})[Symbol.asyncIterator]();
+          function send(message) { server.stdin.write(JSON.stringify({jsonrpc:'2.0', ...message})+'\n'); }
+          async function request(id, method, params) {
+            send({id,method,params});
+            for (;;) {
+              const line = await lines.next();
+              assert.ok(!line.done, 'Connector closed unexpectedly');
+              const reply = JSON.parse(line.value);
+              if (reply.id === id) { assert.ok(!reply.error); return reply.result; }
+            }
+          }
+          try {
+            await request(1,'initialize',{protocolVersion:'2024-11-05',capabilities:{},clientInfo:{name:'beta-test',version:'1'}});
+            send({method:'notifications/initialized'});
+            const result = await request(2,'tools/call',{name:'poach_inspect',arguments:{videoPath:process.argv[3]}});
+            assert.ok(!result.isError, JSON.stringify(result.content));
+            assert.ok(result.structuredContent.keyframes.length);
+          } finally { server.kill(); }
+          JS
+          done
