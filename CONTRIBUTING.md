@@ -60,13 +60,13 @@ When validating automatic stop, let a native capture reach the full 30-second li
 
 Run `pnpm --filter @poach/core test` for the recording boundary regression. It requires FFmpeg/ffprobe, generates a synthetic 31.5-second clip, verifies normalization to 30 seconds and final-moment access, and checks that the import limit remains strict. Fixtures and extracted images are temporary and removed after the test.
 
-Run `pnpm --filter @poach/mcp-server test` to verify assistant handoff through a real MCP stdio client. This test uses an isolated temporary HOME, synthetic video and brief; it checks notes, color instructions, images, timestamp bounds, and expiry without touching your active shared brief.
+Run `pnpm --filter @poach/mcp-server test` to verify assistant handoff through a real MCP stdio client. This test uses an isolated temporary HOME, synthetic video and brief; it checks notes, color instructions, images, timestamp bounds, mismatched handoff IDs, and expiry without touching your active shared brief.
 
 For capture diagnostics, use `log show --last 5m --style compact --predicate 'subsystem == "dev.poach.app" AND category == "CaptureLifecycle"'`. These macOS logs contain lifecycle milestones and numeric failure codes, not capture contents, notes, or source paths. A successful run reports selection requested, recording started, stop requested, file finalized, analysis completed, and review editor presented.
 
 Shortcut validation: with Poach running, physically press Command–Shift–P from another app, verify selection opens, and cancel with Escape. Repeat during a recording to verify stop. Registration status is logged under subsystem `dev.poach.app`, category `HotKey`; status 0 confirms registration, not delivery. App-targeted synthetic keypresses are insufficient evidence of global shortcut delivery.
 
-When checking assistant setup, verify the connector is available from the Settings tab and the review sheet. Verify Continue disables on disconnect and enables after initialization. Check both client tabs, copied shell quoting for paths with spaces, preserved existing Claude server entries, and the missing-server message. The native packaging script builds both TypeScript packages before embedding the local server path; the server and its dependencies remain in the checkout for development.
+When checking assistant setup, verify the connector is available from the Settings tab and the review sheet. Verify **Copy handoff for chat** disables on disconnect and enables after initialization. Check both client tabs, copied shell quoting for paths with spaces, preserved existing Claude server entries, and the missing-server message. The native packaging script builds both TypeScript packages before embedding the local server path; the server and its dependencies remain in the checkout for development.
 
 When checking video comments, post at two different times, close and reopen the sidebar, and select the earlier comment. Verify the player seeks to that moment and both timestamps appear in the copied prompt or shared brief.
 
