@@ -17,19 +17,21 @@ struct AssistantSetupView: View {
 }
 
 struct MCPConnectorView: View {
-    @AppStorage("setupAssistant") private var assistant = "Codex"
-    @State private var copied = false
-    @State private var showingConfiguration = false
+    private enum Assistant: String, CaseIterable {
+        case codex = "Codex"
+        case claude = "Claude"
+    }
+    @State private var copied: Assistant?
 
     private var serverPath: String? {
         Bundle.main.url(forResource: "server", withExtension: "mjs")?.path
     }
 
-    private var configuration: String? {
+    private func configuration(for assistant: Assistant) -> String? {
         guard let serverPath, let executable = PoachInspectionRunner.findNode() else { return nil }
         let node = executable.path
         let runtimePath = executable.deletingLastPathComponent().path + ":/usr/bin:/bin"
-        if assistant == "Codex" {
+        if assistant == .codex {
             return [
                 "codex mcp add poach",
                 "  --env PATH=\(quote(runtimePath))",
@@ -43,54 +45,23 @@ struct MCPConnectorView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Text("MCP")
-                    .font(.headline)
-                    .accessibilityLabel("MCP connection")
-                Spacer()
-                PoachSegments(label: "Assistant", selection: $assistant,
-                              choices: [("Codex", "Codex"), ("Claude Desktop", "Claude")])
-                    .frame(width: 180)
-                .onChange(of: assistant) { copied = false }
-            }
-            if let configuration {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Button("View setup…") { showingConfiguration = true }
-                            .popover(isPresented: $showingConfiguration) {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Text(assistant == "Codex" ? "Run in Terminal, then reopen Codex." : "Merge this entry into your Claude Desktop configuration, then restart Claude.")
-                                    Text(verbatim: configuration)
-                                        .font(.system(.caption, design: .monospaced))
-                                        .textSelection(.enabled)
-                                }
-                                .padding(16)
-                                .frame(width: 380, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                            }
-                        Spacer()
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            copied = NSPasteboard.general.setString(configuration, forType: .string)
-                        } label: {
-                            Text(copied ? "Copied" : "Copy")
-                        }
-                        .buttonStyle(PoachActionStyle())
-                        .accessibilityLabel(copied ? "Copied" : assistant == "Codex" ? "Copy Codex command" : "Copy Claude configuration")
-                    }
-                    .padding(.horizontal, 12).padding(.vertical, 7)
+        HStack {
+            Text("MCP").font(.headline)
+            Spacer()
+            ForEach(Assistant.allCases, id: \.self) { assistant in
+                Button(copied == assistant ? "Copied ✓" : "Copy \(assistant.rawValue) MCP") {
+                    guard let text = configuration(for: assistant) else { return }
+                    NSPasteboard.general.clearContents()
+                    copied = NSPasteboard.general.setString(text, forType: .string) ? assistant : nil
                 }
-                .background(PoachPalette.canvas, in: RoundedRectangle(cornerRadius: 9))
-
-            } else {
-                Text("Reinstall Poach to restore the bundled connector.")
-                    .foregroundStyle(.secondary)
+                .disabled(configuration(for: assistant) == nil)
+                .accessibilityLabel("Copy \(assistant.rawValue) MCP")
             }
         }
-        .padding(12)
-        .background(PoachPalette.panel, in: RoundedRectangle(cornerRadius: 14))
-
+        .task(id: copied) {
+            guard copied != nil else { return }
+            do { try await Task.sleep(for: .seconds(2)); copied = nil } catch {}
+        }
     }
 
     private func quote(_ value: String) -> String {
