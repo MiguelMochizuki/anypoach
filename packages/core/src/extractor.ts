@@ -64,7 +64,7 @@ export async function inspectRecording(videoFile: string, options: ExtractOption
   await run("ffmpeg", [
     "-v", "error", "-i", sourcePath, "-map", "0:v:0", "-an",
     "-t", String(MAX_DURATION_SECONDS), "-vf", "fps=30",
-    "-c:v", "libx264", "-preset", "fast", "-crf", "18", clippedPath,
+    "-c:v", "mpeg4", "-q:v", "2", clippedPath,
   ]);
   return inspectVideo(clippedPath, options);
 }
@@ -94,7 +94,7 @@ function seekForMoment(times: readonly number[], seconds: number): number {
 
 async function readFrame(videoPath: string, seek: number, width: number): Promise<FrameSample> {
   const frame = await run("ffmpeg", [
-    "-v", "error", "-ss", seek.toFixed(6), "-i", videoPath, "-frames:v", "1",
+    "-v", "error", ...(seek > 0 ? ["-ss", seek.toFixed(6)] : []), "-i", videoPath, "-frames:v", "1",
     "-vf", `scale=${width}:-2:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1",
   ]);
   const height = frame.length / (width * 3);
@@ -104,7 +104,7 @@ async function readFrame(videoPath: string, seek: number, width: number): Promis
 
 async function referencePNG(sourcePath: string, timeMs: number, seek = timeMs / 1000): Promise<Buffer> {
   const png = await run("ffmpeg", [
-    "-v", "error", "-ss", seek.toFixed(6), "-i", sourcePath,
+    "-v", "error", ...(seek > 0 ? ["-ss", seek.toFixed(6)] : []), "-i", sourcePath,
     "-frames:v", "1", "-vf", "scale=w='min(1280,iw)':h='min(1280,ih)':force_original_aspect_ratio=decrease",
     "-f", "image2pipe", "-vcodec", "png", "pipe:1",
   ]);
