@@ -144,6 +144,7 @@ struct CommentTimeline: View {
 struct CommentSidebar: View {
     let playback: CommentPlayback
     @Binding var comments: [CaptureComment]
+    @State private var hovered: UUID?
     @State private var draft = ""
     @State private var anchor: Double?
     @FocusState private var composing: Bool
@@ -155,18 +156,38 @@ struct CommentSidebar: View {
                 VStack(alignment: .leading, spacing: 14) {
                     if comments.isEmpty { Text("Comments you add appear here.").foregroundStyle(.secondary) }
                     ForEach(comments) { comment in
-                        Button { playback.visit(comment) } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(timestamp(comment.time)).font(.caption.monospacedDigit()).foregroundStyle(.tint)
-                                Text(comment.text).frame(maxWidth: .infinity, alignment: .leading)
-                            }.contentShape(Rectangle())
-                        }.buttonStyle(.plain)
+                        HStack(alignment: .top, spacing: 4) {
+                            Button { playback.visit(comment) } label: {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(timestamp(comment.time)).font(.caption.monospacedDigit()).foregroundStyle(.tint)
+                                    Text(comment.text).frame(maxWidth: .infinity, alignment: .leading)
+                                }.contentShape(Rectangle())
+                            }
+                            if hovered == comment.id {
+                                Button { remove(comment) } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.red)
+                                        .frame(width: 22, height: 22)
+                                }
+                                .accessibilityLabel("Delete comment")
+                            } else {
+                                Color.clear.frame(width: 22, height: 22)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .contentShape(Rectangle())
+                        .onHover { inside in
+                            if inside { hovered = comment.id }
+                            else if hovered == comment.id { hovered = nil }
+                        }
+                        .accessibilityAction(named: "Delete comment") { remove(comment) }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             Divider()
             Text("Comment at \(timestamp(anchor ?? playback.time))").font(.caption.monospacedDigit())
-            TextField("Write a comment…", text: $draft, axis: .vertical)
-                .textFieldStyle(.roundedBorder).lineLimit(nil).focused($composing)
+            TextField("Write a comment…", text: $draft)
+                .textFieldStyle(.roundedBorder).focused($composing)
+                .onSubmit(post)
                 .onChange(of: composing) {
                     if composing && draft.isEmpty { playback.pause(); anchor = playback.time }
                 }
@@ -174,17 +195,28 @@ struct CommentSidebar: View {
                     if draft.isEmpty { anchor = nil }
                     else if anchor == nil { playback.pause(); anchor = playback.time }
                 }
-            Button("Post comment") {
-                let comment = CaptureComment(time: anchor ?? playback.time, text: draft.trimmingCharacters(in: .whitespacesAndNewlines))
-                comments.insert(comment, at: comments.firstIndex { $0.time > comment.time } ?? comments.endIndex)
-                playback.visit(comment)
-                draft = ""
-                anchor = nil
-            }
+            Button("Post comment", action: post)
             .buttonStyle(.borderedProminent)
             .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(16)
         .background(Color(nsColor: .controlBackgroundColor))
     }
+
+    private func post() {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        let comment = CaptureComment(time: anchor ?? playback.time, text: text)
+        comments.insert(comment, at: comments.firstIndex { $0.time > comment.time } ?? comments.endIndex)
+        playback.visit(comment)
+        draft = ""
+        anchor = nil
+    }
+
+    private func remove(_ comment: CaptureComment) {
+        comments.removeAll { $0.id == comment.id }
+        if playback.highlighted?.id == comment.id { playback.highlighted = nil }
+        hovered = nil
+    }
+
 }
