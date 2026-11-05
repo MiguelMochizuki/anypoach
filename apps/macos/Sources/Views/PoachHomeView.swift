@@ -96,7 +96,7 @@ struct PoachHomeView: View {
                 }
                 .padding(14)
                 .background(.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
-                .accessibilityElement(children: .combine)
+                .accessibilityElement(children: .contain)
             } else {
             Button(action: onLoadMedia) {
                 VStack(spacing: 6) {

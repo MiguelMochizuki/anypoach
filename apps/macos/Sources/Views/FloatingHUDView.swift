@@ -18,6 +18,7 @@ struct FloatingHUDView: View {
     private let sidebarFullWidth: CGFloat = 230
     private var editorWidth: CGFloat { min(550, (NSScreen.main?.visibleFrame.width ?? 800) - 48) }
     @State private var playback = CommentPlayback()
+    let status: InspectionStatus
     let palette: [HUDPaletteToken]
     var onCopyContext: (String) -> Void
     var onShareContext: (String) throws -> String
@@ -42,6 +43,8 @@ struct FloatingHUDView: View {
             } else if let image = NSImage(contentsOf: sourceURL) {
                 Image(nsImage: image).resizable().aspectRatio(contentMode: .fit).frame(maxHeight: 260)
             }
+
+            InspectionStatusLabel(status: status)
 
             VStack(alignment: .leading, spacing: 9) {
                 Text("Colors").font(.headline)

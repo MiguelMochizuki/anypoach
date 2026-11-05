@@ -100,13 +100,13 @@ struct PoachApp: App {
         guard !isWorking, !isRecording, mediaURL.isFileURL else { return }
         workingTitle = "Opening file…"
         isWorking = true
-        importStatus.steps = ["Opening file…"]
+        importStatus.begin("Opening file…")
         loadingFile = mediaURL
         Task {
             defer { loadingFile = nil; isWorking = false }
             do {
                 let result = try await PoachInspectionRunner.inspect(videoURL: mediaURL) { importStatus.steps.append($0) }
-                hudWindow.show(result)
+                hudWindow.show(result, status: importStatus)
             } catch {
                 showError(title: "Poach couldn't load this media", error: error)
             }
@@ -181,7 +181,7 @@ struct PoachApp: App {
                 hudWindow.preparation.steps.append(stage)
             }
             Self.captureLog.notice("Recording analysis completed")
-            hudWindow.show(result)
+            hudWindow.show(result, status: hudWindow.preparation)
             Self.captureLog.notice("Review editor presented")
         } catch {
             NSApp.unhide(nil)
@@ -451,7 +451,7 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
     }
 
     func showPreparing() {
-        preparation.steps = ["Opening recording…"]
+        preparation.begin("Opening recording…")
         let panel = self.panel ?? makePanel()
         panel.title = "Poach — Preparing your brief"
         panel.contentView = NSHostingView(rootView:
@@ -475,11 +475,13 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
         panel?.close()
     }
 
-    func show(_ result: PoachInspection) {
+    func show(_ result: PoachInspection, status: InspectionStatus) {
+        status.finish()
         let palette = result.palette.map { HUDPaletteToken(hex: $0, color: Color(hex: $0)) }
         let view = FloatingHUDView(
             sourceURL: URL(fileURLWithPath: result.sourcePath),
             isVideo: result.mediaType != "image",
+            status: status,
             palette: palette,
             onCopyContext: { Self.copyContext(result, context: $0) },
             onShareContext: { try Self.shareContext(result, context: $0) },
@@ -618,31 +620,4 @@ private struct HomeWindowAnchor: NSViewRepresentable {
     }
     func makeNSView(context: Context) -> Anchor { Anchor() }
     func updateNSView(_ view: Anchor, context: Context) {}
-}
-
-@MainActor
-final class InspectionStatus: ObservableObject {
-    @Published var steps: [String] = []
-}
-
-struct InspectionStatusLabel: View {
-    @ObservedObject var status: InspectionStatus
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            ForEach(Array(status.steps.enumerated()), id: \.offset) { index, step in
-                let active = index == status.steps.count - 1
-                HStack(spacing: 7) {
-                    if active {
-                        ProgressView().controlSize(.mini).frame(width: 14)
-                    } else {
-                        Image(systemName: "checkmark").frame(width: 14)
-                    }
-                    Text(active ? step : step.replacingOccurrences(of: "…", with: ""))
-                }
-                .foregroundStyle(active ? Color.primary : Color.secondary)
-            }
-        }
-        .font(.caption)
-    }
 }
