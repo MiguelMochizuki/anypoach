@@ -16,6 +16,7 @@ fi
 
 pnpm --filter @poach/core build
 pnpm --filter @poach/mcp-server build
+node "$repo_root/scripts/build-connectors.mjs"
 swift build --package-path "$repo_root/apps/macos" --configuration release
 mkdir -p "$repo_root/outputs"
 stage_dir="$(mktemp -d "$repo_root/outputs/.poach-build.XXXXXX")"
@@ -30,8 +31,7 @@ cp "$repo_root/packages/core/dist/"*.js "$engine_path/dist/"
 cp "$repo_root/packages/core/package.json" "$engine_path/package.json"
 cp "$repo_root/apps/macos/.build/release/Poach" "$app_path/Contents/MacOS/Poach"
 cp "$repo_root/apps/macos/Info.plist" "$app_path/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :POACHNodePath string $node_path" "$app_path/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :POACHMCPServerPath string $repo_root/packages/mcp-server/dist/index.js" "$app_path/Contents/Info.plist"
+cp "$repo_root/outputs/connectors/marketplace/plugins/poach/server.mjs" "$app_path/Contents/Resources/server.mjs"
 icon_cache="$repo_root/outputs/compiled-icon"
 icon_digest=$(cat "$repo_root/apps/macos/Assets/Poach.icon/icon.json" "$repo_root/apps/macos/Assets/Poach.icon/Assets/Pouch.png" | shasum -a 256 | cut -d' ' -f1)
 if xcrun --find actool >/dev/null 2>&1; then

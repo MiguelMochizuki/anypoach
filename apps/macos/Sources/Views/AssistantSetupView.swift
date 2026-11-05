@@ -21,14 +21,12 @@ struct MCPConnectorView: View {
     @State private var copied = false
 
     private var serverPath: String? {
-        guard let path = Bundle.main.object(forInfoDictionaryKey: "POACHMCPServerPath") as? String,
-              FileManager.default.fileExists(atPath: path) else { return nil }
-        return path
+        Bundle.main.url(forResource: "server", withExtension: "mjs")?.path
     }
 
     private var configuration: String? {
         guard let serverPath else { return nil }
-        let node = Bundle.main.object(forInfoDictionaryKey: "POACHNodePath") as? String ?? "node"
+        let node = PoachInspectionRunner.findNode()?.path ?? "node"
         let runtimePath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
         if assistant == "Codex" {
             return [
@@ -86,7 +84,7 @@ struct MCPConnectorView: View {
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("Build the local MCP server with scripts/build-macos-app.sh, then reopen Poach.")
+                Text("Reinstall Poach to restore the bundled connector.")
                     .foregroundStyle(.secondary)
             }
         }

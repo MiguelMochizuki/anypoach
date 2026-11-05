@@ -29,7 +29,7 @@ enum PoachInspectionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .projectNotBuilt:
-            "Poach's analysis engine isn't built yet. From the project folder, run `pnpm install` and `pnpm build`, then reopen Poach."
+            "Reinstall Poach to restore its analysis engine."
         case .nodeNotFound:
             "Node.js wasn't found on PATH. Install Node.js 20 or newer, then launch Poach again."
         case .processFailed(let message):
@@ -101,28 +101,12 @@ enum PoachInspectionRunner {
            FileManager.default.fileExists(atPath: bundled.path) {
             return bundled
         }
-        if let configuredRoot = Bundle.main.object(forInfoDictionaryKey: "POACHProjectRoot") as? String {
-            let root = URL(fileURLWithPath: configuredRoot, isDirectory: true)
-            if FileManager.default.fileExists(atPath: root.appending(path: "packages/core/dist/index.js").path) {
-                return root.appending(path: "packages/core/dist/index.js")
-            }
-        }
-        var candidate = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
-        for _ in 0..<10 {
-            let entry = candidate.appending(path: "packages/core/dist/index.js")
-            if FileManager.default.fileExists(atPath: entry.path) { return entry }
-            let parent = candidate.deletingLastPathComponent()
-            if parent.path == candidate.path { break }
-            candidate = parent
-        }
         return nil
     }
 
-    private static func findNode() -> URL? {
-        let configuredNode = Bundle.main.object(forInfoDictionaryKey: "POACHNodePath") as? String
+    static func findNode() -> URL? {
         let environmentPaths = ProcessInfo.processInfo.environment["PATH", default: ""].split(separator: ":")
-        let paths = (configuredNode.map { [Substring(URL(fileURLWithPath: $0).deletingLastPathComponent().path)] } ?? [])
-            + environmentPaths + ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
+        let paths = environmentPaths + ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
         return paths.lazy.map { URL(fileURLWithPath: String($0)).appending(path: "node") }
             .first { FileManager.default.isExecutableFile(atPath: $0.path) }
     }
