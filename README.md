@@ -15,6 +15,8 @@ Record how an interface responds to a click, hover, or drag. Add notes directly 
 2. **Mark the details.** Pause the video and click the comment icon to leave a note at the playhead. Click a comment to return to its frame. Adjust the extracted palette and add any instructions that apply to the whole capture.
 3. **Build with your assistant.** Choose **Copy handoff for chat** and paste it into your connected conversation. The MCP connector lets the assistant read your notes, see representative frames, and request a frame at a specific timestamp. Poach needs no separate AI API key.
 
+In **Settings → Storage**, see how much space Poach uses and choose **Clear unused captures** to remove old recordings and extracted frames. Poach keeps the open edit, the active handoff, and your imported originals.
+
 ## Install on your Mac
 
 Download the Apple silicon build above, unzip it, and move **Poach.app** to Applications. Choose the connector for your assistant, then open a new chat.
