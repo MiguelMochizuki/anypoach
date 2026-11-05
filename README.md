@@ -35,7 +35,7 @@ Sign in to a GitHub account with access to the private beta. The app includes it
 
 This beta is locally signed. If macOS blocks it, review **System Settings → Privacy & Security → Open Anyway**. To record, grant Poach access under **Screen & System Audio Recording** and reopen it if prompted.
 
-Keep Poach in Applications so the connector can find it. If the handoff button is disabled, open a new chat with the connector enabled. Manual connector settings are available in Poach’s **Settings** tab.
+Keep Poach in Applications so the connector can find it. If the handoff button is disabled, open a new chat with the connector enabled. For manual setup, open Poach’s **Settings** and choose **Copy Codex MCP** for the Terminal command or **Copy Claude MCP** for the Claude Desktop configuration.
 
 </details>
 
