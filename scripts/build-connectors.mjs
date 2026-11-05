@@ -15,7 +15,7 @@ const json = async (path, data) => {
   await mkdir(dirname(path),{recursive:true});
   await writeFile(path, JSON.stringify(data,null,2)+'\n');
 };
-const metadata = {name:'poach', version:'0.1.2', description:'Read the screen capture, keyframes, and timestamped notes you share from Poach.'};
+const metadata = {name:'poach', version:'0.1.3', description:'Read the screen capture, keyframes, and timestamped notes you share from Poach.'};
 try {
   await mkdir(plugin,{recursive:true});
   await build({entryPoints:[resolve(root,'packages/mcp-server/dist/index.js')],outfile:entry,bundle:true,platform:'node',format:'esm',banner:{js:"import {createRequire} from 'node:module'; const require=createRequire(import.meta.url);"},target:'node20'});
@@ -26,7 +26,7 @@ try {
   await copyFile(logo, join(plugin, 'assets/poach.png'));
   await copyFile(logo, join(stage, 'icon.png'));
   await json(join(plugin,'.codex-plugin/plugin.json'),{
-    ...metadata, mcpServers:'./.mcp.json',
+    ...metadata, author:{name:'Guilherme Lopes',url:'https://github.com/guilopeszw'}, mcpServers:'./.mcp.json',
     interface:{displayName:'Poach', logo:'./assets/poach.png', composerIcon:'./assets/poach.png'}
   });
   // The installer resolves these paths on the destination Mac.
@@ -34,7 +34,7 @@ try {
   await copyFile(join(root,'scripts/install-codex-connector.sh'),join(out,'Install Codex.command'));
   await copyFile(launcher,join(plugin,'launch-connector.sh'));
   await copyFile(launcher,join(stage,'launch-connector.sh'));
-  await json(join(stage,'manifest.json'),{manifest_version:'0.3',...metadata,display_name:'Poach',icon:'icon.png',author:{name:'Poach'},server:{type:'binary',entry_point:'launch-connector.sh',mcp_config:{command:'/bin/bash',args:['${__dirname}/launch-connector.sh']}},compatibility:{platforms:['darwin']}});
+  await json(join(stage,'manifest.json'),{manifest_version:'0.3',...metadata,display_name:'Poach',icon:'icon.png',author:{name:'Guilherme Lopes',url:'https://github.com/guilopeszw'},server:{type:'binary',entry_point:'launch-connector.sh',mcp_config:{command:'/bin/bash',args:['${__dirname}/launch-connector.sh']}},compatibility:{platforms:['darwin']}});
   const archive=join(out,'Poach.mcpb');
   await rm(archive,{force:true});
   execFileSync('zip',['-q',archive,'manifest.json','launch-connector.sh','icon.png'],{cwd:stage});
