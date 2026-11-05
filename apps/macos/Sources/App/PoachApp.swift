@@ -73,14 +73,10 @@ struct PoachApp: App {
             .frame(width: 240)
             .preferredColorScheme(.light)
         } label: {
-            ZStack {
-                PoachPouchShape()
-                    .stroke(.primary, style: StrokeStyle(lineWidth: 1.4, lineCap: .round, lineJoin: .round))
-                PoachBagDetails()
-                    .stroke(.primary, style: StrokeStyle(lineWidth: 1.05, lineCap: .round, lineJoin: .round))
-                PoachLootPixels().fill(.primary)
-            }
-            .frame(width: 18, height: 18)
+            PoachPouchShape()
+                .fill(.primary)
+                .frame(width: 18, height: 18)
+                .accessibilityLabel("Poach")
         }
         .menuBarExtraStyle(.window)
     }

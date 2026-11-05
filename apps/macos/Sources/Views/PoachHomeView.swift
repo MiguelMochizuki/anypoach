@@ -139,16 +139,10 @@ struct PoachHomeView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(red: 0.263, green: 0.561, blue: 0.557))
-                PoachPouchShape()
-                    .stroke(.white, style: StrokeStyle(lineWidth: 1.45, lineCap: .round, lineJoin: .round))
-                PoachBagDetails()
-                    .stroke(.white.opacity(0.9), style: StrokeStyle(lineWidth: 1.05, lineCap: .round, lineJoin: .round))
-                PoachLootPixels().fill(.white)
-            }
-            .frame(width: 30, height: 30)
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .frame(width: 30, height: 30)
+                .accessibilityHidden(true)
 
             Text("Poach").font(.headline)
         }
