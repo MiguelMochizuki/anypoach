@@ -25,9 +25,9 @@ struct MCPConnectorView: View {
     }
 
     private var configuration: String? {
-        guard let serverPath else { return nil }
-        let node = PoachInspectionRunner.findNode()?.path ?? "node"
-        let runtimePath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+        guard let serverPath, let executable = PoachInspectionRunner.findNode() else { return nil }
+        let node = executable.path
+        let runtimePath = executable.deletingLastPathComponent().path + ":/usr/bin:/bin"
         if assistant == "Codex" {
             return [
                 "codex mcp add poach",
