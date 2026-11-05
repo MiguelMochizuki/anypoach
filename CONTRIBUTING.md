@@ -74,4 +74,9 @@ Motion-analysis checks include stationary video. Verify that a quiet recording y
 
 When changing the local dropzone benchmark, check the PNG success path, MP4 refusal, drag cancellation, and Replay in a browser. Use the server command in the README.
 
-Run `pnpm run build:connectors` after MCP changes. To exercise the bundled server rather than the development entry point, set `POACH_TEST_SERVER` to the absolute path to the packaged server.mjs and run `node --test packages/mcp-server/test/handoff.test.mjs`. For Claude, unzip the .mcpb into a temporary directory first. The tests use synthetic media and an isolated Poach cache.
+Run `pnpm run build:connectors` after MCP changes. To exercise the bundled server rather than the development entry point, set `POACH_TEST_SERVER` to the absolute path to the packaged server.mjs and run `node --test packages/mcp-server/test/handoff.test.mjs`. To exercise Claude, unpack the .mcpb and run the command from its manifest with Poach installed in Applications. The tests use synthetic media and an isolated Poach cache.
+
+
+### Bundled tools
+
+The Apple silicon beta includes official Node.js 22.23.4 and a local LGPL build of FFmpeg 8.1.3. `scripts/bundle-runtime.sh` verifies pinned archive digests, caches the build, and stages the executables and notices. Include the exact FFmpeg source archive and build script alongside beta downloads. Test inspection with only the bundled bin directory and macOS system directories on PATH. Both connector packages launch the app’s server from Applications or the current user’s Applications folder.

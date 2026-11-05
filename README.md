@@ -4,13 +4,12 @@ Poach is a native macOS tool and local MCP server for turning short interface re
 
 ## Install the private beta
 
-Download the assets from [GitHub Releases](https://github.com/guilopeszw/poach/releases) using an account with access to the private repository. The arm64 build runs on Apple silicon. Use macOS 15 or later for recording, or macOS 14 or later for file import.
+Download the assets from [GitHub Releases](https://github.com/guilopeszw/poach/releases) using an account with access to the private repository. Beta 2 includes Node.js, FFmpeg, and ffprobe in the app. Both connectors use that copy of Poach in Applications. No Homebrew or separate runtime installation is required. The arm64 build runs on Apple silicon. Use macOS 15 or later for recording, or macOS 14 or later for file import.
 
-1. Install Node.js 20.19 or later and FFmpeg (including ffprobe). With Homebrew, run `brew install node ffmpeg`. Poach looks in the standard Apple silicon and Intel Homebrew directories.
-2. Unzip **Poach-arm64.zip**, move **Poach.app** to Applications, and open it. This tester build is locally signed and unnotarized. If Gatekeeper blocks launch, review the app in System Settings → Privacy & Security → Open Anyway. Grant Screen Recording when prompted.
-3. For **Codex**, install its CLI, unzip **Poach-Codex.zip**, then run `bash "Install Codex.command"` in the extracted folder. It places the connector in your Library, registers the marketplace, and installs the plugin. You can delete the extracted folder afterward.
-4. For **Claude Desktop**, open Settings → Extensions → Advanced settings → Install Extension, select **Poach.mcpb**, and enable Poach.
-5. Open a new assistant chat, record or import a clip, add a note, and paste **Copy handoff for chat** into the chat. Ask the assistant to read the brief and describe your annotated moment.
+1. Unzip **Poach-arm64.zip**, move **Poach.app** to Applications, and open it. This tester build is locally signed and unnotarized. If Gatekeeper blocks launch, review the app in System Settings → Privacy & Security → Open Anyway. Grant Screen Recording when prompted.
+2. For **Codex**, unzip **Poach-Codex.zip** and double-click **Install Codex.command** with Codex installed. It places the connector in your Library, registers the marketplace, and installs the plugin. You can delete the extracted folder afterward.
+3. For **Claude Desktop**, open Settings → Extensions → Advanced settings → Install Extension, select **Poach.mcpb**, and enable Poach.
+4. Open a new assistant chat, record or import a clip, add a note, and paste **Copy handoff for chat** into the chat. Ask the assistant to read the brief and describe your annotated moment.
 
 ## What works today
 
@@ -18,7 +17,7 @@ Download the assets from [GitHub Releases](https://github.com/guilopeszw/poach/r
 - You can also load existing videos and still images from the app.
 - The MCP server exposes `poach_inspect` for local video files.
 - The MCP server exposes `poach_inspect_image` for local still images.
-- The TypeScript core samples frames with the system `ffmpeg` and `ffprobe` executables. It writes small PNG keyframes and computes motion and palette summaries.
+- The TypeScript core samples frames with the bundled `ffmpeg` and `ffprobe` executables in the app. It writes small PNG keyframes and computes motion and palette summaries.
 
 The first screen capture may ask for Screen Recording access. Grant it in **System Settings → Privacy & Security → Screen & System Audio Recording**, then reopen Poach if macOS requests it. Poach captures no audio and excludes its own windows. Captures and keyframes are stored under your temporary directory; nothing is uploaded.
 
@@ -48,7 +47,7 @@ The generated app bundle is written to `outputs/Poach.app`. Re-run the build scr
 
 Development builds automatically reuse an installed identity named `Poach Local Development`; otherwise they use ad-hoc signing. Rebuilding can invalidate the previous Screen Recording approval. If Poach is already enabled but macOS denies capture, remove the old entry in Screen & System Audio Recording, add the current app, then quit and reopen it.
 
-For a stable signing identity, run `POACH_CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" bash scripts/build-macos-app.sh`. The identity and private key must already be installed in your Keychain. GitHub binary releases should use Developer ID signing and Apple notarization; App Store publication is not required. This build command signs the bundle but does not notarize it. The analysis engine is bundled inside the app. Node.js, FFmpeg, and ffprobe are still external runtime requirements, so it is not yet a standalone redistributable release.
+For a stable signing identity, run `POACH_CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" bash scripts/build-macos-app.sh`. The identity and private key must already be installed in your Keychain. GitHub binary releases should use Developer ID signing and Apple notarization; App Store publication is not required. This build command signs the bundle but does not notarize it. The app bundles the analysis engine, Node.js and FFmpeg. Runtime licenses are included under `Contents/Resources/runtime/licenses`. Release assets include the corresponding FFmpeg source and the build recipe.
 
 ## Build the TypeScript packages
 
