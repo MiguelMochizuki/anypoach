@@ -7,7 +7,7 @@
 
 ## What does Poach do?
 
-Poach lets you show Codex or Claude how an interface behaves. In the demo above, a bookmark turns into a checkmark when clicked. Record the click, pause where the icon changes, and leave a note like *“Keep this transition, but use our accent color.”* Your assistant can inspect that moment while it works in your project.
+Record how an interface responds to a click, hover, or drag. Add notes directly to the video timeline, then share the capture with Codex or Claude. Your assistant can inspect the frames you marked and use them to recreate the interaction in your project.
 
 ## From screen to chat
 
