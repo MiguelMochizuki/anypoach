@@ -73,6 +73,11 @@ struct FloatingHUDView: View {
                     .textFieldStyle(.plain)
                     .padding(9)
                     .background(PoachPalette.panel, in: RoundedRectangle(cornerRadius: 6))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(PoachPalette.outline, lineWidth: 1)
+                            .allowsHitTesting(false)
+                    }
                     .accessibilityLabel("Instructions")
                     .onChange(of: context) { shareStatus = "Changes have not been shared yet." }
             }
