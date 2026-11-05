@@ -45,7 +45,7 @@ function parseDuration(output: Buffer): number {
 }
 
 /** Normalize recorder shutdown latency without relaxing the imported-video limit. */
-export async function inspectRecording(videoFile: string): Promise<InspectionResult> {
+export async function inspectRecording(videoFile: string, options: ExtractOptions = {}): Promise<InspectionResult> {
   const sourcePath = resolve(videoFile);
   if (![".mov", ".mp4"].includes(extname(sourcePath).toLowerCase())) {
     throw new Error("Recording must be an MP4 or MOV file");
@@ -56,7 +56,7 @@ export async function inspectRecording(videoFile: string): Promise<InspectionRes
   const metadata = JSON.parse(probe.toString("utf8")) as { format?: { duration?: string } };
   const duration = Number(metadata.format?.duration);
   if (!Number.isFinite(duration) || duration <= 0) throw new Error("Recording has no valid duration");
-  if (duration <= MAX_DURATION_SECONDS) return inspectVideo(sourcePath);
+  if (duration <= MAX_DURATION_SECONDS) return inspectVideo(sourcePath, options);
 
   const directory = await mkdtemp(join(tmpdir(), "poach-recording-"));
   const clippedPath = join(directory, "recording.mp4");
@@ -66,7 +66,7 @@ export async function inspectRecording(videoFile: string): Promise<InspectionRes
     "-t", String(MAX_DURATION_SECONDS), "-vf", "fps=30",
     "-c:v", "libx264", "-preset", "fast", "-crf", "18", clippedPath,
   ]);
-  return inspectVideo(clippedPath);
+  return inspectVideo(clippedPath, options);
 }
 
 // ScreenCaptureKit may store one frame for several seconds of unchanged pixels.
@@ -171,6 +171,7 @@ export async function inspectVideo(videoFile: string, options: ExtractOptions = 
   const sampleWidth = Math.max(48, Math.min(256, Math.round(options.sampleWidth ?? DEFAULT_SAMPLE_WIDTH)));
   const sampleRate = Math.max(2, Math.min(24, Math.round(options.samplesPerSecond ?? DEFAULT_SAMPLES_PER_SECOND)));
   const sampleCount = Math.max(2, Math.min(720, Math.ceil(durationSeconds * sampleRate)));
+  options.onProgress?.("motion");
   const times = await presentationTimes(sourcePath);
   let previousSeek: number | undefined;
   const frames: FrameSample[] = [];
@@ -184,6 +185,7 @@ export async function inspectVideo(videoFile: string, options: ExtractOptions = 
   }
   const deltas = frames.slice(1).map((frame, index) => pixelDifference(frames[index]!, frame));
   const keys = chooseKeyframes(frames, deltas);
+  options.onProgress?.("frames");
   const outputDirectory = options.outputDirectory
     ? resolve(options.outputDirectory)
     : await mkdtemp(join(tmpdir(), "poach-"));
@@ -202,6 +204,7 @@ export async function inspectVideo(videoFile: string, options: ExtractOptions = 
   const durationMs = keys.length === 1 ? 0 : Math.max(0, settledTimeMs - motionStartMs);
   const timing = approximateTiming(frames, deltas, motionStartMs, durationMs);
   const paletteFrame = frames[keys.find((key) => key.kind === "settled")?.index ?? frames.length - 1]!;
+  options.onProgress?.("palette");
   const palette = extractPalette(paletteFrame, options.paletteSize ?? 6);
 
   return {
@@ -237,11 +240,13 @@ export async function inspectImage(imageFile: string, options: ExtractOptions = 
   const height = raw.length / (width * 3);
   if (!Number.isInteger(height) || height < 1) throw new Error("Could not decode image pixels");
   const frame: FrameSample = { timeMs: 0, pixels: raw, width, height, channels: 3 };
+  options.onProgress?.("frames");
   const outputDirectory = options.outputDirectory ? resolve(options.outputDirectory) : await mkdtemp(join(tmpdir(), "poach-"));
   await mkdir(outputDirectory, { recursive: true });
   const safeBase = basename(sourcePath, extension).replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 48) || "image";
   const imagePath = join(outputDirectory, `${safeBase}-image.png`);
   await writeFile(imagePath, await referencePNG(sourcePath, 0));
+  options.onProgress?.("palette");
   const palette = extractPalette(frame, options.paletteSize ?? 6);
   return {
     mediaType: "image",

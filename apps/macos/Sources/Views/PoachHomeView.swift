@@ -24,7 +24,7 @@ struct PoachHomeView: View {
 
     private var primaryTitle: String {
         if isRecording { return "Stop and inspect · \(clock(elapsedSeconds)) / 0:30" }
-        if isWorking { return workingTitle }
+        if isWorking && loadingFile == nil { return workingTitle }
         switch captureMode {
         case .selectedPortion: return "Select an area…"
         case .fullScreen: return "Choose a screen…"
@@ -89,7 +89,7 @@ struct PoachHomeView: View {
                     Image(systemName: "doc").font(.title2).foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(loadingFile.lastPathComponent).font(.headline).lineLimit(1)
-                        Text("Inspecting…").font(.caption).foregroundStyle(.secondary)
+                        Text(workingTitle).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     ProgressView().controlSize(.small)

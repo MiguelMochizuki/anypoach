@@ -97,13 +97,13 @@ struct PoachApp: App {
 
     private func loadMedia(at mediaURL: URL) {
         guard !isWorking, !isRecording, mediaURL.isFileURL else { return }
-        workingTitle = "Analyzing your media…"
+        workingTitle = "Opening file…"
         isWorking = true
         loadingFile = mediaURL
         Task {
             defer { loadingFile = nil; isWorking = false }
             do {
-                let result = try await PoachInspectionRunner.inspect(videoURL: mediaURL)
+                let result = try await PoachInspectionRunner.inspect(videoURL: mediaURL) { workingTitle = $0 }
                 hudWindow.show(result)
             } catch {
                 showError(title: "Poach couldn't load this media", error: error)
@@ -175,7 +175,9 @@ struct PoachApp: App {
             NSApp.activate(ignoringOtherApps: true)
             hudWindow.showPreparing()
             recordingWindow.close()
-            let result = try await PoachInspectionRunner.inspect(videoURL: videoURL, isRecording: true)
+            let result = try await PoachInspectionRunner.inspect(videoURL: videoURL, isRecording: true) { stage in
+                hudWindow.preparation.message = stage
+            }
             Self.captureLog.notice("Recording analysis completed")
             hudWindow.show(result)
             Self.captureLog.notice("Review editor presented")
@@ -364,6 +366,7 @@ private final class PoachAppDelegate: NSObject, NSApplicationDelegate, Observabl
 private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
 
+    let preparation = InspectionStatus()
     private var returningToCapture = false
 
     func hideHomeWhileEditing() {
@@ -446,13 +449,14 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
     }
 
     func showPreparing() {
+        preparation.message = "Opening recording…"
         let panel = self.panel ?? makePanel()
         panel.title = "Poach — Preparing your brief"
         panel.contentView = NSHostingView(rootView:
             VStack(spacing: 16) {
                 ProgressView()
                 Text("Preparing your capture for review").font(.headline)
-                Text("Preparing the editor…").foregroundStyle(.secondary)
+                InspectionStatusLabel(status: preparation)
             }
             .frame(width: 660, height: 500)
             .background(PoachPalette.canvas)
@@ -613,4 +617,17 @@ private struct HomeWindowAnchor: NSViewRepresentable {
     }
     func makeNSView(context: Context) -> Anchor { Anchor() }
     func updateNSView(_ view: Anchor, context: Context) {}
+}
+
+@MainActor
+private final class InspectionStatus: ObservableObject {
+    @Published var message = ""
+}
+
+private struct InspectionStatusLabel: View {
+    @ObservedObject var status: InspectionStatus
+
+    var body: some View {
+        Text(status.message).foregroundStyle(.secondary)
+    }
 }

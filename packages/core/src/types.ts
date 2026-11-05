@@ -25,6 +25,7 @@ export interface InspectionResult {
 }
 
 export interface ExtractOptions {
+  readonly onProgress?: (stage: "motion" | "frames" | "palette") => void;
   /** Directory for PNG keyframes. Defaults to a temporary Poach directory. */
   readonly outputDirectory?: string;
   /** Maximum decoded sample width; height is scaled to preserve aspect ratio. */
