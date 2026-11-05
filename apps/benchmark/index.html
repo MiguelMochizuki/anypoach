@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dropzone · Poach benchmark</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <section aria-label="Upload dropzone benchmark">
+      <div id="zone">
+        <div class="prompt">
+          <span class="upload"><svg viewBox="0 0 24 24"><path d="M12 15V3m-5 5 5-5 5 5M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/></svg></span>
+          <strong id="hint">Drag a file here</strong><span class="muted">Up to 5 MB</span>
+        </div>
+        <div class="result" hidden>
+          <span class="mini" id="kind"></span>
+          <div class="details"><strong id="name"></strong><small id="status"></small><progress id="progress" max="100" value="0" aria-label="Demo upload progress"></progress></div>
+        </div>
+      </div>
+      <div class="samples">
+        <button class="file" data-kind="PNG" data-name="mood.png" data-size="2.4" aria-label="Drag mood.png, or press Enter to try the drop"><span class="sheet"><svg viewBox="0 0 42 52"><path d="M5 1h20l15 15v31a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4V5a4 4 0 0 1 4-4Zm20 0v11a4 4 0 0 0 4 4h11"/></svg><b>PNG</b></span><span>mood.png</span></button>
+        <button class="file" data-kind="MP4" data-name="demo.mp4" data-size="8.1" aria-label="Drag demo.mp4, or press Enter to try the drop"><span class="sheet"><svg viewBox="0 0 42 52"><path d="M5 1h20l15 15v31a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4V5a4 4 0 0 1 4-4Zm20 0v11a4 4 0 0 0 4 4h11"/></svg><b>MP4</b></span><span>demo.mp4</span></button>
+      </div>
+      <footer><a href="https://bencho.dev/blocks/upload-dropzone?c=upload-dropzone&amp;theme=dark" target="_blank" rel="noreferrer">Bencho reference ↗</a><button id="reset">↺ Replay</button></footer>
+      <p class="sr" aria-live="polite" id="announcement"></p>
+    </section>
+  </main>
+  <script src="benchmark.js"></script>
+</body></html>
