@@ -117,7 +117,7 @@ struct PoachHomeView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity)
-                .frame(height: 99)
+                .frame(minHeight: 99, maxHeight: .infinity)
                 .background(PoachPalette.canvas)
                 .overlay {
                     RoundedRectangle(cornerRadius: 14)
