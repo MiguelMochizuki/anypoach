@@ -112,7 +112,10 @@ From the project root, run `python3 -m http.server 8741 --bind 127.0.0.1 --direc
 On your Mac, install Node.js 20.19 or later and FFmpeg (including ffprobe), then run
 `pnpm install` and `pnpm run build:connectors` from this checkout.
 
-- **Codex:** run `codex plugin marketplace add "$PWD/outputs/connectors/marketplace"`, then `codex plugin add poach@poach-local`. Keep the generated directory in place; rebuild and reinstall if you move it. If you previously registered the standalone Poach server, disable that entry before testing the plugin on its own.
+- **Codex:** run `codex plugin marketplace add "$PWD/outputs/connectors/marketplace"`, then `codex plugin add poach@poach-local`. Keep the generated directory in place; rebuild and reinstall if you move it. If you previously registered the standalone Poach server, run `codex mcp get poach` to identify the old standalone entry. If it points at this checkout’s `packages/mcp-server/dist/index.js`, remove it with `codex mcp remove poach` after installing the plugin. This leaves the plugin registration intact.
 - **Claude Desktop:** open Settings → Extensions → Advanced settings → Install Extension, choose `outputs/connectors/Poach.mcpb`, and enable Poach. This is a locally built, unsigned extension.
 
 Open a new chat, share a capture from Poach, and paste its chat handoff. Ask the assistant to read the shared brief and describe a specific timestamp. The packages contain server code, not your recordings. When you request a handoff, the connected assistant receives the requested evidence.
+
+
+**Verify the installation.** In Codex, `codex plugin list` should show `poach@poach-local` as **installed, enabled**. In Claude Desktop, look for **Poach** in Settings → Extensions. A local extension installation may ask you to confirm the developer is unverified. In either client, start a new chat and paste the handoff for a capture you recognize. Ask: “Use Poach to read this brief, then show me what was visible at 1 second.” Check that the response describes that recording. The connection indicator in Poach means at least one client has connected; it cannot tell you that a particular chat has read the capture.
