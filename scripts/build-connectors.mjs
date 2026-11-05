@@ -19,11 +19,12 @@ const metadata = {name:'poach', version:'0.1.0', description:'Read the screen ca
 try {
   await mkdir(plugin,{recursive:true});
   await build({entryPoints:[resolve(root,'packages/mcp-server/dist/index.js')],outfile:entry,bundle:true,platform:'node',format:'esm',banner:{js:"import {createRequire} from 'node:module'; const require=createRequire(import.meta.url);"},target:'node20'});
-  const env = {PATH:[dirname(process.execPath),'/opt/homebrew/bin','/usr/local/bin','/usr/bin','/bin'].join(':')};
+  const env = {PATH:['/opt/homebrew/bin','/usr/local/bin','/usr/bin','/bin'].join(':')};
   await json(join(market,'.agents/plugins/marketplace.json'),{name:'poach-local',plugins:[{name:'poach',source:{source:'local',path:'./plugins/poach'},policy:{installation:'AVAILABLE',authentication:'ON_INSTALL'},category:'Productivity'}]});
   await json(join(plugin,'.codex-plugin/plugin.json'),{...metadata,mcpServers:'./.mcp.json'});
-  // This local marketplace targets the machine on which it is built.
-  await json(join(plugin,'.mcp.json'),{mcpServers:{poach:{command:process.execPath,args:[entry],env}}});
+  // The installer resolves these paths on the destination Mac.
+  await json(join(plugin,'.mcp.json'),{mcpServers:{poach:{command:"node",args:["server.mjs"],env}}});
+  await copyFile(join(root,'scripts/install-codex-connector.sh'),join(out,'Install Codex.command'));
   await copyFile(entry,join(stage,'server.mjs'));
   await json(join(stage,'manifest.json'),{manifest_version:'0.3',...metadata,display_name:'Poach',author:{name:'Poach'},server:{type:'node',entry_point:'server.mjs',mcp_config:{command:'node',args:['${__dirname}/server.mjs'],env}},compatibility:{platforms:['darwin']}});
   const archive=join(out,'Poach.mcpb');
