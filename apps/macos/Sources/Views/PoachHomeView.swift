@@ -42,17 +42,12 @@ struct PoachHomeView: View {
                     .frame(width: 144)
 
             }
-            ZStack(alignment: .topLeading) {
-                captureControls
-                    .opacity(settings ? 0 : 1)
-                    .allowsHitTesting(!settings)
-                    .accessibilityHidden(settings)
-                    .disabled(settings)
-                PoachSettingsView(storageVisible: settings, captureBusy: isWorking || isRecording)
-                    .opacity(settings ? 1 : 0)
-                    .allowsHitTesting(settings)
-                    .accessibilityHidden(!settings)
-                    .disabled(!settings)
+            Group {
+                if settings {
+                    PoachSettingsView(captureBusy: isWorking || isRecording)
+                } else {
+                    captureControls
+                }
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.14), value: settings)
