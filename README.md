@@ -3,7 +3,7 @@
 <p align="center">Record an interaction on your Mac. Show Codex or Claude exactly what to build.</p>
 <p align="center"><strong><a href="https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach-arm64.zip">Download for Apple silicon</a></strong> · <a href="docs/media/poach-demo.mp4">Watch the demo</a></p>
 
-<p align="center"><a href="docs/media/poach-demo.mp4"><img src="docs/media/poach-demo.gif" width="420" alt="Poach records a context meter responding to the pointer, then opens the clip for comments and handoff."></a></p>
+<p align="center"><a href="docs/media/poach-editor.png"><img src="docs/media/poach-editor.png" width="550" alt="Poach reviewing a reading-list bookmark animation, with the clip, extracted colors, and instructions for the assistant."></a></p>
 
 ## Get started
 
