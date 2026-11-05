@@ -1,0 +1,46 @@
+name: Pull request policy
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+permissions:
+  contents: read
+  statuses: write
+jobs:
+  commits:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Check every proposed commit subject
+        shell: bash
+        run: |
+          context='Poach / Conventional Commits'
+          report() {
+            gh api --silent --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
+              -f state="$1" -f context="$context" -f description="$2" \
+              -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          }
+          report pending 'Checking commit subjects'
+          trap 'report failure "Commit validation failed. See the workflow log."' ERR
+          # Read Git objects only. Never check out or run proposed code with this token.
+          git init --bare --quiet policy.git
+          cd policy.git
+          gh auth setup-git
+          git fetch --quiet --filter=blob:none "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" \
+            "$BASE_SHA" "refs/pull/$PR_NUMBER/head:refs/heads/proposed"
+          git cat-file -e "$HEAD_SHA^{commit}"
+          pattern='^(feat|fix|docs|style|refactor|test|build|ci|chore|perf|revert)\([a-z0-9][a-z0-9._/-]*\)!?: [^[:space:]]'
+          git rev-list "$BASE_SHA..$HEAD_SHA" > commits
+          while read -r sha; do
+            subject=$(git show -s --format=%s "$sha")
+            if ! [[ "$subject" =~ $pattern ]]; then
+              echo "Commit $sha needs a subject such as fix(editor): preserve the playhead"
+              report failure 'Use type(scope): summary for every commit'
+              exit 1
+            fi
+          done < commits
+          report success 'All commit subjects follow the project convention'
