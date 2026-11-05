@@ -17,5 +17,27 @@ ditto "$source_dir/marketplace" "$market"
 # plutil quotes the destination path correctly, including spaces and Unicode.
 plutil -replace mcpServers.poach.args.0 -string "$plugin/launch-connector.sh" "$plugin/.mcp.json"
 plutil -convert json "$plugin/.mcp.json"
-codex plugin marketplace add "$market"
-codex plugin add poach@poach-local
+# Codex rejects an existing marketplace name when the registered source changes.
+# Only migrate Poach's local registration. Leave remote and unrelated sources alone.
+old_source="$(codex plugin marketplace list --json | node -e '
+  const list = JSON.parse(require("node:fs").readFileSync(0, "utf8")).marketplaces;
+  const entry = list.find(item => item.name === "poach-local");
+  if (entry && entry.marketplaceSource?.sourceType !== "local") {
+    throw Error("poach-local already refers to a non-local marketplace.");
+  }
+  if (entry) process.stdout.write(entry.marketplaceSource.source);
+')"
+migrated=false
+if [[ -n "$old_source" && "$old_source" != "$market" ]]; then
+  codex plugin marketplace remove poach-local
+  migrated=true
+fi
+if codex plugin marketplace add "$market" && codex plugin add poach@poach-local; then
+  exit 0
+fi
+if "$migrated"; then
+  echo "Upgrade failed. Restoring the previous Poach marketplace." >&2
+  codex plugin marketplace remove poach-local || true
+  codex plugin marketplace add "$old_source" && codex plugin add poach@poach-local
+fi
+exit 1
