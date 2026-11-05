@@ -1,15 +1,27 @@
-section{width:min(386px,100%)}
-.meter{background:#252525;border-radius:24px;padding:20px;display:grid;gap:18px}
-.meter header,.reading,#legend button{display:flex;align-items:center}
-.meter header{justify-content:space-between}.meter header strong{font-size:19px}
-#compact,#legend button{border-radius:100px;padding:8px 15px}
-#compact{background:#fff;color:#171717;font-weight:550}
-.reading{gap:7px;align-items:baseline;color:#999}
-#amount{font-size:38px;color:white;line-height:1.1;font-variant-numeric:tabular-nums}
-#bar{height:50px;display:flex;gap:3px;overflow:hidden;border-radius:8px}
-#bar span{min-width:0;background:var(--color);border-radius:3px;transition:flex-grow .48s cubic-bezier(.16,1,.3,1),opacity .18s}
-#legend{display:flex;flex-wrap:wrap;gap:8px}
-#legend button{gap:9px;background:#333;line-height:24px}
-#legend i{background:var(--color);width:10px;height:10px;border-radius:3px}
-#legend button:is(:hover,:focus-visible){background:#414141}
-@media(prefers-reduced-motion:reduce){#bar span{transition:none}}
+:root { font: 16px/1.25 -apple-system, BlinkMacSystemFont, sans-serif; color: #fdfdfd; background: #161616; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0 }
+main { min-height: 100svh; display: grid; place-items: center; padding: 20px }
+section { width: min(386px,100%); position: relative }
+.meter { padding: 20px; border-radius: 24px; background: #252525 }
+header, .reading, #legend, #bar, .chip { display: flex; align-items: center }
+header { justify-content: space-between; font-size: 20px; font-weight: 500 }
+button { font: inherit; color: inherit; border: 0; cursor: pointer }
+#compact { padding: 7px 15px; border-radius: 24px; font-size: 16px; line-height: 21px; color: #252525; background: #fdfdfd; transition: background .2s,color .2s }
+#compact[aria-pressed=true] { color: #fff; background: #353535 }
+.reading { margin: 13px 0 20px; align-items: baseline; gap: 8px }
+#amount { display: inline-flex; align-items: baseline; white-space: pre; font-size: 38px; font-weight: 500; line-height: 46px; font-variant-numeric: tabular-nums }
+.slot { display: inline-grid; overflow: hidden; line-height: 1.12 }
+.slot span { grid-area: 1/1 }
+#unit { color: #999 }
+#bar { height: 50px; gap: 3px; align-items: stretch; overflow: hidden; border-radius: 8px }
+.segment { min-width: 0; background: var(--ink); border-radius: 2px; transition: flex-grow .42s cubic-bezier(.2,.7,.3,1), opacity .18s }
+#legend { margin-top: 20px; gap: 8px; flex-wrap: wrap }
+.chip { padding: 0 15px; gap: 10px; height: 40px; background: #313131; border-radius: 20px; transition: background .16s }
+.chip.active { background: #404040 }
+.chip i { width: 10px; height: 10px; border-radius: 2px; background: var(--ink) }
+button:focus-visible, a:focus-visible { outline: 2px solid white; outline-offset: 3px }
+nav { position: absolute; top: calc(100% + 36px); font-size: 12px }
+a { color: #aaa; text-decoration: none }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%) }
+@media (prefers-reduced-motion:reduce) { * { transition: none !important } }
