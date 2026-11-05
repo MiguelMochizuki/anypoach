@@ -40,21 +40,20 @@ struct PoachHomeView: View {
                     .frame(width: 144)
 
             }
-            Group {
-                if settings {
-                    PoachSettingsView()
-                } else {
-                    captureControls
-                }
+            ZStack(alignment: .topLeading) {
+                captureControls
+                    .opacity(settings ? 0 : 1)
+                    .allowsHitTesting(!settings)
+                    .accessibilityHidden(settings)
+                    .disabled(settings)
+                PoachSettingsView()
+                    .opacity(settings ? 1 : 0)
+                    .allowsHitTesting(settings)
+                    .accessibilityHidden(!settings)
+                    .disabled(!settings)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .keyframeAnimator(initialValue: 1.0, trigger: settings) { [reduceMotion, settings] pane, progress in
-                pane.opacity(reduceMotion ? 1 : progress)
-                    .offset(x: reduceMotion ? 0 : (settings ? 8 : -8) * (1 - progress))
-            } keyframes: { _ in
-                MoveKeyframe(0)
-                CubicKeyframe(1, duration: 0.18)
-            }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.14), value: settings)
         }
         .padding(16)
         .frame(width: min(440, (NSScreen.main?.visibleFrame.width ?? 800) - 32),
