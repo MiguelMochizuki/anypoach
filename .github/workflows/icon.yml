@@ -1,0 +1,21 @@
+name: Compile macOS icon
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  icon:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile layered artwork
+        run: |
+          mkdir compiled
+          xcrun actool apps/macos/Assets/Poach.icon --compile compiled --platform macosx \
+            --minimum-deployment-target 14.0 --app-icon Poach --target-device mac \
+            --output-partial-info-plist compiled/icon.plist
+          test -s compiled/Assets.car
+          plutil -p compiled/icon.plist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: poach-icon
+          path: compiled/
