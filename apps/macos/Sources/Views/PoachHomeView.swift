@@ -54,7 +54,7 @@ struct PoachHomeView: View {
         }
         .padding(16)
         .frame(width: min(440, (NSScreen.main?.visibleFrame.width ?? 800) - 32),
-               alignment: .topLeading)
+               height: 320, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
         .background(PoachPalette.canvas)
         .tint(PoachPalette.ink)

@@ -19,6 +19,7 @@ struct AssistantSetupView: View {
 struct MCPConnectorView: View {
     @AppStorage("setupAssistant") private var assistant = "Codex"
     @State private var copied = false
+    @State private var showingConfiguration = false
 
     private var serverPath: String? {
         Bundle.main.url(forResource: "server", withExtension: "mjs")?.path
@@ -56,7 +57,18 @@ struct MCPConnectorView: View {
             if let configuration {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack {
-                        Text(assistant == "Codex" ? "Terminal" : "claude_desktop_config.json").font(.caption)
+                        Button("View setup…") { showingConfiguration = true }
+                            .popover(isPresented: $showingConfiguration) {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text(assistant == "Codex" ? "Run in Terminal, then reopen Codex." : "Merge this entry into your Claude Desktop configuration, then restart Claude.")
+                                    Text(verbatim: configuration)
+                                        .font(.system(.caption, design: .monospaced))
+                                        .textSelection(.enabled)
+                                }
+                                .padding(16)
+                                .frame(width: 380, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
                         Spacer()
                         Button {
                             NSPasteboard.general.clearContents()
@@ -68,21 +80,9 @@ struct MCPConnectorView: View {
                         .accessibilityLabel(copied ? "Copied" : assistant == "Codex" ? "Copy Codex command" : "Copy Claude configuration")
                     }
                     .padding(.horizontal, 12).padding(.vertical, 7)
-                        Text(verbatim: configuration)
-                            .font(.system(size: 12))
-                            .lineSpacing(1)
-                            .textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12).padding(.bottom, 12)
                 }
                 .background(PoachPalette.canvas, in: RoundedRectangle(cornerRadius: 9))
 
-                Text(assistant == "Codex"
-                     ? "Run in Terminal, then reopen Codex to load Poach."
-                     : "In Claude Desktop settings, choose Developer → Edit Config. Merge the poach entry into mcpServers, then restart Claude.")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             } else {
                 Text("Reinstall Poach to restore the bundled connector.")
                     .foregroundStyle(.secondary)
@@ -109,19 +109,16 @@ struct PoachSettingsView: View {
         catch { usage = nil; storageError = error.localizedDescription }
     }
 
-    @AppStorage("setupAssistant") private var assistant = "Codex"
     @AppStorage("windowEdge") private var edge = "right"
     @AppStorage("defaultCaptureMode") private var defaultMode = PoachCaptureMode.selectedPortion.rawValue
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if assistant == "Codex" {
             HStack {
                 Text("Window position")
                 Spacer()
                 PoachSegments(label: "Window position", selection: $edge, choices: [("left", "Left"), ("right", "Right")])
                     .frame(width: 140)
-            }
             }
             HStack {
                 Text("Default recording mode")
