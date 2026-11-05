@@ -5,17 +5,26 @@
 
 <p align="center"><a href="docs/media/poach-editor.png"><img src="docs/media/poach-editor.png" width="550" alt="Poach reviewing a reading-list bookmark animation, with the clip, extracted colors, and instructions for the assistant."></a></p>
 
-## Get started
+## What does Poach do?
 
-1. **Install Poach.** Unzip the download and move **Poach.app** to Applications. Recording requires macOS 15 or later. On macOS 14, you can import images and videos.
-2. **Connect your assistant.** Install its MCP connector below, then open a new chat.
+Poach lets you show Codex or Claude how an interface behaves. In the demo above, a bookmark turns into a checkmark when clicked. Record the click, pause where the icon changes, and leave a note like *“Keep this transition, but use our accent color.”* Your assistant can inspect that moment while it works in your project.
 
-   | Assistant | Setup |
-   | --- | --- |
-   | [Codex installer](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach-Codex-upgrade.zip) | Unzip and double-click **Install Codex.command**. |
-   | [Claude Desktop extension](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach.mcpb) | Open **Settings → Extensions → Advanced settings → Install Extension**. Select the downloaded file and enable Poach. |
+## From screen to chat
 
-3. **Share a moment.** Record up to 30 seconds or drop a file into Poach. Pause the clip, add a timestamped comment, then choose **Copy handoff for chat** and paste it into your conversation. Try *“Recreate the hover effect I marked at two seconds.”*
+1. **Capture the interaction.** Record a screen area, a window, or a full display. Poach captures the pointer and leaves its own controls out of the video. Press **⌘⇧P** to select an area, then press it again to stop. You can also drop in an existing video or still image.
+2. **Mark the details.** Pause the video and click the comment icon to leave a note at the playhead. Click a comment to return to its frame. Adjust the extracted palette and add any instructions that apply to the whole capture.
+3. **Build with your assistant.** Choose **Copy handoff for chat** and paste it into your connected conversation. The MCP connector lets the assistant read your notes, see representative frames, and request a frame at a specific timestamp. Poach needs no separate AI API key.
+
+## Install on your Mac
+
+Download the Apple silicon build above, unzip it, and move **Poach.app** to Applications. Choose the connector for your assistant, then open a new chat.
+
+| Assistant | Install the MCP connector |
+| --- | --- |
+| [Codex installer](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach-Codex-upgrade.zip) | Unzip and double-click **Install Codex.command**. |
+| [Claude Desktop extension](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.2/Poach.mcpb) | Open **Settings → Extensions → Advanced settings → Install Extension**. Select the downloaded file and enable Poach. |
+
+**Beta requirements.** Screen recording requires macOS 15 or later. On macOS 14 you can import images and videos. Clips can be up to 30 seconds long. Poach records the screen without audio.
 
 <details>
 <summary>Download and first-launch help</summary>
@@ -31,7 +40,7 @@ Keep Poach in Applications so the connector can find it. If the handoff button i
 <details>
 <summary>What does my assistant receive?</summary>
 
-Poach processes media on your Mac. When the assistant reads a handoff, it receives the requested frames and notes. A new handoff replaces the previous one. Each expires after 24 hours.
+Poach analyzes the media on your Mac. When your assistant reads a handoff, it receives your instructions, timestamped notes, palette, and requested frames. Motion timing and easing are estimates from sampled frames. A new handoff replaces the previous one, and each handoff expires after 24 hours.
 
 </details>
 
