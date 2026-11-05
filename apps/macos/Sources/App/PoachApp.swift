@@ -285,7 +285,7 @@ private final class RecordingStatusWindowController {
                 Text("Finishing recording…")
             }
             .frame(width: 260, height: 58)
-            .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+            .background(PoachPalette.canvas, in: RoundedRectangle(cornerRadius: 12))
             .preferredColorScheme(.light)
         )
     }
@@ -367,7 +367,7 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
         // Use a single surface while resizing. Both layouts keep their native text size.
         let surface = NSView(frame: content.bounds)
         surface.wantsLayer = true
-        surface.layer?.backgroundColor = NSColor.white.cgColor
+        surface.layer?.backgroundColor = NSColor(PoachPalette.canvas).cgColor
         surface.layer?.masksToBounds = true
         let capture = NSImageView(image: captureImage)
         let editor = NSImageView(image: editorImage)
@@ -423,7 +423,7 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
                 Text("Preparing the editor…").foregroundStyle(.secondary)
             }
             .frame(width: 660, height: 500)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(PoachPalette.canvas)
             .preferredColorScheme(.light)
         )
         panel.setContentSize(NSSize(width: 660, height: 500))
@@ -484,7 +484,7 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
         panel.appearance = NSAppearance(named: .aqua)
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
-        panel.backgroundColor = .white
+        panel.backgroundColor = NSColor(PoachPalette.canvas)
         panel.hasShadow = true
         panel.isMovable = false
         panel.becomesKeyOnlyIfNeeded = true

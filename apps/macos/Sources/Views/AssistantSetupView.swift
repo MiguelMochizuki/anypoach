@@ -11,7 +11,7 @@ struct AssistantSetupView: View {
         }
         .padding(20)
         .frame(width: 560)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(PoachPalette.canvas)
         .preferredColorScheme(.light)
     }
 }
@@ -78,7 +78,7 @@ struct MCPConnectorView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 12).padding(.bottom, 12)
                 }
-                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 9))
+                .background(PoachPalette.canvas, in: RoundedRectangle(cornerRadius: 9))
 
                 Text(assistant == "Codex"
                      ? "Run in Terminal, then reopen Codex to load Poach."
@@ -91,7 +91,7 @@ struct MCPConnectorView: View {
             }
         }
         .padding(12)
-        .background(Color(white: 0.97), in: RoundedRectangle(cornerRadius: 14))
+        .background(PoachPalette.panel, in: RoundedRectangle(cornerRadius: 14))
 
     }
 

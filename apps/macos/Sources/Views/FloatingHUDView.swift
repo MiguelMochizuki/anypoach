@@ -71,7 +71,7 @@ struct FloatingHUDView: View {
                     .lineLimit(nil)
                     .textFieldStyle(.plain)
                     .padding(9)
-                    .background(Color(white: 0.96), in: RoundedRectangle(cornerRadius: 6))
+                    .background(PoachPalette.panel, in: RoundedRectangle(cornerRadius: 6))
                     .accessibilityLabel("Instructions")
                     .onChange(of: context) { copied = false; shareStatus = "Changes have not been shared yet." }
             }
@@ -90,7 +90,7 @@ struct FloatingHUDView: View {
                     shareStatus = "Could not share: \(error.localizedDescription)"
                 }
             }
-            .buttonStyle(PoachActionStyle(fill: .blue, foreground: .white))
+            .buttonStyle(PoachActionStyle(fill: PoachPalette.cocoa, foreground: .white))
             .disabled(!connected)
             if !connected {
                 Button { showingAssistantSetup = true } label: {
@@ -134,7 +134,7 @@ struct FloatingHUDView: View {
                 .allowsHitTesting(commentsOpen)
         }
         }
-        .background(Color.white)
+        .background(PoachPalette.canvas)
         .preferredColorScheme(.light)
         .frame(width: editorWidth + sidebarWidth)
         .fixedSize(horizontal: false, vertical: true)

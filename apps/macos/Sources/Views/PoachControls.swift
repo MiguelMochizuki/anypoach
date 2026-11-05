@@ -1,6 +1,15 @@
 import SwiftUI
 
+enum PoachPalette {
+    static let canvas = Color(red: 0.91, green: 0.89, blue: 0.85)
+    static let panel = Color(red: 0.95, green: 0.93, blue: 0.90)
+    static let inset = Color(red: 0.86, green: 0.83, blue: 0.78)
+    static let cocoa = Color(red: 0.40, green: 0.25, blue: 0.18)
+}
+
 struct PoachSegments<Value: Hashable>: View {
+    @Namespace private var indicator
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let label: String
     @Binding var selection: Value
     let choices: [(Value, String)]
@@ -15,22 +24,29 @@ struct PoachSegments<Value: Hashable>: View {
                         .font(.system(size: 12, weight: selection == value ? .semibold : .regular))
                         .foregroundStyle(selection == value ? Color.white : .primary)
                         .frame(maxWidth: .infinity, minHeight: 22)
-                        .background(selection == value ? Color.blue : .clear, in: RoundedRectangle(cornerRadius: 5))
+                        .background {
+                            if selection == value {
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(PoachPalette.cocoa)
+                                    .matchedGeometryEffect(id: "selection", in: indicator)
+                            }
+                        }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selection == value ? .isSelected : [])
             }
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: selection)
         .padding(1)
-        .background(Color(white: 0.925), in: RoundedRectangle(cornerRadius: 6))
+        .background(PoachPalette.inset, in: RoundedRectangle(cornerRadius: 6))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
 }
 
 struct PoachActionStyle: ButtonStyle {
-    var fill = Color(white: 0.93)
+    var fill = PoachPalette.inset
     var foreground = Color.primary
     @Environment(\.isEnabled) private var enabled
 

@@ -40,17 +40,28 @@ struct PoachHomeView: View {
                     .frame(width: 144)
 
             }
-            if settings {
-                PoachSettingsView()
-            } else {
-                captureControls
+            Group {
+                if settings {
+                    PoachSettingsView()
+                } else {
+                    captureControls
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .keyframeAnimator(initialValue: 1.0, trigger: settings) { [reduceMotion, settings] pane, progress in
+                pane.opacity(reduceMotion ? 1 : progress)
+                    .offset(x: reduceMotion ? 0 : (settings ? 8 : -8) * (1 - progress))
+            } keyframes: { _ in
+                MoveKeyframe(0)
+                CubicKeyframe(1, duration: 0.18)
             }
         }
         .padding(16)
         .frame(width: min(440, (NSScreen.main?.visibleFrame.width ?? 800) - 32),
                alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
-        .background(Color.white)
+        .background(PoachPalette.canvas)
+        .tint(PoachPalette.cocoa)
         .preferredColorScheme(.light)
     }
 
@@ -68,7 +79,7 @@ struct PoachHomeView: View {
             Button(action: isRecording ? onStopRecording : onStartRecording) {
                 Text(primaryTitle).frame(maxWidth: .infinity)
             }
-            .buttonStyle(PoachActionStyle(fill: isRecording ? .red : .blue, foreground: .white))
+            .buttonStyle(PoachActionStyle(fill: isRecording ? .red : PoachPalette.cocoa, foreground: .white))
             .keyboardShortcut(.defaultAction)
             .disabled(isWorking)
 
@@ -92,7 +103,7 @@ struct PoachHomeView: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 17, weight: .medium))
                         .frame(width: 34, height: 34)
-                        .background(Color(white: highlightDropZone ? 0.915 : 0.895), in: RoundedRectangle(cornerRadius: 9))
+                        .background(PoachPalette.inset, in: RoundedRectangle(cornerRadius: 9))
                         .foregroundStyle(.primary)
                         .keyframeAnimator(initialValue: 0.0, trigger: dragEntry) { [animate = targeted && !reduceMotion] icon, displacement in
                             let offset = animate ? displacement : 0
@@ -112,7 +123,7 @@ struct PoachHomeView: View {
                 .padding(12)
                 .frame(maxWidth: .infinity)
                 .frame(height: 99)
-                .background(highlightDropZone ? Color(white: 0.70) : Color.white,
+                .background(highlightDropZone ? PoachPalette.inset : PoachPalette.panel,
                             in: RoundedRectangle(cornerRadius: 14))
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: highlightDropZone)
                 .contentShape(Rectangle())
@@ -170,12 +181,13 @@ struct PoachRecordingStatusView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(width: 260)
-        .background(.white, in: RoundedRectangle(cornerRadius: 14))
+        .background(PoachPalette.panel, in: RoundedRectangle(cornerRadius: 14))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(.white.opacity(0.7), lineWidth: 0.5)
         }
         .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 6)
+        .tint(PoachPalette.cocoa)
         .preferredColorScheme(.light)
     }
 }
