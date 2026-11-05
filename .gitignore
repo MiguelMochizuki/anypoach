@@ -13,3 +13,4 @@ dist/
 outputs/Poach.app/
 *.mp4
 *.mov
+outputs/connectors/

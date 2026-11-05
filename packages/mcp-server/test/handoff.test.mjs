@@ -22,7 +22,7 @@ test("shared brief carries notes and visual moments through MCP", { timeout: 30_
   const path = join(cache, "active-brief.json");
   await writeFile(path, JSON.stringify(brief));
   const client = new Client({ name: "poach-handoff-test", version: "1.0.0" });
-  const transport = new StdioClientTransport({ command: process.execPath, args: [new URL("../dist/index.js", import.meta.url).pathname], env: { ...process.env, HOME: home }, stderr: "pipe" });
+  const transport = new StdioClientTransport({ command: process.execPath, args: [process.env.POACH_TEST_SERVER ?? new URL("../dist/index.js", import.meta.url).pathname], env: { ...process.env, HOME: home }, stderr: "pipe" });
   await client.connect(transport);
   t.after(() => client.close());
   const shared = await client.callTool({ name: "poach_read_brief", arguments: {} });
@@ -54,7 +54,7 @@ test("connection status follows initialized clients independently", async (t) =>
   const directory = join(home, "Library/Caches/Poach/connections");
   const transport = () => new StdioClientTransport({
     command: process.execPath,
-    args: [new URL("../dist/index.js", import.meta.url).pathname],
+    args: [process.env.POACH_TEST_SERVER ?? new URL("../dist/index.js", import.meta.url).pathname],
     env: { ...process.env, HOME: home },
     stderr: "pipe",
   });
