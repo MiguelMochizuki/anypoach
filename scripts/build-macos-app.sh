@@ -44,6 +44,16 @@ fi
 if [[ -s "$app_path/Contents/Resources/Assets.car" ]]; then
   /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string Poach" "$app_path/Contents/Info.plist"
 fi
+runtime="$app_path/Contents/Resources/runtime"
+bash "$repo_root/scripts/bundle-runtime.sh" "$runtime"
+for tool in ffmpeg ffprobe; do
+  if [[ "$signing_identity" == "Poach Local Development" || "$signing_identity" == "-" ]]; then
+    codesign --force --timestamp=none --sign - "$runtime/bin/$tool"
+  else
+    codesign --force --options runtime --timestamp --sign "$signing_identity" "$runtime/bin/$tool"
+  fi
+done
+codesign --verify --strict "$runtime/bin/node"
 if [[ "$signing_identity" == "-" ]]; then
   codesign --force --sign - "$app_path"
   echo "Development build: ad-hoc signing can invalidate Screen Recording approval after rebuilding. Set POACH_CODESIGN_IDENTITY to a stable code-signing identity." >&2

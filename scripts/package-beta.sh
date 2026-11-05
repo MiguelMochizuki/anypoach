@@ -9,6 +9,10 @@ stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
 mkdir "$stage/Poach Codex"
 ditto outputs/connectors/marketplace "$stage/Poach Codex/marketplace"
+# The connector launches the server embedded in the installed app.
+rm -f "$stage/Poach Codex/marketplace/plugins/poach/server.mjs"
 cp scripts/install-codex-connector.sh "$stage/Poach Codex/Install Codex.command"
 ditto -c -k --keepParent "$stage/Poach Codex" "$release/Poach-Codex.zip"
 cp outputs/connectors/Poach.mcpb "$release/"
+cp outputs/runtime-cache/ffmpeg-8.1.3.tar.xz "$release/"
+cp scripts/bundle-runtime.sh "$release/"

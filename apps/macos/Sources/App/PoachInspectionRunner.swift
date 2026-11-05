@@ -31,7 +31,7 @@ enum PoachInspectionError: LocalizedError {
         case .projectNotBuilt:
             "Reinstall Poach to restore its analysis engine."
         case .nodeNotFound:
-            "Node.js wasn't found on PATH. Install Node.js 20 or newer, then launch Poach again."
+            "Poach’s bundled runtime is missing. Reinstall Poach from the release download."
         case .processFailed(let message):
             message
         }
@@ -43,7 +43,7 @@ enum PoachInspectionRunner {
                         onProgress: @escaping @MainActor @Sendable (String) -> Void) async throws -> PoachInspection {
         guard let engine = findEngine() else { throw PoachInspectionError.projectNotBuilt }
         guard let node = findNode() else { throw PoachInspectionError.nodeNotFound }
-        let entry = engine.path
+        let entry = engine.absoluteString
         let videoPath = videoURL.path
 
         return try await Task.detached(priority: .userInitiated) {
@@ -59,8 +59,7 @@ enum PoachInspectionRunner {
             // All inputs and imports are absolute, so no project cwd is needed.
             process.currentDirectoryURL = FileManager.default.temporaryDirectory
             var environment = ProcessInfo.processInfo.environment
-            let bundledPath = environment["PATH", default: ""]
-            environment["PATH"] = [bundledPath, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].joined(separator: ":")
+            environment["PATH"] = node.deletingLastPathComponent().path + ":/usr/bin:/bin"
             process.environment = environment
             let output = Pipe()
             let errors = Pipe()
@@ -105,10 +104,10 @@ enum PoachInspectionRunner {
     }
 
     static func findNode() -> URL? {
-        let environmentPaths = ProcessInfo.processInfo.environment["PATH", default: ""].split(separator: ":")
-        let paths = environmentPaths + ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
-        return paths.lazy.map { URL(fileURLWithPath: String($0)).appending(path: "node") }
-            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
+        guard let bin = Bundle.main.resourceURL?.appending(path: "runtime/bin"),
+              ["node", "ffmpeg", "ffprobe"].allSatisfy({ FileManager.default.isExecutableFile(atPath: bin.appending(path: $0).path) })
+        else { return nil }
+        return bin.appending(path: "node")
     }
 
     private static func jsString(_ value: String) -> String {
