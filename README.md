@@ -2,6 +2,16 @@
 
 Poach is a native macOS tool and local MCP server for turning short interface recordings into reusable motion context. It extracts representative keyframes, timing and easing estimates, and a compact color palette.
 
+## Install the private beta
+
+Download the assets from [GitHub Releases](https://github.com/guilopeszw/poach/releases) using an account with access to the private repository. The arm64 build runs on Apple silicon. Use macOS 15 or later for recording, or macOS 14 or later for file import.
+
+1. Install Node.js 20.19 or later and FFmpeg (including ffprobe). With Homebrew, run `brew install node ffmpeg`. Poach looks in the standard Apple silicon and Intel Homebrew directories.
+2. Unzip **Poach-arm64.zip**, move **Poach.app** to Applications, and open it. This tester build is locally signed and unnotarized. If Gatekeeper blocks launch, review the app in System Settings → Privacy & Security → Open Anyway. Grant Screen Recording when prompted.
+3. For **Codex**, install its CLI, unzip **Poach-Codex.zip**, then run `bash "Install Codex.command"` in the extracted folder. It places the connector in your Library, registers the marketplace, and installs the plugin. You can delete the extracted folder afterward.
+4. For **Claude Desktop**, open Settings → Extensions → Advanced settings → Install Extension, select **Poach.mcpb**, and enable Poach.
+5. Open a new assistant chat, record or import a clip, add a note, and paste **Copy handoff for chat** into the chat. Ask the assistant to read the brief and describe your annotated moment.
+
 ## What works today
 
 - The macOS app records a selected portion, display, or window for up to 30 seconds with ScreenCaptureKit, including the mouse pointer and click indicators, then analyzes it locally and opens the opaque review editor.
@@ -14,7 +24,7 @@ The first screen capture may ask for Screen Recording access. Grant it in **Syst
 
 The capture recorder uses ScreenCaptureKit's direct file output and requires macOS 15 or newer. On macOS 14, the app can still inspect existing recordings through the file picker or MCP server.
 
-## Requirements
+## Source build requirements
 
 - macOS 14 or newer; macOS 15 or newer for direct screen recording
 - Node.js 20.19 or newer and pnpm
@@ -99,7 +109,7 @@ Recordings that run slightly past 30 seconds while ScreenCaptureKit finishes sto
 
 Poach registers **Command–Shift–P** while running: it opens selected-area capture when idle and stops an active recording. The menu-bar panel reports if registration fails. The shortcut registers only that chord; it does not install a general keyboard monitor. Capture buttons remain available.
 
-Open **Settings** to choose a window edge, a default recording mode, and a Codex or Claude Desktop configuration. Click **Copy** to copy the configuration. The review editor also opens Settings. **Copy handoff for chat** becomes available when an initialized Poach MCP client is running. If you updated from an older build, restart the assistant's MCP server so it can advertise its connection. To inspect local media, drop one image or video onto the Capture tab or click the drop zone to browse. Keep the project folder in place for this development configuration. Claude setup follows the [MCP local-server guide](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
+Open **Settings** to choose a window edge, a default recording mode, and a Codex or Claude Desktop configuration. Click **Copy** to copy the configuration. The review editor also opens Settings. **Copy handoff for chat** becomes available when an initialized Poach MCP client is running. If you updated from an older build, restart the assistant's MCP server so it can advertise its connection. To inspect local media, drop one image or video onto the Capture tab or click the drop zone to browse. Keep the installed application at the location used when copying its configuration. Claude setup follows the [MCP local-server guide](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
 
 ## Local dropzone benchmark
 
@@ -109,11 +119,7 @@ From the project root, run `python3 -m http.server 8741 --bind 127.0.0.1 --direc
 
 ### Install the local assistant connectors
 
-On your Mac, install Node.js 20.19 or later and FFmpeg (including ffprobe), then run
-`pnpm install` and `pnpm run build:connectors` from this checkout.
-
-- **Codex:** run `codex plugin marketplace add "$PWD/outputs/connectors/marketplace"`, then `codex plugin add poach@poach-local`. Keep the generated directory in place; rebuild and reinstall if you move it. If you previously registered the standalone Poach server, run `codex mcp get poach` to identify the old standalone entry. If it points at this checkout’s `packages/mcp-server/dist/index.js`, remove it with `codex mcp remove poach` after installing the plugin. This leaves the plugin registration intact.
-- **Claude Desktop:** open Settings → Extensions → Advanced settings → Install Extension, choose `outputs/connectors/Poach.mcpb`, and enable Poach. This is a locally built, unsigned extension.
+Use the beta instructions above for downloaded packages. To generate all three archives from source, run `pnpm install` and `bash scripts/package-beta.sh`. The archives are written to `outputs/beta/`. If migrating from a manually configured MCP server, remove the old standalone entry after installing the plugin to avoid duplicate registration.
 
 Open a new chat, share a capture from Poach, and paste its chat handoff. Ask the assistant to read the shared brief and describe a specific timestamp. The packages contain server code, not your recordings. When you request a handoff, the connected assistant receives the requested evidence.
 
