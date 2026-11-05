@@ -1,7 +1,7 @@
 <p align="center"><img src="apps/macos/Assets/PoachIcon.png" width="88" alt="Poach pouch icon"></p>
 <h1 align="center">Poach</h1>
 <p align="center">A lightweight Mac app for the UI you wish you’d made.</p>
-<p align="center"><strong><a href="https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.3/Poach-arm64.zip">Download for Apple silicon</a></strong> · <a href="docs/media/poach-demo.mp4">Watch the demo</a></p>
+<p align="center"><strong><a href="https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.4/Poach-arm64.zip">Download for Apple silicon</a></strong> · <a href="docs/media/poach-demo.mp4">Watch the demo</a></p>
 
 <p align="center"><a href="docs/media/poach-editor.png"><img src="docs/media/poach-editor.png" width="550" alt="Poach reviewing a reading-list bookmark animation, with the clip, extracted colors, and instructions for the assistant."></a></p>
 
@@ -23,8 +23,8 @@ Download the Apple silicon build above, unzip it, and move **Poach.app** to Appl
 
 | Assistant | Install the MCP connector |
 | --- | --- |
-| [Codex installer](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.3/Poach-Codex.zip) | Unzip and double-click **Install Codex.command**. |
-| [Claude Desktop extension](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.3/Poach.mcpb) | Open **Settings → Extensions → Advanced settings → Install Extension**. Select the downloaded file and enable Poach. |
+| [Codex installer](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.4/Poach-Codex.zip) | Unzip and double-click **Install Codex.command**. |
+| [Claude Desktop extension](https://github.com/guilopeszw/poach/releases/download/v0.1.0-beta.4/Poach.mcpb) | Open **Settings → Extensions → Advanced settings → Install Extension**. Select the downloaded file and enable Poach. |
 
 **Beta requirements.** Screen recording requires macOS 15 or later. On macOS 14 you can import images and videos. Clips can be up to 30 seconds long. Poach records the screen without audio.
 
