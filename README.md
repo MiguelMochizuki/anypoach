@@ -100,3 +100,7 @@ Recordings that run slightly past 30 seconds while ScreenCaptureKit finishes sto
 Poach registers **Command–Shift–P** while running: it opens selected-area capture when idle and stops an active recording. The menu-bar panel reports if registration fails. The shortcut registers only that chord; it does not install a general keyboard monitor. Capture buttons remain available.
 
 Open **Settings** to choose a window edge, a default recording mode, and a Codex or Claude Desktop configuration. Click **Copy** to copy the configuration. The review editor also opens Settings. **Continue with Codex or Claude** becomes available when an initialized Poach MCP client is running. If you updated from an older build, restart the assistant's MCP server so it can advertise its connection. To inspect local media, drop one image or video onto the Capture tab or click the drop zone to browse. Keep the project folder in place for this development configuration. Claude setup follows the [MCP local-server guide](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
+
+## Local dropzone benchmark
+
+From the project root, run `python3 -m http.server 8741 --bind 127.0.0.1 --directory apps/benchmark` and open [the local benchmark](http://127.0.0.1:8741/). Record the drop zone and both sample files using Poach’s **Screen area** mode. Drag **mood.png** into the target to see progress, or **demo.mp4** to see the size-limit response. **Replay** resets the demo. Both files and the progress indicator are simulated locally.
