@@ -20,7 +20,7 @@ struct FloatingHUDView: View {
     @State private var playback = CommentPlayback()
     let palette: [HUDPaletteToken]
     var onCopyContext: (String) -> Void
-    var onShareContext: (String) throws -> Void
+    var onShareContext: (String) throws -> String
     @State private var connected = false
     @State private var showingAssistantSetup = false
     @State private var shareStatus = ""
@@ -76,12 +76,16 @@ struct FloatingHUDView: View {
                     .onChange(of: context) { copied = false; shareStatus = "Changes have not been shared yet." }
             }
 
-            Button("Continue with Codex or Claude") {
+            Button("Copy handoff for chat") {
                 connected = Self.hasLiveConnector()
                 guard connected else { return }
                 do {
-                    try onShareContext(implementationContext)
-                    shareStatus = "Brief published locally. In your connected Codex or Claude, ask: Read my Poach brief, describe the interaction, and recreate it in my project."
+                    let id = try onShareContext(implementationContext)
+                    let message = "Use Poach MCP to call poach_read_brief with briefId \(id). Verify the returned briefId matches before using its images and notes. Recreate the recorded interaction in this project. For video details, call poach_read_moment with the same briefId and timeMs."
+                    NSPasteboard.general.clearContents()
+                    let copied = NSPasteboard.general.setString(message, forType: .string)
+                    shareStatus = copied ? "Copied. Paste into the Codex or Claude chat where you want to work." : "Clipboard unavailable. Click Copy handoff to try again."
+
                 } catch {
                     shareStatus = "Could not share: \(error.localizedDescription)"
                 }
@@ -91,7 +95,7 @@ struct FloatingHUDView: View {
             if !connected {
                 Button { showingAssistantSetup = true } label: {
                 Label {
-                    Text("Connect an MCP assistant to continue.")
+                    Text("Set up Poach MCP in Codex or Claude.")
                         .font(.caption)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -100,6 +104,9 @@ struct FloatingHUDView: View {
                 }
                 .foregroundStyle(Color(red: 0.46, green: 0.38, blue: 0.10))
                 }.buttonStyle(.plain).accessibilityHint("Opens Settings")
+            }
+            if connected && shareStatus.isEmpty {
+                Text("Paste the handoff into your chosen Codex or Claude chat.").font(.caption).foregroundStyle(.secondary)
             }
             if !shareStatus.isEmpty {
                 Text(shareStatus).font(.caption).foregroundStyle(.secondary)

@@ -515,13 +515,15 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
         pasteboard.setString(prompt, forType: .string)
     }
 
-    private static func shareContext(_ result: PoachInspection, context: String) throws {
+    private static func shareContext(_ result: PoachInspection, context: String) throws -> String {
         let directory = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Caches/Poach", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
             attributes: [.posixPermissions: 0o700])
         let evidence = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result))
+        let identifier = UUID().uuidString
         let brief: [String: Any] = [
+            "briefId": identifier,
             "version": 1,
             "sharedAt": Date().timeIntervalSince1970,
             "context": context,
@@ -531,6 +533,7 @@ private final class FloatingHUDWindowController: NSObject, NSWindowDelegate {
         let destination = directory.appendingPathComponent("active-brief.json")
         try JSONSerialization.data(withJSONObject: brief, options: [.sortedKeys]).write(to: destination, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+        return identifier
     }
 }
 
