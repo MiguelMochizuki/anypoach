@@ -2,9 +2,25 @@
 
 Thanks for helping improve Poach. The project is a pnpm/Turborepo monorepo with a native SwiftUI client, a TypeScript analysis core, and an MCP server.
 
+## Contribute a change
+
+Create a topic branch from the latest `main` and open a pull request against `main`. Explain the problem, the resulting behavior, and how you verified it. For interface changes, include a screenshot or short recording made with synthetic or explicitly shareable media. Call out changes to permissions, storage, or supported macOS versions.
+
+**Every commit must be atomic and use a Conventional Commit subject** in the form `type(scope): summary`. Choose the area touched as the scope and describe the change with an imperative verb. For example:
+
+```text
+fix(codex): install a single connector launcher argument
+style(editor): outline the instructions field
+docs(readme): show the outlined instructions field
+```
+
+Keep one independently reviewable change per commit. Include regression tests with the fix they verify. Split unrelated edits, formatting, or documentation into separate commits. Use `feat` for new behavior, `fix` for corrections, `docs` for documentation, and `style`, `refactor`, `test`, `build`, `ci`, or `chore` when appropriate. Flag breaking interface changes with `!` before the colon and describe the migration in the commit body.
+
+Run the checks for each package you touch. Keep generated builds, dependency directories, app bundles, temporary captures, and private media out of commits. Update the README and this guide when commands, capabilities, permissions, or data handling change. Contributions are licensed under the repository’s [Apache License 2.0](LICENSE).
+
 ## Development setup
 
-Install Node.js 20.19 or newer, pnpm, Swift 6, and the `ffmpeg` and `ffprobe` command-line tools. On macOS, install FFmpeg with Homebrew:
+Install Node.js 20.19 or newer, the pnpm version pinned in [package.json](package.json), Swift 6, and the `ffmpeg` and `ffprobe` command-line tools. On macOS, install FFmpeg with Homebrew:
 
 ```sh
 brew install ffmpeg
@@ -13,12 +29,12 @@ brew install ffmpeg
 Then install dependencies and build the TypeScript packages:
 
 ```sh
-pnpm install
+pnpm install --frozen-lockfile
 pnpm build
 pnpm exec turbo run typecheck
 ```
 
-Build the macOS package with:
+The Swift package targets macOS 14 or later. Testing native screen recording requires macOS 15 or later and Screen Recording permission. Build the macOS package with:
 
 ```sh
 swift build --package-path apps/macos
@@ -39,16 +55,7 @@ Set `POACH_CODESIGN_IDENTITY` to an installed code-signing identity to preserve 
 - Use clear, accessible labels and respect macOS appearance, contrast, and motion preferences.
 - Add focused documentation when changing commands, permissions, supported file formats, or user data handling.
 
-## Pull requests
-
-1. Keep changes focused and explain the user-facing reason in the PR description.
-2. Use one atomic commit per logical change, with a Conventional Commit message such as `feat(macos): record short screen clips` or `docs: explain local capture permissions`.
-3. Include screenshots or a short recording when changing the macOS interface.
-4. Run the TypeScript build and typecheck for TypeScript changes. Build the Swift package for macOS changes.
-5. Describe any permissions added, data read or written, and platform limitations.
-6. Do not commit generated `.build`, `dist`, `.turbo`, `node_modules`, or app bundle output.
-
-By submitting a contribution, you agree that it is provided under the [Apache License 2.0](LICENSE). No separate contribution agreement is required.
+## Capture and handoff checks
 
 The explicit MCP share action writes one replaceable snapshot under `~/Library/Caches/Poach/active-brief.json`. Keep this format compatible with `poach_read_brief`, preserve user-only permissions, and document changes to the 24-hour validity period. Expired snapshots are removed on read.
 
@@ -68,7 +75,7 @@ Shortcut validation: with Poach running, physically press Command–Shift–P fr
 
 When checking assistant setup, verify the connector is available from the Settings tab and the review sheet. Verify **Copy handoff for chat** disables on disconnect and enables after initialization. Click both MCP copy buttons. Verify the Codex command quotes paths with spaces, the Claude JSON contains the poach server entry, and both buttons disable when the runtime is missing. The packaging script bundles the server and its JavaScript dependencies into the app. The connectors launch that server. To test portability, run `bash scripts/package-beta.sh`, move the archives outside the checkout, install the Codex marketplace with its included installer, and test both servers from their extracted locations.
 
-When checking video comments, post at two different times, close and reopen the sidebar, and select the earlier comment. Verify the player seeks to that moment and both timestamps appear in the copied prompt or shared brief.
+When checking video comments, post at two different times, close and reopen the sidebar, and select the earlier comment. Verify the player seeks to that moment and both timestamps appear in the brief returned by `poach_read_brief` after choosing **Copy handoff for chat**.
 
 Motion-analysis checks include stationary video. Verify that a quiet recording yields one resting frame, zero motion duration, and a null easing estimate in the assistant brief.
 
@@ -76,6 +83,7 @@ When changing the local dropzone benchmark, check the PNG success path, MP4 refu
 
 Run `pnpm run build:connectors` after MCP changes. To exercise the bundled server rather than the development entry point, set `POACH_TEST_SERVER` to the absolute path to the packaged server.mjs and run `node --test packages/mcp-server/test/handoff.test.mjs`. To exercise Claude, unpack the .mcpb and run the command from its manifest with Poach installed in Applications. The tests use synthetic media and an isolated Poach cache.
 
+When changing storage cleanup, verify it with temporary fixtures. Cover native recordings, trimmed videos, generated frames, active handoff paths, the open edit, unrelated files, and symlinks. An unreadable shared brief must prevent deletion.
 
 ### Bundled tools
 
@@ -106,7 +114,7 @@ Build first, then configure an MCP client to launch the server's compiled JavaSc
 ```text
 apps/macos/          SwiftUI menu-bar app, capture service, and floating HUD
 packages/core/       TypeScript frame extraction, motion analysis, and palette code
-packages/mcp-server/ MCP server exposing poach_inspect
+packages/mcp-server/ Local MCP server for media inspection and assistant handoff
 scripts/             Local packaging helpers
 ```
 
@@ -117,10 +125,8 @@ From the project root, run `python3 -m http.server 8741 --bind 127.0.0.1 --direc
 [Context meter](http://127.0.0.1:8741/context-meter.html) runs on the same benchmark server. Hover a category to isolate its token count. Use **Compact** and **Undo** to compare totals.
 
 
-## Package and verify a release
+## Package and verify a release (authorized maintainers)
 
 Run `bash scripts/package-beta.sh` to produce the app archive, Codex installer, Claude extension, FFmpeg source archive, and build recipe in `outputs/beta/`. Run `open outputs/Poach.app` to launch the local build. The capture shortcut is Command–Shift–P. For an installer upgrade check, register a copy of the old local marketplace in a temporary Codex home. Run the packaged installer twice and verify that Poach is enabled and points to the installed marketplace.
 
-Prepare release assets in a draft, verify them, then publish. Future releases are immutable once published. Use a new version for corrections. All tags require repository administrator access to create, update, or delete. The personal repository owner currently holds the only administrator account. GitHub also allows users with write access to manage releases, including releases for existing tags. Grant repository write access only to people explicitly authorized to publish. Keep workflow permissions read-only and review any credentials or GitHub App installation that requests contents write access.
-
-When changing storage cleanup, verify it with temporary fixtures. Cover native recordings, trimmed videos, generated frames, active handoff paths, the open edit, unrelated files, and symlinks. An unreadable shared brief must prevent deletion.
+Only maintainers authorized by the repository owner may publish a release. Prepare release assets in a draft, verify them, then publish. Future releases are immutable once published. Use a new version for corrections. All tags require repository administrator access to create, update, or delete. The personal repository owner currently holds the only administrator account. GitHub also allows users with write access to manage releases, including releases for existing tags. Grant repository write access only to people explicitly authorized to publish. Keep workflow permissions read-only and review any credentials or GitHub App installation that requests contents write access.
