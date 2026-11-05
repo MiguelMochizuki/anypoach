@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct PoachHomeView: View {
+    let icon: NSImage
     let isWorking: Bool
     var workingTitle: String = "Preparing your capture…"
     let isRecording: Bool
@@ -153,7 +154,7 @@ struct PoachHomeView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(nsImage: NSApplication.shared.applicationIconImage)
+            Image(nsImage: icon)
                 .resizable()
                 .frame(width: 30, height: 30)
                 .accessibilityHidden(true)

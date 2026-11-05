@@ -23,6 +23,7 @@ struct PoachApp: App {
     var body: some Scene {
         Window("Poach", id: "main") {
             PoachHomeView(
+                icon: appDelegate.icon,
                 isWorking: isWorking,
                 workingTitle: workingTitle,
                 isRecording: isRecording,
@@ -316,7 +317,38 @@ private final class RecordingStatusWindowController {
 }
 
 @MainActor
-private final class PoachAppDelegate: NSObject, NSApplicationDelegate {
+private final class PoachAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
+    @Published private(set) var icon: NSImage = NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
+    private var appearanceObservation: NSKeyValueObservation?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.initial, .new]) { _, _ in
+            Task { @MainActor [weak self] in self?.refreshIcon() }
+        }
+    }
+
+    private func refreshIcon() {
+        // A compiled layered icon is rendered by macOS, including Dock tint and clear styles.
+        if Bundle.main.object(forInfoDictionaryKey: "CFBundleIconName") != nil {
+            icon = NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
+            return
+        }
+        guard let url = Bundle.main.url(forResource: "Pouch", withExtension: "png"),
+              let pouch = NSImage(contentsOf: url) else { return }
+        let dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let paper = NSColor(srgbRed: 247/255, green: 247/255, blue: 245/255, alpha: 1)
+        let tile = dark ? NSColor(srgbRed: 0.147, green: 0.147, blue: 0.153, alpha: 1) : paper
+        let image = NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { _ in
+            tile.setFill()
+            NSBezierPath(roundedRect: NSRect(x: 80, y: 80, width: 864, height: 864),
+                         xRadius: 190, yRadius: 190).fill()
+            pouch.draw(in: NSRect(x: 220, y: 220, width: 584, height: 584))
+            return true
+        }
+        NSApp.applicationIconImage = image
+        icon = image
+    }
+
     let editor = FloatingHUDWindowController()
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
