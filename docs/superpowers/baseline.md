@@ -7,11 +7,11 @@ Medida em 2026-11-20 no Linux (x86_64), Node 26.9, ffmpeg 8.0.1, com o `packages
 | `inspectVideo` em `motion.mov` (2 s, 160x90) | 24 | 3,76 s | 4,2 s | 75 MB | 27 / 2 |
 | `inspectRecording` em `overrun.mov` (31,5 s recortado a 30 s, 96x64) | 360 | 33,5 s | 36,6 s | 77 MB | 364 / 3 |
 
-O custo cresce linearmente com o número de amostras porque cada amostra abre um processo `ffmpeg`. Metas da versão Python: ver `python/tests` e a Task 4 do plano; o jitter do ponteiro será registrado aqui na Task 7.
+O custo cresce linearmente com o número de amostras porque cada amostra abre um processo `ffmpeg`. Metas da versão Python: ver `tests` e a Task 4 do plano; o jitter do ponteiro será registrado aqui na Task 7.
 
 ## Python (Task 4), mesma máquina
 
-Medido com `python/tools/bench.py` (PyAV 19.0.2, decodificação em um único processo, nenhum `ffmpeg` filho).
+Medido com `tools/bench.py` (PyAV 19.0.2, decodificação em um único processo, nenhum `ffmpeg` filho).
 
 | Caso | Tempo (parede) | CPU (user+sys) | Pico de RSS |
 |---|---|---|---|
@@ -22,7 +22,7 @@ Contra a linha de base do TS (3,76 s e 33,5 s) a análise ficou cerca de 60x e 2
 
 ## Polling a 120 Hz (Task 7), Linux
 
-`python/tools/jitter.py` mede o laço de amostragem com uma fonte sintética (não a chamada do SO). 10 s no Linux: 1201 amostras para ~1200 esperadas (0 perdidas), intervalo médio 8,33 ms, p99 8,78 ms, máximo 8,88 ms. O laço agenda por tick a partir do início, então o atraso não acumula. No Windows o agendador padrão tem granularidade de ~15 ms; `Win32PointerSource` pede `timeBeginPeriod(1)` e a medição ainda precisa ser feita no CI/máquina Windows. Se o jitter ali for alto, é o gatilho para mover o laço para uma extensão nativa.
+`tools/jitter.py` mede o laço de amostragem com uma fonte sintética (não a chamada do SO). 10 s no Linux: 1201 amostras para ~1200 esperadas (0 perdidas), intervalo médio 8,33 ms, p99 8,78 ms, máximo 8,88 ms. O laço agenda por tick a partir do início, então o atraso não acumula. No Windows o agendador padrão tem granularidade de ~15 ms; `Win32PointerSource` pede `timeBeginPeriod(1)` e a medição ainda precisa ser feita no CI/máquina Windows. Se o jitter ali for alto, é o gatilho para mover o laço para uma extensão nativa.
 
 ## Captura com MssBackend (Task 8), Linux/XWayland
 
