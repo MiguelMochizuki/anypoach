@@ -133,14 +133,16 @@ Build first, then configure an MCP client to launch the server's compiled JavaSc
 
 ## Portable Python implementation (in progress)
 
-`python/` is a cross-platform rewrite of the analysis core, MCP server, and brief storage in Python (PyAV and numpy decode in a single process, with no `ffmpeg` child processes or Node). It lives beside the Swift and TypeScript code, which stay in place until the Python version reaches parity. Phase 1 covers Windows 10+ and Linux X11. Screen capture and the PySide6 window are not implemented yet, so there is no `poach` app command.
+`python/` is a cross-platform rewrite of the analysis core, MCP server, and brief storage in Python (PyAV and numpy decode in a single process, with no `ffmpeg` child processes or Node). It lives beside the Swift and TypeScript code, which stay in place until the Python version reaches parity. Phase 1 covers Windows 10+ and Linux X11. It records a screen area (`mss` plus PyAV/H.264), samples the pointer, analyzes, shares the brief, and has a minimal PySide6 window (`uv run poach`: choose area, record, stop, see keyframes, copy the assistant prompt). The window has no global shortcut, no comment editor, and no onboarding yet.
 
 ```sh
 cd python
-uv sync --group dev                    # Python 3.11 or newer
+uv sync --group dev --extra ui         # Python 3.11 or newer; the ui extra adds PySide6 and mss
 uv run pytest                          # headless suites; needs the ffmpeg CLI only to synthesize test clips
 uv run ruff check src tests tools
 uv run poach-mcp                       # stdio MCP server, same four tools as the TypeScript server
+uv run poach                           # minimal capture window
+uv run pytest -m live                  # real capture; needs an X11 or Windows desktop (CI uses Xvfb on Linux)
 ```
 
 To connect an assistant to it, point the MCP client at `uv run --project /absolute/path/to/poach/python poach-mcp`.
@@ -157,7 +159,7 @@ Keyframe kinds, times, durations, and timing tokens must match the goldens exact
 
 Data handling matches the rest of the project: no network, telemetry, or audio, and only pointer position and button state are sampled, by polling, with no global hooks. Briefs and archives live in the per-OS cache directory (`~/Library/Caches/Poach` on macOS, `~/.cache/Poach` on Linux, `%LOCALAPPDATA%\Poach\Cache` on Windows; `POACH_CACHE_DIR` overrides it for tests) and expire after 24 hours. On POSIX they use `0700` and `0600`. On Windows the same files get an ACL limited to the current user through `icacls`; that path has no local test and relies on CI. The Windows pointer source needs a per-monitor DPI-aware process, or coordinates arrive scaled. On Wayland there is no global pointer position, so the trace reports `available: false`.
 
-`python/tools/bench.py` and `python/tools/jitter.py` print the timings recorded in `docs/superpowers/baseline.md`.
+Before relying on a change to capture or the window, check by hand on Windows and on Linux X11: the Poach window does not appear in the video (on Windows it is excluded with `SetWindowDisplayAffinity`; elsewhere it is hidden while recording and a tray menu stops the recording, with a 30 s limit), the selection overlay is not recorded, the cursor and click ring are drawn where the pointer was, and the brief shows up in the OS cache directory. On Wayland the screen cannot be captured with `mss` yet. `python/tools/bench.py` and `python/tools/jitter.py` print the timings recorded in `docs/superpowers/baseline.md`.
 
 ## Repository map
 

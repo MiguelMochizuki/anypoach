@@ -34,9 +34,10 @@ uv run pytest                                  # fixtures need the ffmpeg CLI; s
 uv run pytest tests/test_inspect_golden.py -k motion
 uv run ruff check src tests tools
 uv run poach-mcp                               # stdio MCP server
+uv run poach                                   # minimal capture window (needs `uv sync --extra ui`; tests use QT_QPA_PLATFORM=offscreen)
 ```
 
-Cross-platform replacement for the analysis core, brief storage and MCP server, and the only code that is meant to run off macOS. PyAV and numpy decode in one process (no ffmpeg children). Screen capture and the PySide6 window are not written yet (phase 1 Tasks 8 and 9). `packages/core` is the oracle: `python/tests/golden` is generated from it with `python/tools/make_goldens.mjs`. The design is `docs/superpowers/specs/2026-11-20-poach-portable-rewrite-design.md`, the plan `docs/superpowers/plans/2026-11-20-poach-portable-phase1.md`, and measured timings are in `docs/superpowers/baseline.md`.
+Cross-platform replacement for the analysis core, brief storage and MCP server, and the only code that is meant to run off macOS. PyAV and numpy decode in one process (no ffmpeg children). Screen capture (`mss` + PyAV) and a minimal PySide6 window (`uv run poach`) exist but are only unit-tested here (no Windows or X11 desktop); `pytest -m live` needs a real display. `packages/core` is the oracle: `python/tests/golden` is generated from it with `python/tools/make_goldens.mjs`. The design is `docs/superpowers/specs/2026-11-20-poach-portable-rewrite-design.md`, the plan `docs/superpowers/plans/2026-11-20-poach-portable-phase1.md`, and measured timings are in `docs/superpowers/baseline.md`.
 
 ## Architecture
 
