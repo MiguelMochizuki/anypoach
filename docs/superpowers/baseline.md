@@ -23,3 +23,7 @@ Contra a linha de base do TS (3,76 s e 33,5 s) a análise ficou cerca de 60x e 2
 ## Polling a 120 Hz (Task 7), Linux
 
 `python/tools/jitter.py` mede o laço de amostragem com uma fonte sintética (não a chamada do SO). 10 s no Linux: 1201 amostras para ~1200 esperadas (0 perdidas), intervalo médio 8,33 ms, p99 8,78 ms, máximo 8,88 ms. O laço agenda por tick a partir do início, então o atraso não acumula. No Windows o agendador padrão tem granularidade de ~15 ms; `Win32PointerSource` pede `timeBeginPeriod(1)` e a medição ainda precisa ser feita no CI/máquina Windows. Se o jitter ali for alto, é o gatilho para mover o laço para uma extensão nativa.
+
+## Captura com MssBackend (Task 8), Linux/XWayland
+
+Medição neste desktop (sessão Wayland, então o `mss` lê o XWayland e a imagem sai preta; vale como ordem de grandeza do custo, não da captura real). `grab` de 1280x720 sozinho: ~250 quadros/s. Gravação de 3 s com `Recorder` (H.264 `libx264` `veryfast`, crf 20, 30 fps): 91 quadros, ~80% de um núcleo. O custo vem da conversão BGRA→yuv420p e do `libx264`; se for alto demais em máquinas fracas, os caminhos são `preset ultrafast`, reduzir a resolução de saída ou codificação por hardware. **Pendência P2:** medir no Windows (quadros/s e CPU) antes de decidir se entra um `DxcamBackend`.
