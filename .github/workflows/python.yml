@@ -1,0 +1,36 @@
+name: Python
+on:
+  push:
+    branches: [main]
+    paths: ["python/**", ".github/workflows/python.yml"]
+  pull_request:
+    paths: ["python/**", ".github/workflows/python.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # The test fixtures are synthesized with ffmpeg; the package itself does not need it.
+      - name: Install ffmpeg for the test fixtures
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux) sudo apt-get update && sudo apt-get install -y ffmpeg ;;
+            macOS) brew install ffmpeg ;;
+            Windows) choco install ffmpeg -y --no-progress ;;
+          esac
+      - run: uv sync --group dev
+      - run: uv run ruff check src tests tools
+      - run: uv run pytest -q
