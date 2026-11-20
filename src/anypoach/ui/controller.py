@@ -15,7 +15,7 @@ from anypoach.pointer.trace import PointerSource, Rect
 
 State = Literal["idle", "recording", "ready"]
 
-_LOOKUP = "Use Poach MCP to call poach_read_brief with briefId {id}. Verify the returned briefId matches."
+_LOOKUP = "Use AnyPoach MCP to call anypoach_read_brief with briefId {id}. Verify the returned briefId matches."
 
 
 def physical_rect(start: tuple[float, float], end: tuple[float, float], *, origin: tuple[float, float], dpr: float) -> Rect:
@@ -48,7 +48,7 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
             "Match pointer coordinates and timestamps to the frames to identify targets. For a drag, inspect the frames "
             "after release and include visible changes through the end of the response. Use the video and notes to "
             "describe visible results, and ask if behavior is ambiguous. Recreate the recorded interaction in this "
-            "project. For video details, call poach_read_moment with the same briefId and timeMs.")
+            "project. For video details, call anypoach_read_moment with the same briefId and timeMs.")
 
 
 class Controller:
@@ -93,7 +93,7 @@ class Controller:
             recording = recorder.stop()
             result = inspect_recording(recording.path, output_dir=self._work / "frames")
         except PermissionError:
-            self.message = "Poach cannot capture the screen. Check the screen recording permission and try again."
+            self.message = "AnyPoach cannot capture the screen. Check the screen recording permission and try again."
             return None
         except (ValueError, OSError) as error:
             self.message = f"Could not finish the recording: {error}"

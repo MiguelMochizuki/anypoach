@@ -1,4 +1,4 @@
-"""Find (and remove) Poach's temporary media that no valid brief still needs."""
+"""Find (and remove) AnyPoach's temporary media that no valid brief still needs."""
 from __future__ import annotations
 
 import json
@@ -15,10 +15,10 @@ from .paths import cache_dir
 from .store import VALIDITY_SECONDS, read_regular
 
 _ID = r"[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}"
-_POACH_FILES = re.compile(rf"^(?:capture-{_ID}\.mov|screenshot-{_ID}\.png)$")
-_RECORDING_DIR = re.compile(r"^poach-recording-[a-zA-Z0-9]{6}$")
+_ANYPOACH_FILES = re.compile(rf"^(?:capture-{_ID}\.mov|screenshot-{_ID}\.png)$")
+_RECORDING_DIR = re.compile(r"^anypoach-recording-[a-zA-Z0-9]{6}$")
 _RECORDING_FILE = re.compile(r"^recording\.mp4$")
-_FRAME_DIR = re.compile(r"^poach-[a-zA-Z0-9]{6}$")
+_FRAME_DIR = re.compile(r"^anypoach-[a-zA-Z0-9]{6}$")
 _FRAME_FILE = re.compile(r"^[a-zA-Z0-9_-]{1,48}-(image|(start|peak|settled)-[0-9]+ms)\.png$")
 
 
@@ -61,8 +61,8 @@ def scan_storage(*, temp: Path | None = None, cache: Path | None = None, open_pa
     protected = {os.path.realpath(p) for p in (*open_paths, *_protected_media(cache or cache_dir()))}
     usage = Usage()
     for folder in sorted(temp.iterdir()):
-        if folder.name == "Poach":
-            pattern = _POACH_FILES
+        if folder.name == "AnyPoach":
+            pattern = _ANYPOACH_FILES
         elif _RECORDING_DIR.match(folder.name):
             pattern = _RECORDING_FILE
         elif _FRAME_DIR.match(folder.name):
@@ -89,7 +89,7 @@ def clear_storage(*, temp: Path | None = None, cache: Path | None = None, open_p
     for file in files:
         file.unlink()
     for folder in {f.parent for f in files}:
-        if folder.name != "Poach":
+        if folder.name != "AnyPoach":
             try:
                 folder.rmdir()  # only removes empty folders, even if a new file appeared meanwhile
             except OSError:

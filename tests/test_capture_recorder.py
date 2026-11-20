@@ -176,8 +176,8 @@ def test_frames_grabbed_at_the_same_instant_still_get_increasing_times(tmp_path)
 
 
 def test_recording_name_is_recognized_by_the_storage_cleanup(tmp_path):
-    from anypoach.brief.cleanup import _POACH_FILES
+    from anypoach.brief.cleanup import _ANYPOACH_FILES
     recorder, _ = make(tmp_path)
     recorder.start(Rect(0, 0, 32, 32), spawn=False)
     recorder.capture_once()
-    assert _POACH_FILES.match(recorder.stop().path.name)
+    assert _ANYPOACH_FILES.match(recorder.stop().path.name)

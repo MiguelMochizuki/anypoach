@@ -1,4 +1,4 @@
-"""Minimal Poach window: choose an area, record, stop, see the keyframes, copy the assistant prompt."""
+"""Minimal AnyPoach window: choose an area, record, stop, see the keyframes, copy the assistant prompt."""
 from __future__ import annotations
 
 import sys
@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
         menu = QMenu()
         menu.addAction("Stop recording", self._stop)
         tray.setContextMenu(menu)
-        tray.setToolTip("Poach is recording")
+        tray.setToolTip("AnyPoach is recording")
         tray.show()
         self._tray = tray
         self.hide()
@@ -153,7 +153,7 @@ class MainWindow(QMainWindow):
 
 def main() -> int:
     app = QApplication(sys.argv)
-    work = make_temp_dir("Poach-")
+    work = make_temp_dir()
     controller = Controller(MssBackend(), default_source(), Path(work), cache=cache_dir())
     window = MainWindow(controller)
     window.show()

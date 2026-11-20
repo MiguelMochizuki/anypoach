@@ -37,7 +37,7 @@ def _safe_base(path: Path, fallback: str) -> str:
 
 def _output_dir(output_dir: str | Path | None) -> Path:
     if output_dir is None:
-        return make_temp_dir("poach-")
+        return make_temp_dir("anypoach-")
     path = Path(output_dir).resolve()
     path.mkdir(parents=True, exist_ok=True)
     return path
@@ -91,7 +91,7 @@ def inspect_recording(path: str | Path, **options) -> InspectionResult:
         duration = source.duration_s
     if duration <= MAX_DURATION_SECONDS:
         return inspect_video(source_path, **options)
-    clipped = make_temp_dir("poach-recording-") / "recording.mp4"
+    clipped = make_temp_dir("anypoach-recording-") / "recording.mp4"
     _clip(source_path, clipped, MAX_DURATION_SECONDS)
     return inspect_video(clipped, **options)
 

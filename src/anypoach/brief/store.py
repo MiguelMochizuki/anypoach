@@ -88,14 +88,14 @@ def read_brief(brief_id: str | None = None, *, cache: Path | None = None) -> dic
         brief = json.loads(read_regular(path))
         shared_at = float(brief["sharedAt"])
     except FileNotFoundError:
-        raise ValueError("No shared brief is available. Share one from Poach first.") from None
+        raise ValueError("No shared brief is available. Share one from AnyPoach first.") from None
     except (KeyError, TypeError, json.JSONDecodeError):
-        raise ValueError("The shared brief is unreadable. Share it again from Poach.") from None
+        raise ValueError("The shared brief is unreadable. Share it again from AnyPoach.") from None
     if brief_id is not None and str(brief.get("briefId", "")).lower() != brief_id.lower():
-        raise ValueError("This handoff was replaced or its local archive is unavailable. Share it again from Poach.")
+        raise ValueError("This handoff was replaced or its local archive is unavailable. Share it again from AnyPoach.")
     if time.time() - shared_at > VALIDITY_SECONDS:
         # Only the app replaces the latest snapshot; archived IDs live at immutable paths.
         if path != latest:
             path.unlink(missing_ok=True)
-        raise ValueError("This shared brief expired. Share it again from Poach.")
+        raise ValueError("This shared brief expired. Share it again from AnyPoach.")
     return brief

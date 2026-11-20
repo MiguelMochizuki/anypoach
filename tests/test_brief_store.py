@@ -25,12 +25,12 @@ def result(media, name="capture"):
 @pytest.fixture
 def env(tmp_path):
     cache, temp = tmp_path / "cache", tmp_path / "tmp"
-    (temp / "Poach").mkdir(parents=True)
+    (temp / "AnyPoach").mkdir(parents=True)
     return cache, temp
 
 
 def make_media(temp, name="capture-%s.mov"):
-    path = temp / "Poach" / (name % str(uuid.uuid4()).upper())
+    path = temp / "AnyPoach" / (name % str(uuid.uuid4()).upper())
     path.write_bytes(b"x" * 10)
     return path
 
@@ -119,8 +119,8 @@ def test_scan_protects_media_of_valid_briefs_and_lists_the_rest(env):
     kept = make_media(temp)
     share(result(kept), "", [], cache=cache)
     stale = make_media(temp)
-    (temp / "Poach" / "notes.txt").write_text("not ours")
-    folder = temp / "poach-AbC123"
+    (temp / "AnyPoach" / "notes.txt").write_text("not ours")
+    folder = temp / "anypoach-AbC123"
     folder.mkdir()
     (folder / "clip-start-12ms.png").write_bytes(b"12345")
     (folder / "unrelated.png").write_bytes(b"x")
@@ -141,7 +141,7 @@ def test_media_of_expired_briefs_and_open_paths(env):
 
 def test_paths_with_spaces_and_accents_are_protected(env):
     cache, temp = env
-    folder = temp / "poach-recording-aB3dE9"
+    folder = temp / "anypoach-recording-aB3dE9"
     folder.mkdir()
     media = folder / "recording.mp4"
     media.write_bytes(b"x")
@@ -155,8 +155,8 @@ def test_symlinked_temp_dirs_and_files_are_ignored(env):
     outside = temp / "outside"
     outside.mkdir()
     (outside / "recording.mp4").write_bytes(b"x")
-    (temp / "poach-recording-Zz9Zz9").symlink_to(outside)
-    (temp / "Poach" / f"capture-{uuid.uuid4()}.mov").symlink_to(outside / "recording.mp4")
+    (temp / "anypoach-recording-Zz9Zz9").symlink_to(outside)
+    (temp / "AnyPoach" / f"capture-{uuid.uuid4()}.mov").symlink_to(outside / "recording.mp4")
     assert scan_storage(temp=temp, cache=cache).removable == []
 
 
@@ -165,11 +165,11 @@ def test_clear_removes_unused_media_and_empty_folders_only(env):
     kept = make_media(temp)
     share(result(kept), "", [], cache=cache)
     stale = make_media(temp)
-    folder = temp / "poach-AbC123"
+    folder = temp / "anypoach-AbC123"
     folder.mkdir()
     (folder / "clip-image.png").write_bytes(b"x")
     clear_storage(temp=temp, cache=cache)
-    assert kept.exists() and not stale.exists() and not folder.exists() and (temp / "Poach").exists()
+    assert kept.exists() and not stale.exists() and not folder.exists() and (temp / "AnyPoach").exists()
 
 
 def test_malformed_briefs_stop_the_scan_instead_of_risking_media(env):

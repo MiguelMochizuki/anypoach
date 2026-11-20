@@ -1,4 +1,4 @@
-"""Poach MCP server (stdio). Stdout is the protocol channel: diagnostics go to stderr."""
+"""AnyPoach MCP server (stdio). Stdout is the protocol channel: diagnostics go to stderr."""
 from __future__ import annotations
 
 import asyncio
@@ -23,7 +23,7 @@ from .descriptions import TOOLS
 
 PNG_SIGNATURE = bytes([137, 80, 78, 71, 13, 10, 26, 10])
 FIVE_MB = 5 * 1024 * 1024
-server = MCPServer("poach", version="0.1.0")
+server = MCPServer("anypoach", version="0.1.0")
 
 
 def text(value: str) -> TextContent:
@@ -66,16 +66,16 @@ async def _inspect(fn, path: str, output_directory: str | None, failure_prefix: 
         return failure(f"{failure_prefix}: {error}")
 
 
-@tool("poach_inspect")
-async def poach_inspect(videoPath: Annotated[str, Field(min_length=1, description="Absolute path to a local .mp4 or .mov file")],
+@tool("anypoach_inspect")
+async def anypoach_inspect(videoPath: Annotated[str, Field(min_length=1, description="Absolute path to a local .mp4 or .mov file")],
                         outputDirectory: Annotated[str | None, Field(description="Optional absolute directory for extracted keyframe PNG files")] = None) -> CallToolResult:
-    return await _inspect(inspect_video, videoPath, outputDirectory, "Poach could not inspect this video")
+    return await _inspect(inspect_video, videoPath, outputDirectory, "AnyPoach could not inspect this video")
 
 
-@tool("poach_inspect_image")
-async def poach_inspect_image(imagePath: Annotated[str, Field(min_length=1, description="Absolute path to a local still image")],
+@tool("anypoach_inspect_image")
+async def anypoach_inspect_image(imagePath: Annotated[str, Field(min_length=1, description="Absolute path to a local still image")],
                               outputDirectory: Annotated[str | None, Field(description="Optional absolute directory for the normalized PNG preview")] = None) -> CallToolResult:
-    return await _inspect(inspect_image, imagePath, outputDirectory, "Poach could not inspect this image")
+    return await _inspect(inspect_image, imagePath, outputDirectory, "AnyPoach could not inspect this image")
 
 
 class Brief(BaseModel):
@@ -127,7 +127,7 @@ async def _drag_release_content(source_path: str, actions: list[dict[str, Any]])
     starts = sorted(a["timeMs"] for a in drags)
     recent = releases[-3:]
     if len(recent) < len(releases):
-        content.append(text("Frames are included for the three latest drag releases inside the capture. Use poach_read_moment for earlier candidates."))
+        content.append(text("Frames are included for the three latest drag releases inside the capture. Use anypoach_read_moment for earlier candidates."))
     for release in recent:
         release_ms = release["timeMs"] + release["durationMs"]
         next_drag = next((s for s in starts if s > release_ms), None)
@@ -150,8 +150,8 @@ async def _drag_release_content(source_path: str, actions: list[dict[str, Any]])
     return content
 
 
-@tool("poach_read_brief")
-async def poach_read_brief(briefId: uuid.UUID | None = None,
+@tool("anypoach_read_brief")
+async def anypoach_read_brief(briefId: uuid.UUID | None = None,
                            includeKeyframes: Annotated[bool, Field(description="Include the shared capture's PNG keyframes as images for visual inspection")] = True) -> CallToolResult:
     try:
         raw = read_brief(str(briefId) if briefId else None)
@@ -171,7 +171,7 @@ async def poach_read_brief(briefId: uuid.UUID | None = None,
                 content += await _drag_release_content(source, actions["actions"])
         return CallToolResult(content=content, structured_content=response)
     except Exception as error:  # noqa: BLE001
-        return failure(f"No readable shared brief. Choose Copy handoff for chat in Poach. {error}")
+        return failure(f"No readable shared brief. Choose Copy handoff for chat in AnyPoach. {error}")
 
 
 STYLE_KEYS = ("fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing")
@@ -232,8 +232,8 @@ def _browser_near(raw: Any, time_ms: float) -> list[dict[str, Any]]:
     return sorted(near, key=lambda i: i["estimatedVideoMs"])[:12]
 
 
-@tool("poach_read_moment")
-async def poach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, description="Timestamp in milliseconds, before the recording ends")],
+@tool("anypoach_read_moment")
+async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, description="Timestamp in milliseconds, before the recording ends")],
                             briefId: uuid.UUID | None = None) -> CallToolResult:
     try:
         raw = read_brief(str(briefId) if briefId else None)
@@ -241,7 +241,7 @@ async def poach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, descr
         if not isinstance(evidence, dict) or evidence.get("mediaType") != "video" or not isinstance(evidence.get("sourcePath"), str):
             raise ValueError("This shared brief does not include a video recording.")
         if not evidence["sourcePath"]:
-            raise ValueError("This favorite keeps reference frames without the original recording. Use poach_read_brief to see its saved frames.")
+            raise ValueError("This favorite keeps reference frames without the original recording. Use anypoach_read_brief to see its saved frames.")
         png = await asyncio.to_thread(read_video_moment, evidence["sourcePath"], timeMs)
         if len(png) > FIVE_MB:
             raise ValueError("Reference image exceeds the 5 MB limit")
@@ -297,7 +297,7 @@ def _refresh_presence() -> None:
         _presence.touch(mode=0o600)
         os.utime(_presence)
     except OSError as error:
-        print(f"Could not update Poach connection status: {error}", file=sys.stderr)
+        print(f"Could not update AnyPoach connection status: {error}", file=sys.stderr)
 
 
 def _disconnect() -> None:

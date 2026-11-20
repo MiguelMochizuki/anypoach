@@ -45,7 +45,7 @@ def test_full_flow_writes_a_brief_the_mcp_side_can_read(tmp_path):
     brief = read_brief(cache=tmp_path / "cache")
     assert brief["briefId"] in prompt and brief["context"] == "Ease the box out."
     assert brief["evidence"]["pointerTrace"]["available"] is True
-    assert "poach_read_moment" in prompt and "button transitions" in prompt
+    assert "anypoach_read_moment" in prompt and "button transitions" in prompt
 
 
 def test_empty_region_is_a_message_not_an_exception(tmp_path):
@@ -88,7 +88,7 @@ def test_prompt_guidance_follows_the_pointer_evidence():
     assert "no native pointer trace" in handoff_prompt("ID", unavailable)
     assert "collected 12 samples, including 9 inside" in handoff_prompt("ID", still)
     assert "collected no samples" in handoff_prompt("ID", empty)
-    assert handoff_prompt("ID", None).startswith("Use Poach MCP to call poach_read_brief with briefId ID. Verify the returned briefId matches.")
+    assert handoff_prompt("ID", None).startswith("Use AnyPoach MCP to call anypoach_read_brief with briefId ID. Verify the returned briefId matches.")
 
 
 @pytest.mark.parametrize(("drag", "dpr", "origin", "expected"), [

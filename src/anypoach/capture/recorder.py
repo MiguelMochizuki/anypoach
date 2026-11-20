@@ -66,7 +66,7 @@ class Recorder:
         if self._pointer is not None and not self._pointer.started:
             self._pointer.start(spawn=spawn)
         if spawn:
-            self._thread = threading.Thread(target=self._guarded_run, name="poach-capture", daemon=True)
+            self._thread = threading.Thread(target=self._guarded_run, name="anypoach-capture", daemon=True)
             self._thread.start()
 
     def request_stop(self) -> None:

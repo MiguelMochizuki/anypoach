@@ -11,9 +11,9 @@ from platformdirs import user_cache_dir
 
 
 def cache_dir() -> Path:
-    """`~/Library/Caches/Poach` on macOS, `~/.cache/Poach` on Linux, `%LOCALAPPDATA%\\Poach\\Cache` on Windows."""
-    override = os.environ.get("POACH_CACHE_DIR")
-    return Path(override) if override else Path(user_cache_dir("Poach", appauthor=False))
+    """`~/Library/Caches/AnyPoach` on macOS, `~/.cache/AnyPoach` on Linux, `%LOCALAPPDATA%\\AnyPoach\\Cache` on Windows."""
+    override = os.environ.get("ANYPOACH_CACHE_DIR")
+    return Path(override) if override else Path(user_cache_dir("AnyPoach", appauthor=False))
 
 
 def restrict(path: Path, *, directory: bool) -> None:

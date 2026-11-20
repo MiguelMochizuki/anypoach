@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -14,14 +15,14 @@ import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 TS_SERVER = ROOT / "packages/mcp-server/dist/index.js"
 PNG = bytes([137, 80, 78, 71, 13, 10, 26, 10])
 
 
 def sp(server, home):
     cache = home / "Library/Caches/Poach"  # the TS server derives this from HOME
-    env = {**os.environ, "HOME": str(home), "POACH_CACHE_DIR": str(cache)}
+    env = {**os.environ, "HOME": str(home), "ANYPOACH_CACHE_DIR": str(cache)}
     if server == "ts":
         return StdioServerParameters(command="node", args=[str(TS_SERVER)], env=env)
     return StdioServerParameters(command=sys.executable, args=["-m", "anypoach.mcp.server"], env=env)
@@ -34,11 +35,44 @@ def server(request):
     return request.param
 
 
+def to_ts(name):
+    return re.sub(r"\banypoach_", "poach_", name)
+
+
+def from_ts(text):
+    """The original TS server still says `poach_*` and `Poach`; the tests are written in AnyPoach terms."""
+    return re.sub(r"\bPoach\b", "AnyPoach", re.sub(r"\bpoach_", "anypoach_", text))
+
+
+class TsClient:
+    """Translates names going to the original server and texts coming back, so one scenario checks both."""
+
+    def __init__(self, session):
+        self._session = session
+
+    async def call_tool(self, name, arguments=None, **kwargs):
+        result = await self._session.call_tool(to_ts(name), arguments, **kwargs)
+        for block in result.content:
+            if block.type == "text":
+                block.text = from_ts(block.text)
+        return result
+
+    async def list_tools(self):
+        listing = await self._session.list_tools()
+        for tool in listing.tools:
+            tool.name, tool.description = from_ts(tool.name), from_ts(tool.description or "")
+            tool.title = from_ts(tool.title) if tool.title else tool.title
+        return listing
+
+    def __getattr__(self, name):
+        return getattr(self._session, name)
+
+
 @asynccontextmanager
 async def connect(server, home):
     async with stdio_client(sp(server, home)) as (read, write), ClientSession(read, write) as session:
         await session.initialize()
-        yield session
+        yield TsClient(session) if server == "ts" else session
 
 
 def structured(result):
@@ -116,8 +150,8 @@ def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home)
 
     async def scenario():
         async with connect(server, home) as client:
-            shared = await client.call_tool("poach_read_brief", {})
-            assert not is_error(shared)
+            shared = await client.call_tool("anypoach_read_brief", {})
+            assert not is_error(shared), texts(shared)
             sc = structured(shared)
             assert sc["context"] == brief["context"]
             assert sc["evidence"]["browserEvidence"] == brief["evidence"]["browserEvidence"]
@@ -136,7 +170,7 @@ def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home)
             two["evidence"]["pointerTrace"]["events"][:0] = [event(100, "down", 0.1, 0.1), event(200, "drag", 0.3, 0.3),
                                                              event(300, "up", 0.4, 0.4)]
             write_active(home, two)
-            multiple = await client.call_tool("poach_read_brief", {"briefId": brief["briefId"]})
+            multiple = await client.call_tool("anypoach_read_brief", {"briefId": brief["briefId"]})
             assert not is_error(multiple)
             text = texts(multiple)
             for prefix in ("Drag release candidate at 300 ms", "After drag release: 1199 ms",
@@ -144,7 +178,7 @@ def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home)
                 assert any(t.startswith(prefix) for t in text), prefix
             write_active(home, brief)
 
-            moment = await client.call_tool("poach_read_moment", {"timeMs": 1000})
+            moment = await client.call_tool("anypoach_read_moment", {"timeMs": 1000})
             assert not is_error(moment) and len(images(moment)) == 1
             text = texts(moment)[0]
             assert "The heart fills on click" in text and "sample-derived click/drag candidates" in text
@@ -158,33 +192,33 @@ def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home)
             assert ("Pointer trace summary: 132 samples, 110 inside the capture, 12 with a button held, "
                     "10 recorded pointer events, and 4 summarized clicks or drags.") in text
 
-            for name, args in (("poach_read_brief", {}), ("poach_read_moment", {"timeMs": 500})):
+            for name, args in (("anypoach_read_brief", {}), ("anypoach_read_moment", {"timeMs": 500})):
                 assert not is_error(await client.call_tool(name, {**args, "briefId": brief["briefId"]}))
                 stale = await client.call_tool(name, {**args, "briefId": "827fb563-c2a2-4bf6-91a1-846528d715e9"})
                 assert is_error(stale) and "replaced" in texts(stale)[0]
-            assert is_error(await client.call_tool("poach_read_moment", {"timeMs": 30000}))
+            assert is_error(await client.call_tool("anypoach_read_moment", {"timeMs": 30000}))
 
             empty = json.loads(json.dumps(brief))
             empty["evidence"]["pointerTrace"].update(sampleCount=44, insideSampleCount=40, buttonSampleCount=0, events=[])
             write_active(home, empty)
-            text = texts(await client.call_tool("poach_read_moment", {"timeMs": 1000}))[0]
+            text = texts(await client.call_tool("anypoach_read_moment", {"timeMs": 1000}))[0]
             assert "Pointer trace summary: 44 samples, 40 inside the capture, 0 with a button held, 0 recorded pointer events, and 0 summarized clicks or drags." in text
 
             gone = json.loads(json.dumps(brief))
             gone["evidence"]["pointerTrace"].update(available=False, sampleCount=0, insideSampleCount=0, buttonSampleCount=0, events=[])
             write_active(home, gone)
-            text = texts(await client.call_tool("poach_read_moment", {"timeMs": 1000}))[0]
+            text = texts(await client.call_tool("anypoach_read_moment", {"timeMs": 1000}))[0]
             assert "No native pointer trace was included" in text and "Pointer trace summary:" not in text
 
             cut = json.loads(json.dumps(brief))
             cut["evidence"]["pointerTrace"].update(truncated=True, events=[event(990, "down", 0.5, 0.5)])
             write_active(home, cut)
-            text = texts(await client.call_tool("poach_read_moment", {"timeMs": 1000}))[0]
+            text = texts(await client.call_tool("anypoach_read_moment", {"timeMs": 1000}))[0]
             assert "Trace reached its event limit; later actions may be incomplete" in text
             assert "Incomplete button-down without a matching release" in text
 
             write_active(home, {**brief, "sharedAt": brief["sharedAt"] - 86401})
-            expired = await client.call_tool("poach_read_brief", {})
+            expired = await client.call_tool("anypoach_read_brief", {})
             assert is_error(expired) and "expired" in texts(expired)[0]
             assert (home / "Library/Caches/Poach/active-brief.json").exists()
 
@@ -207,12 +241,12 @@ def test_archived_briefs_remain_readable_by_id(server, home):
 
     async def scenario():
         async with connect(server, home) as client:
-            first = await client.call_tool("poach_read_brief", {"briefId": older["briefId"], "includeKeyframes": False})
+            first = await client.call_tool("anypoach_read_brief", {"briefId": older["briefId"], "includeKeyframes": False})
             assert not is_error(first) and structured(first)["context"] == older["context"]
-            recent = await client.call_tool("poach_read_brief", {"includeKeyframes": False})
+            recent = await client.call_tool("anypoach_read_brief", {"includeKeyframes": False})
             assert structured(recent)["briefId"] == latest["briefId"]
-            old_moment = await client.call_tool("poach_read_moment", {"briefId": older["briefId"], "timeMs": 500})
-            new_moment = await client.call_tool("poach_read_moment", {"briefId": latest["briefId"], "timeMs": 500})
+            old_moment = await client.call_tool("anypoach_read_moment", {"briefId": older["briefId"], "timeMs": 500})
+            new_moment = await client.call_tool("anypoach_read_moment", {"briefId": latest["briefId"], "timeMs": 500})
             assert not is_error(old_moment) and not is_error(new_moment)
             assert images(old_moment)[0].data != images(new_moment)[0].data, "each brief ID should read its own recording"
 
@@ -223,16 +257,16 @@ def test_archived_briefs_remain_readable_by_id(server, home):
                                     "region": {"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.1}}}}
             (home / "preset.png").write_bytes(__import__("base64").b64decode(images(new_moment)[0].data))
             (archive / f"{preset['briefId']}.json").write_text(json.dumps(preset))
-            saved = await client.call_tool("poach_read_brief", {"briefId": preset["briefId"]})
+            saved = await client.call_tool("anypoach_read_brief", {"briefId": preset["briefId"]})
             assert not is_error(saved)
             assert structured(saved)["evidence"]["visualFontMatch"] == preset["evidence"]["visualFontMatch"]
             assert images(saved)[0].data == images(new_moment)[0].data
-            kept = await client.call_tool("poach_read_moment", {"briefId": preset["briefId"], "timeMs": 500})
-            assert is_error(kept) and "Use poach_read_brief to see its saved frames" in texts(kept)[0]
+            kept = await client.call_tool("anypoach_read_moment", {"briefId": preset["briefId"], "timeMs": 500})
+            assert is_error(kept) and "Use anypoach_read_brief to see its saved frames" in texts(kept)[0]
 
             path = archive / f"{older['briefId']}.json"
             path.write_text(json.dumps({**older, "sharedAt": older["sharedAt"] - 86401}))
-            expired = await client.call_tool("poach_read_brief", {"briefId": older["briefId"]})
+            expired = await client.call_tool("anypoach_read_brief", {"briefId": older["briefId"]})
             assert is_error(expired) and "expired" in texts(expired)[0]
             assert not path.exists() and (cache / "active-brief.json").exists()
 
@@ -269,7 +303,7 @@ def test_stdout_carries_only_protocol_messages(server, home):
     requests = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
         "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}},
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
-        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "poach_read_brief", "arguments": {}}}]
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": to_ts("anypoach_read_brief") if server == "ts" else "anypoach_read_brief", "arguments": {}}}]
     out, _ = process.communicate("".join(json.dumps(r) + "\n" for r in requests), timeout=20)
     lines = [l for l in out.splitlines() if l.strip()]
     assert lines and all(json.loads(l)["jsonrpc"] == "2.0" for l in lines)
@@ -292,16 +326,16 @@ def test_tools_match_the_ts_server_names_descriptions_and_inputs(home):
 def test_inspect_tools_return_results_and_report_errors(clips, home):
     async def scenario():
         async with connect("python", home) as client:
-            video = await client.call_tool("poach_inspect", {"videoPath": str(clips["static"]), "outputDirectory": str(home / "out")})
+            video = await client.call_tool("anypoach_inspect", {"videoPath": str(clips["static"]), "outputDirectory": str(home / "out")})
             assert not is_error(video)
             data = structured(video)
             assert data["mediaType"] == "video" and [k["kind"] for k in data["keyframes"]] == ["start"]
             assert (home / "out").is_dir() and json.loads(texts(video)[0]) == data
-            still = await client.call_tool("poach_inspect_image", {"imagePath": str(clips["image"])})
+            still = await client.call_tool("anypoach_inspect_image", {"imagePath": str(clips["image"])})
             assert structured(still)["timing"]["token"] == "Still image · no motion duration"
-            missing = await client.call_tool("poach_inspect", {"videoPath": str(home / "missing.mov")})
-            assert is_error(missing) and texts(missing)[0].startswith("Poach could not inspect this video: ")
-            bad = await client.call_tool("poach_inspect_image", {"imagePath": str(clips["static"])})
-            assert is_error(bad) and texts(bad)[0].startswith("Poach could not inspect this image: ")
+            missing = await client.call_tool("anypoach_inspect", {"videoPath": str(home / "missing.mov")})
+            assert is_error(missing) and texts(missing)[0].startswith("AnyPoach could not inspect this video: ")
+            bad = await client.call_tool("anypoach_inspect_image", {"imagePath": str(clips["static"])})
+            assert is_error(bad) and texts(bad)[0].startswith("AnyPoach could not inspect this image: ")
 
     asyncio.run(scenario())

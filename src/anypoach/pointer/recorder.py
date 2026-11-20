@@ -41,7 +41,7 @@ class PointerTraceRecorder:
         getattr(self._source, "open", lambda: None)()
         self._started_at = self._clock()
         if spawn:
-            self._thread = threading.Thread(target=self.run, name="poach-pointer", daemon=True)
+            self._thread = threading.Thread(target=self.run, name="anypoach-pointer", daemon=True)
             self._thread.start()
         return True
 
