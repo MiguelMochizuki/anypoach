@@ -1,0 +1,25 @@
+{
+  "mediaType": "image",
+  "durationMs": 0,
+  "keyframes": [
+    {
+      "kind": "start",
+      "timeMs": 0,
+      "imagePath": "image-start.png",
+      "motion": 0
+    }
+  ],
+  "palette": [
+    "#00FFFF",
+    "#FD0000",
+    "#0000FE",
+    "#FE00FD",
+    "#FDFD00",
+    "#00FE00"
+  ],
+  "timing": {
+    "durationMs": 0,
+    "bezier": null,
+    "token": "Still image · no motion duration"
+  }
+}

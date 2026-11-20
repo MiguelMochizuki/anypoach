@@ -1,0 +1,20 @@
+{
+  "mediaType": "video",
+  "durationMs": 0,
+  "keyframes": [
+    {
+      "kind": "start",
+      "timeMs": 0,
+      "imagePath": "static-start.png",
+      "motion": 0
+    }
+  ],
+  "palette": [
+    "#000000"
+  ],
+  "timing": {
+    "durationMs": 0,
+    "bezier": null,
+    "token": "No measurable motion in sampled frames"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "mediaType": "video",
+  "durationMs": 783,
+  "keyframes": [
+    {
+      "kind": "start",
+      "timeMs": 0,
+      "imagePath": "motion-start.png",
+      "motion": 0
+    },
+    {
+      "kind": "peak",
+      "timeMs": 87,
+      "imagePath": "motion-peak.png",
+      "motion": 0.05393849370612444
+    },
+    {
+      "kind": "settled",
+      "timeMs": 783,
+      "imagePath": "motion-settled.png",
+      "motion": 0
+    }
+  ],
+  "palette": [
+    "#000000",
+    "#FDA500",
+    "#C58408",
+    "#966102",
+    "#544322",
+    "#43361C"
+  ],
+  "timing": {
+    "durationMs": 783,
+    "bezier": [
+      0.16,
+      1,
+      0.3,
+      1
+    ],
+    "token": "783ms • cubic-bezier(0.16, 1, 0.3, 1)"
+  }
+}
