@@ -27,10 +27,16 @@ jobs:
         shell: bash
         run: |
           case "$RUNNER_OS" in
-            Linux) sudo apt-get update && sudo apt-get install -y ffmpeg ;;
+            Linux) sudo apt-get update && sudo apt-get install -y ffmpeg xvfb ;;
             macOS) brew install ffmpeg ;;
             Windows) choco install ffmpeg -y --no-progress ;;
           esac
       - run: uv sync --group dev
       - run: uv run ruff check src tests tools
       - run: uv run pytest -q
+      - name: Live capture under Xvfb (Linux X11)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a uv run --with mss pytest -m live -q
+      - name: Live capture in the desktop session (Windows)
+        if: runner.os == 'Windows'
+        run: uv run --with mss pytest -m live -q
