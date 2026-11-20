@@ -62,6 +62,7 @@ def test_capture_permission_errors_become_a_message(tmp_path):
     assert record(controller, 0.2) is None
     assert "permission" in controller.message.lower() and controller.state == "idle"
     assert controller.copy_handoff() == "" and controller.message
+    assert not list((tmp_path / "work").glob("*.mov")), "a failed capture must not leave an empty recording behind"
 
 
 def test_second_start_is_refused_and_the_first_recording_survives(tmp_path):
