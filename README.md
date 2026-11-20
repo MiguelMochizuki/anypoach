@@ -64,6 +64,6 @@ Poach analyzes the media on your Mac. During an explicit native screen recording
 
 [Contributing and local development](CONTRIBUTING.md) · [License](LICENSE)
 
-## Beyond the Mac (in progress)
+## AnyPoach: beyond the Mac (in progress)
 
-Poach is being rewritten in Python so it can run on Windows and Linux as well. From `python/` you can already record a screen area, sample the pointer, analyze the clip, share a brief, and read it through the MCP server, with a minimal window to drive it. It still needs hands-on checks on real Windows and Linux X11 desktops, and the comment editor, global shortcut, and Wayland support are not done. See [CONTRIBUTING.md](CONTRIBUTING.md#portable-python-implementation-in-progress) for the commands and what is covered.
+Poach is being rewritten in Python so it can run on Windows and Linux as well. From `python/` you can already record a screen area, sample the pointer, analyze the clip, share a brief, and read it through the MCP server, with a minimal window to drive it (from the repository root: `uv run --project python --extra ui anypoach`). It still needs hands-on checks on real Windows and Linux X11 desktops, and the comment editor, global shortcut, and Wayland support are not done. See [CONTRIBUTING.md](CONTRIBUTING.md#portable-python-implementation-in-progress) for the commands and what is covered.

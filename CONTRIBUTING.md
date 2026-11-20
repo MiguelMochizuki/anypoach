@@ -133,19 +133,21 @@ Build first, then configure an MCP client to launch the server's compiled JavaSc
 
 ## Portable Python implementation (in progress)
 
-`python/` is a cross-platform rewrite of the analysis core, MCP server, and brief storage in Python (PyAV and numpy decode in a single process, with no `ffmpeg` child processes or Node). It lives beside the Swift and TypeScript code, which stay in place until the Python version reaches parity. Phase 1 covers Windows 10+ and Linux X11. It records a screen area (`mss` plus PyAV/H.264), samples the pointer, analyzes, shares the brief, and has a minimal PySide6 window (`uv run poach`: choose area, record, stop, see keyframes, copy the assistant prompt). The window has no global shortcut, no comment editor, and no onboarding yet.
+`python/` is a cross-platform rewrite of the analysis core, MCP server, and brief storage in Python (PyAV and numpy decode in a single process, with no `ffmpeg` child processes or Node). It lives beside the Swift and TypeScript code, which stay in place until the Python version reaches parity. Phase 1 covers Windows 10+ and Linux X11. It records a screen area (`mss` plus PyAV/H.264), samples the pointer, analyzes, shares the brief, and has a minimal PySide6 window (`uv run anypoach`: choose area, record, stop, see keyframes, copy the assistant prompt). The window has no global shortcut, no comment editor, and no onboarding yet.
+
+The Python package, its commands (`anypoach`, `anypoach-mcp`) and the window title use the name AnyPoach. Contracts shared with the macOS app and the TypeScript server keep the original names: the tools (`poach_*`), the MCP server name `poach`, the `Poach` cache folder, and the `poach-` temporary directory prefixes that storage cleanup recognizes.
 
 ```sh
 cd python
 uv sync --group dev --extra ui         # Python 3.11 or newer; the ui extra adds PySide6 and mss
 uv run pytest                          # headless suites; needs the ffmpeg CLI only to synthesize test clips
 uv run ruff check src tests tools
-uv run poach-mcp                       # stdio MCP server, same four tools as the TypeScript server
-uv run poach                           # minimal capture window
+uv run anypoach-mcp                     # stdio MCP server, same four tools as the TypeScript server
+uv run anypoach                           # minimal capture window
 uv run pytest -m live                  # real capture; needs an X11 or Windows desktop (CI uses Xvfb on Linux)
 ```
 
-To connect an assistant to it, point the MCP client at `uv run --project /absolute/path/to/poach/python poach-mcp`.
+To connect an assistant to it, point the MCP client at `uv run --project /absolute/path/to/anypoach/python anypoach-mcp`.
 
 The TypeScript core is the oracle. `python/tests/golden` holds results generated from it. To regenerate them, build the TypeScript packages, then:
 
