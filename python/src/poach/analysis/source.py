@@ -32,6 +32,26 @@ def encode_png(rgb: np.ndarray) -> bytes:
     return b"".join(bytes(p) for p in [*codec.encode(frame), *codec.encode(None)])
 
 
+def scaled_rgb(frame: av.VideoFrame, width: int) -> np.ndarray:
+    """RGB uint8 scaled with the area filter to `width`, height kept even like `scale=W:-2`."""
+    height = max(2, round(frame.height * width / frame.width / 2) * 2)
+    return frame.reformat(width=width, height=height, format="rgb24", interpolation="AREA").to_ndarray()
+
+
+def scaled_png(frame: av.VideoFrame, max_size: int) -> bytes:
+    """PNG that fits inside a max_size box, never enlarging (like force_original_aspect_ratio=decrease)."""
+    ratio = min(1.0, max_size / frame.width, max_size / frame.height)
+    w, h = max(1, round(frame.width * ratio)), max(1, round(frame.height * ratio))
+    return encode_png(frame.reformat(width=w, height=h, format="rgb24", interpolation="BICUBIC").to_ndarray())
+
+
+def read_still(path: str | Path) -> av.VideoFrame:
+    with av.open(str(path)) as container:
+        for frame in container.decode(video=0):
+            return frame
+    raise ValueError("Image has no decodable pixel dimensions")
+
+
 class VideoSource:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path).resolve()
@@ -100,15 +120,7 @@ class VideoSource:
         return [out[i] for i in range(len(seeks))]
 
     def frames_at(self, seeks: Sequence[float], width: int) -> list[np.ndarray]:
-        """RGB uint8 samples scaled with the area filter to `width`, height kept even like `scale=W:-2`."""
-        def convert(frame: av.VideoFrame) -> np.ndarray:
-            height = max(2, round(frame.height * width / frame.width / 2) * 2)
-            return frame.reformat(width=width, height=height, format="rgb24", interpolation="AREA").to_ndarray()
-        return self._collect(seeks, convert)
+        return self._collect(seeks, lambda frame: scaled_rgb(frame, width))
 
     def png_at(self, seek: float, max_size: int = 1280) -> bytes:
-        def convert(frame: av.VideoFrame) -> bytes:
-            ratio = min(1.0, max_size / frame.width, max_size / frame.height)
-            w, h = max(1, round(frame.width * ratio)), max(1, round(frame.height * ratio))
-            return encode_png(frame.reformat(width=w, height=h, format="rgb24", interpolation="BICUBIC").to_ndarray())
-        return self._collect([seek], convert)[0]
+        return self._collect([seek], lambda frame: scaled_png(frame, max_size))[0]
