@@ -2,8 +2,8 @@ import threading
 
 import pytest
 
-from poach.pointer.recorder import PointerTraceRecorder
-from poach.pointer.trace import PointerSample, Rect
+from anypoach.pointer.recorder import PointerTraceRecorder
+from anypoach.pointer.trace import PointerSample, Rect
 
 
 class Script:
@@ -139,7 +139,7 @@ def test_real_thread_starts_samples_and_stops():
 
 @pytest.mark.parametrize("env", [{"XDG_SESSION_TYPE": "wayland", "DISPLAY": ":0"}, {"XDG_SESSION_TYPE": "x11"}])
 def test_no_source_on_wayland_or_without_a_display(monkeypatch, env):
-    from poach import pointer
+    from anypoach import pointer
     monkeypatch.setattr("sys.platform", "linux")
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("XDG_SESSION_TYPE", raising=False)

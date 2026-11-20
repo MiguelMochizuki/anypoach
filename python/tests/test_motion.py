@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from poach.analysis.motion import approximate_timing, pixel_difference
+from anypoach.analysis.motion import approximate_timing, pixel_difference
 
 TIMES = [i * 100 for i in range(11)]
 

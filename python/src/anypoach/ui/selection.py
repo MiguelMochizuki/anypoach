@@ -5,7 +5,7 @@ from PySide6.QtCore import QRect, Qt, Signal
 from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
-from poach.pointer.trace import Rect
+from anypoach.pointer.trace import Rect
 
 from .controller import physical_rect
 

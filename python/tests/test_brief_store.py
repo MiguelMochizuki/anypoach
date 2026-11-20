@@ -6,10 +6,10 @@ import uuid
 
 import pytest
 
-from poach.analysis.motion import MotionTiming
-from poach.analysis.types import InspectionResult, Keyframe
-from poach.brief.cleanup import clear_storage, scan_storage
-from poach.brief.store import read_brief, share
+from anypoach.analysis.motion import MotionTiming
+from anypoach.analysis.types import InspectionResult, Keyframe
+from anypoach.brief.cleanup import clear_storage, scan_storage
+from anypoach.brief.store import read_brief, share
 
 posix_only = pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits")
 UUID = "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}"

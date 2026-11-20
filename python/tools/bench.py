@@ -8,7 +8,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from poach.analysis.inspect import inspect_recording, inspect_video
+from anypoach.analysis.inspect import inspect_recording, inspect_video
 
 fixtures = Path(sys.argv[1])
 for name, fn in (("motion.mov", inspect_video), ("overrun.mov", inspect_recording)):

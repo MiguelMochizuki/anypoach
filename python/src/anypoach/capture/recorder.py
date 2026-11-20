@@ -12,8 +12,8 @@ from pathlib import Path
 import av
 import numpy as np
 
-from poach.pointer.recorder import PointerTraceRecorder
-from poach.pointer.trace import PointerTrace, Rect
+from anypoach.pointer.recorder import PointerTraceRecorder
+from anypoach.pointer.trace import PointerTrace, Rect
 
 from .backend import CaptureBackend
 from .overlay import draw_click_ring, draw_cursor

@@ -1,4 +1,4 @@
-from poach.mcp.actions import summarize_pointer_actions
+from anypoach.mcp.actions import summarize_pointer_actions
 
 
 def ev(t, kind, x=0.5, y=0.5, button="left", inside=True):

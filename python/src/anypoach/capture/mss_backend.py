@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 
-from poach.pointer.trace import Rect
+from anypoach.pointer.trace import Rect
 
 from .backend import Frame, Screen
 

@@ -20,10 +20,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from poach.brief.paths import cache_dir
-from poach.capture.mss_backend import MssBackend
-from poach.pointer import default_source
-from poach.tempdirs import make_temp_dir
+from anypoach.brief.paths import cache_dir
+from anypoach.capture.mss_backend import MssBackend
+from anypoach.pointer import default_source
+from anypoach.tempdirs import make_temp_dir
 
 from .controller import Controller
 from .selection import SelectionOverlay
@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
     def __init__(self, controller: Controller) -> None:
         super().__init__()
         self.controller = controller
-        self.setWindowTitle("Poach")
+        self.setWindowTitle("AnyPoach")
         self._tray: QSystemTrayIcon | None = None
         self._limit = QTimer(self, singleShot=True, interval=MAX_RECORDING_MS)
         self._limit.timeout.connect(self._stop)

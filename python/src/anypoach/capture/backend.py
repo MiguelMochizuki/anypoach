@@ -6,7 +6,7 @@ from typing import NamedTuple, Protocol
 
 import numpy as np
 
-from poach.pointer.trace import Rect
+from anypoach.pointer.trace import Rect
 
 
 class Screen(NamedTuple):

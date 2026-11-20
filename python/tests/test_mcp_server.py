@@ -24,7 +24,7 @@ def sp(server, home):
     env = {**os.environ, "HOME": str(home), "POACH_CACHE_DIR": str(cache)}
     if server == "ts":
         return StdioServerParameters(command="node", args=[str(TS_SERVER)], env=env)
-    return StdioServerParameters(command=sys.executable, args=["-m", "poach.mcp.server"], env=env)
+    return StdioServerParameters(command=sys.executable, args=["-m", "anypoach.mcp.server"], env=env)
 
 
 @pytest.fixture(params=["python", "ts"])

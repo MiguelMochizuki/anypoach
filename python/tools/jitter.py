@@ -7,8 +7,8 @@ import statistics
 import sys
 import time
 
-from poach.pointer.recorder import PointerTraceRecorder
-from poach.pointer.trace import PointerSample, Rect
+from anypoach.pointer.recorder import PointerTraceRecorder
+from anypoach.pointer.trace import PointerSample, Rect
 
 stamps: list[float] = []
 

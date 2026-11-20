@@ -10,9 +10,9 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QPushButton
 
-from poach.pointer.trace import Rect
-from poach.ui.app import MainWindow, hide_from_capture
-from poach.ui.selection import SelectionOverlay
+from anypoach.pointer.trace import Rect
+from anypoach.ui.app import MainWindow, hide_from_capture
+from anypoach.ui.selection import SelectionOverlay
 
 
 class FakeController:

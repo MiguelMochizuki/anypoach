@@ -1,4 +1,4 @@
-from poach.analysis.keyframes import choose_keyframes
+from anypoach.analysis.keyframes import choose_keyframes
 
 
 def test_single_frame_or_codec_noise_gives_only_start():

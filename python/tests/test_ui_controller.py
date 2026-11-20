@@ -3,10 +3,10 @@ import time
 import numpy as np
 import pytest
 
-from poach.brief.store import read_brief
-from poach.capture.backend import Frame, Screen
-from poach.pointer.trace import Rect
-from poach.ui.controller import Controller, handoff_prompt, physical_rect
+from anypoach.brief.store import read_brief
+from anypoach.capture.backend import Frame, Screen
+from anypoach.pointer.trace import Rect
+from anypoach.ui.controller import Controller, handoff_prompt, physical_rect
 from tests.test_pointer_recorder import Script, at
 
 

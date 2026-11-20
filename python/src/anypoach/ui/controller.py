@@ -5,13 +5,13 @@ import dataclasses
 from pathlib import Path
 from typing import Any, Literal
 
-from poach.analysis.inspect import inspect_recording
-from poach.analysis.types import InspectionResult
-from poach.brief.store import share
-from poach.capture.backend import CaptureBackend
-from poach.capture.recorder import Recorder
-from poach.pointer.recorder import PointerTraceRecorder
-from poach.pointer.trace import PointerSource, Rect
+from anypoach.analysis.inspect import inspect_recording
+from anypoach.analysis.types import InspectionResult
+from anypoach.brief.store import share
+from anypoach.capture.backend import CaptureBackend
+from anypoach.capture.recorder import Recorder
+from anypoach.pointer.recorder import PointerTraceRecorder
+from anypoach.pointer.trace import PointerSource, Rect
 
 State = Literal["idle", "recording", "ready"]
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from poach.analysis.source import VideoSource, seek_for_moment
+from anypoach.analysis.source import VideoSource, seek_for_moment
 
 PNG = bytes([137, 80, 78, 71, 13, 10, 26, 10])
 

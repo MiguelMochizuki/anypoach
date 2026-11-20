@@ -6,14 +6,14 @@ import av
 import numpy as np
 import pytest
 
-from poach.analysis.inspect import inspect_recording
-from poach.analysis.source import VideoSource
-from poach.capture.backend import Frame, Screen
-from poach.capture.mss_backend import MssBackend
-from poach.capture.overlay import CLICK_RING_SECONDS, draw_click_ring, draw_cursor
-from poach.capture.recorder import Recorder
-from poach.pointer.recorder import PointerTraceRecorder
-from poach.pointer.trace import Rect
+from anypoach.analysis.inspect import inspect_recording
+from anypoach.analysis.source import VideoSource
+from anypoach.capture.backend import Frame, Screen
+from anypoach.capture.mss_backend import MssBackend
+from anypoach.capture.overlay import CLICK_RING_SECONDS, draw_click_ring, draw_cursor
+from anypoach.capture.recorder import Recorder
+from anypoach.pointer.recorder import PointerTraceRecorder
+from anypoach.pointer.trace import Rect
 from tests.test_pointer_recorder import Clock, Script, at
 
 
@@ -176,7 +176,7 @@ def test_frames_grabbed_at_the_same_instant_still_get_increasing_times(tmp_path)
 
 
 def test_recording_name_is_recognized_by_the_storage_cleanup(tmp_path):
-    from poach.brief.cleanup import _POACH_FILES
+    from anypoach.brief.cleanup import _POACH_FILES
     recorder, _ = make(tmp_path)
     recorder.start(Rect(0, 0, 32, 32), spawn=False)
     recorder.capture_once()

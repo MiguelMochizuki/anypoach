@@ -1,6 +1,6 @@
 import numpy as np
 
-from poach.analysis.palette import extract_palette
+from anypoach.analysis.palette import extract_palette
 
 
 def frame():

@@ -7,14 +7,14 @@ import av
 import numpy as np
 import pytest
 
-from poach.analysis.inspect import (
+from anypoach.analysis.inspect import (
     inspect_image,
     inspect_recording,
     inspect_video,
     read_drag_release_frames,
     read_video_moment,
 )
-from poach.analysis.source import VideoSource
+from anypoach.analysis.source import VideoSource
 
 GOLD = Path(__file__).parent / "golden"
 PNG = bytes([137, 80, 78, 71, 13, 10, 26, 10])

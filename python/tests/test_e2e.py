@@ -2,10 +2,10 @@
 import asyncio
 import dataclasses
 
-from poach.analysis.inspect import inspect_recording
-from poach.brief.store import share
-from poach.pointer.recorder import PointerTraceRecorder
-from poach.pointer.trace import Rect
+from anypoach.analysis.inspect import inspect_recording
+from anypoach.brief.store import share
+from anypoach.pointer.recorder import PointerTraceRecorder
+from anypoach.pointer.trace import Rect
 from tests.test_mcp_server import connect, images, is_error, structured, texts
 from tests.test_pointer_recorder import Clock, Script, at
 

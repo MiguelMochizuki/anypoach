@@ -1,4 +1,4 @@
-from poach.pointer.trace import PointerTrace, PointerTraceBuffer, PointerTraceEvent, Rect
+from anypoach.pointer.trace import PointerTrace, PointerTraceBuffer, PointerTraceEvent, Rect
 
 
 def event(t=0, kind="move", x=0.5, y=0.5, button=None, inside=True):
