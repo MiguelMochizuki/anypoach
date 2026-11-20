@@ -19,3 +19,7 @@ Medido com `python/tools/bench.py` (PyAV 19.0.2, decodificação em um único pr
 | `inspect_recording` em `overrun.mov` | 0,17 s | 1,49 s | 69 MB |
 
 Contra a linha de base do TS (3,76 s e 33,5 s) a análise ficou cerca de 60x e 200x mais rápida nessas fixtures pequenas (96x64 e 160x90). Em gravações reais de até 1920 px o custo de decodificação domina; medir de novo com uma gravação real antes de fixar metas.
+
+## Polling a 120 Hz (Task 7), Linux
+
+`python/tools/jitter.py` mede o laço de amostragem com uma fonte sintética (não a chamada do SO). 10 s no Linux: 1201 amostras para ~1200 esperadas (0 perdidas), intervalo médio 8,33 ms, p99 8,78 ms, máximo 8,88 ms. O laço agenda por tick a partir do início, então o atraso não acumula. No Windows o agendador padrão tem granularidade de ~15 ms; `Win32PointerSource` pede `timeBeginPeriod(1)` e a medição ainda precisa ser feita no CI/máquina Windows. Se o jitter ali for alto, é o gatilho para mover o laço para uma extensão nativa.
