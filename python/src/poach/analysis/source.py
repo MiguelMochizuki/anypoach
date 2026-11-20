@@ -5,7 +5,7 @@ import bisect
 from collections.abc import Callable, Sequence
 from fractions import Fraction
 from pathlib import Path
-from typing import TypeVar
+from typing import Self, TypeVar
 
 import av
 import numpy as np
@@ -55,7 +55,7 @@ class VideoSource:
             raise ValueError("Video has no valid duration")
         self._times: list[float] | None = None
 
-    def __enter__(self) -> VideoSource:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:
