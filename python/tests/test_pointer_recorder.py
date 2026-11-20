@@ -146,3 +146,18 @@ def test_no_source_on_wayland_or_without_a_display(monkeypatch, env):
     for key, value in env.items():
         monkeypatch.setenv(key, value)
     assert pointer.default_source() is None
+
+
+def test_latest_exposes_the_last_sample_and_the_time_of_the_last_press():
+    clock = Clock()
+    recorder = PointerTraceRecorder(Rect(0, 0, 100, 100), Script(at(5, 6), at(7, 8, "left"), at(9, 9)), clock=clock)
+    assert not recorder.started and recorder.latest() is None
+    recorder.start(spawn=False)
+    assert recorder.started
+    recorder.poll()
+    assert recorder.latest() == (at(5, 6), None)
+    clock.now += 0.5
+    recorder.poll()
+    clock.now += 0.5
+    recorder.poll()
+    assert recorder.latest() == (at(9, 9), 100.5)

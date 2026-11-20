@@ -30,6 +30,8 @@ class PointerTraceRecorder:
         self._started_at: float | None = None
         self._last: tuple[float, float] | None = None
         self._pressed: frozenset[Button] = frozenset()
+        self._latest: PointerSample | None = None
+        self._last_down_at: float | None = None
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -42,6 +44,14 @@ class PointerTraceRecorder:
             self._thread = threading.Thread(target=self.run, name="poach-pointer", daemon=True)
             self._thread.start()
         return True
+
+    @property
+    def started(self) -> bool:
+        return self._started_at is not None
+
+    def latest(self) -> tuple[PointerSample, float | None] | None:
+        """Last sample and the clock time of the last button press (None until each exists); used to draw the cursor."""
+        return None if self._latest is None else (self._latest, self._last_down_at)
 
     def request_stop(self) -> None:
         self._stop.set()
@@ -78,6 +88,9 @@ class PointerTraceRecorder:
         inside = self.bounds.contains(*point)
         buttons = frozenset(sample.buttons)
         self._buffer.record_sample(inside=inside, button_held=bool(buttons))
+        self._latest = sample
+        if buttons - self._pressed:
+            self._last_down_at = self._clock()
         # Button edges can happen outside a selected region; flag them instead of leaving a sequence unfinished.
         for button in (b for b in _ORDER if b in buttons - self._pressed):
             self._append("down", button, point, inside)
