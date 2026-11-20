@@ -63,3 +63,7 @@ Poach analyzes the media on your Mac. During an explicit native screen recording
 </details>
 
 [Contributing and local development](CONTRIBUTING.md) · [License](LICENSE)
+
+## Beyond the Mac (in progress)
+
+Poach is being rewritten in Python so it can run on Windows and Linux as well. The analysis, brief storage, pointer-trace logic, and MCP server already work from `python/`; screen capture and the editor window are next. See [CONTRIBUTING.md](CONTRIBUTING.md#portable-python-implementation-in-progress) for the commands and what is covered.

@@ -26,9 +26,21 @@ bash scripts/package-beta.sh                 # release zips + SHA256SUMS in outp
 
 Tests are `.mjs` files that import the built `dist/`, so always build before running them directly. There is no linter. The Swift tests compile only the specific source files they cover (see the scripts), so new Swift code under test must stay free of dependencies on the rest of the app.
 
+### Python rewrite (`python/`, in progress)
+
+```sh
+cd python && uv sync --group dev
+uv run pytest                                  # fixtures need the ffmpeg CLI; skips TS-server parity tests if packages/mcp-server/dist is missing
+uv run pytest tests/test_inspect_golden.py -k motion
+uv run ruff check src tests tools
+uv run poach-mcp                               # stdio MCP server
+```
+
+Cross-platform replacement for the analysis core, brief storage and MCP server, and the only code that is meant to run off macOS. PyAV and numpy decode in one process (no ffmpeg children). Screen capture and the PySide6 window are not written yet (phase 1 Tasks 8 and 9). `packages/core` is the oracle: `python/tests/golden` is generated from it with `python/tools/make_goldens.mjs`. The design is `docs/superpowers/specs/2026-11-20-poach-portable-rewrite-design.md`, the plan `docs/superpowers/plans/2026-11-20-poach-portable-phase1.md`, and measured timings are in `docs/superpowers/baseline.md`.
+
 ## Architecture
 
-Three pieces connected by files on disk, not by network:
+Three pieces connected by files on disk, not by network (plus the unpacked Chrome extension in `apps/chrome`, which POSTs element evidence to the app's local HTTP bridge on `127.0.0.1:47831`):
 
 1. **`apps/macos`** (SwiftUI, ScreenCaptureKit; a single `PoachApp` executable target). `Sources/Capture` records and samples the pointer (`PointerTraceBuffer`, 120 Hz, capped at 5,000 events). `Sources/App/PoachInspectionRunner.swift` shells out to `node` to run `packages/core` (bundled at `Resources/core/dist/index.js` inside the app) and decodes the result into `PoachInspection`. `PoachHandoff.swift` writes the shared brief.
 2. **`packages/core`** (headless TS, no AppKit): `extractor.ts` drives `ffmpeg`/`ffprobe` as external binaries to produce keyframes, palette (`palette.ts`) and motion timing (`motion.ts`) for videos and images. Public surface is only `src/index.ts`.

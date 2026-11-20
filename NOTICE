@@ -1,0 +1,7 @@
+Poach
+Copyright 2026 the Poach contributors
+
+This product is a fork of Poach, originally written by Guilherme Lopes
+(https://github.com/guilopeszw/poach) and released under the Apache License 2.0.
+The portable Python implementation in python/ is a derivative work of that code.
+See LICENSE for the license terms.

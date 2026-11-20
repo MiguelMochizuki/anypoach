@@ -131,6 +131,34 @@ Build first, then configure an MCP client to launch the server's compiled JavaSc
 
 `poach_inspect` accepts an absolute `videoPath` and optional `outputDirectory`. It returns structured JSON with `keyframes`, `palette`, and `timing`. The MCP server only reads local video files and writes extracted PNGs; it does not upload recordings.
 
+## Portable Python implementation (in progress)
+
+`python/` is a cross-platform rewrite of the analysis core, MCP server, and brief storage in Python (PyAV and numpy decode in a single process, with no `ffmpeg` child processes or Node). It lives beside the Swift and TypeScript code, which stay in place until the Python version reaches parity. Phase 1 covers Windows 10+ and Linux X11. Screen capture and the PySide6 window are not implemented yet, so there is no `poach` app command.
+
+```sh
+cd python
+uv sync --group dev                    # Python 3.11 or newer
+uv run pytest                          # headless suites; needs the ffmpeg CLI only to synthesize test clips
+uv run ruff check src tests tools
+uv run poach-mcp                       # stdio MCP server, same four tools as the TypeScript server
+```
+
+To connect an assistant to it, point the MCP client at `uv run --project /absolute/path/to/poach/python poach-mcp`.
+
+The TypeScript core is the oracle. `python/tests/golden` holds results generated from it. To regenerate them, build the TypeScript packages, then:
+
+```sh
+cd python
+uv run python -c "from pathlib import Path; from tests.fixtures import build_all; build_all(Path('/tmp/poach-fixtures'))"
+node tools/make_goldens.mjs /tmp/poach-fixtures
+```
+
+Keyframe kinds, times, durations, and timing tokens must match the goldens exactly. Palettes match exactly except for two fixtures. PyAV bundles a newer libswscale than the system `ffmpeg`, so antialiased edge colors differ by up to two per channel. Those two compare dominant colors within that tolerance, and the 30 s recording clip is compared against the original frame instead of byte for byte. If you change these rules, say why in the commit. `tests/test_mcp_server.py` also runs against the compiled TypeScript server when `packages/mcp-server/dist` exists, so the two servers stay interchangeable.
+
+Data handling matches the rest of the project: no network, telemetry, or audio, and only pointer position and button state are sampled, by polling, with no global hooks. Briefs and archives live in the per-OS cache directory (`~/Library/Caches/Poach` on macOS, `~/.cache/Poach` on Linux, `%LOCALAPPDATA%\Poach\Cache` on Windows; `POACH_CACHE_DIR` overrides it for tests) and expire after 24 hours. On POSIX they use `0700` and `0600`. On Windows the same files get an ACL limited to the current user through `icacls`; that path has no local test and relies on CI. The Windows pointer source needs a per-monitor DPI-aware process, or coordinates arrive scaled. On Wayland there is no global pointer position, so the trace reports `available: false`.
+
+`python/tools/bench.py` and `python/tools/jitter.py` print the timings recorded in `docs/superpowers/baseline.md`.
+
 ## Repository map
 
 ```text
@@ -138,6 +166,7 @@ apps/chrome/         Unpacked Chrome companion for component evidence
 apps/macos/          SwiftUI menu-bar app, capture service, and floating HUD
 packages/core/       TypeScript frame extraction, motion analysis, and palette code
 packages/mcp-server/ Local MCP server for media inspection and assistant handoff
+python/              Cross-platform Python rewrite (analysis, brief storage, MCP server, pointer trace)
 scripts/             Local packaging helpers
 ```
 
