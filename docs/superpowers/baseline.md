@@ -8,3 +8,14 @@ Medida em 2026-11-20 no Linux (x86_64), Node 26.9, ffmpeg 8.0.1, com o `packages
 | `inspectRecording` em `overrun.mov` (31,5 s recortado a 30 s, 96x64) | 360 | 33,5 s | 36,6 s | 77 MB | 364 / 3 |
 
 O custo cresce linearmente com o número de amostras porque cada amostra abre um processo `ffmpeg`. Metas da versão Python: ver `python/tests` e a Task 4 do plano; o jitter do ponteiro será registrado aqui na Task 7.
+
+## Python (Task 4), mesma máquina
+
+Medido com `python/tools/bench.py` (PyAV 19.0.2, decodificação em um único processo, nenhum `ffmpeg` filho).
+
+| Caso | Tempo (parede) | CPU (user+sys) | Pico de RSS |
+|---|---|---|---|
+| `inspect_video` em `motion.mov` | 0,06 s | 1,27 s (inclui importar PyAV/numpy) | 62 MB |
+| `inspect_recording` em `overrun.mov` | 0,17 s | 1,49 s | 69 MB |
+
+Contra a linha de base do TS (3,76 s e 33,5 s) a análise ficou cerca de 60x e 200x mais rápida nessas fixtures pequenas (96x64 e 160x90). Em gravações reais de até 1920 px o custo de decodificação domina; medir de novo com uma gravação real antes de fixar metas.
