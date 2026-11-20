@@ -11,6 +11,7 @@ ui = ["PySide6", "mss"]
 
 [project.scripts]
 poach-mcp = "poach.mcp.server:main"
+poach = "poach.ui.app:main"
 
 [dependency-groups]
 dev = ["pytest", "ruff"]
