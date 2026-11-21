@@ -139,6 +139,11 @@ class Controller:
         return self._backend
 
     @property
+    def region(self) -> Rect | None:
+        """The chosen area in global physical pixels, or None."""
+        return self._region
+
+    @property
     def ready_to_record(self) -> bool:
         """Whether `start()` would begin a recording: an area is chosen and nothing is recording."""
         return self._region is not None and self.state != "recording"
