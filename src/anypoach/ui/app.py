@@ -40,21 +40,29 @@ MAX_RECORDING_MS = 30_000  # the analysis only reads the first 30 s
 LEAVE_SCREEN_MS = 500  # time for the compositor to take the window off the screen before capture starts
 
 
-def recording_icon() -> QIcon:
-    """The tray icon while recording: the theme's `media-record`, or a red dot where the theme has none (macOS,
-    Windows), because a blank menu-bar item leaves no visible way to stop the recording."""
-    icon = QIcon.fromTheme("media-record")
-    if not icon.isNull():
-        return icon
+def _dot(color: str) -> QIcon:
     pixmap = QPixmap(44, 44)
     pixmap.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setBrush(QColor("#e5322d"))
+    painter.setBrush(QColor(color))
     painter.setPen(Qt.PenStyle.NoPen)
     painter.drawEllipse(6, 6, 32, 32)
     painter.end()
     return QIcon(pixmap)
+
+
+def recording_icon() -> QIcon:
+    """The tray icon while recording: the theme's `media-record`, or a red dot where the theme has none (macOS,
+    Windows), because a blank menu-bar item leaves no visible way to stop the recording."""
+    icon = QIcon.fromTheme("media-record")
+    return icon if not icon.isNull() else _dot("#e5322d")
+
+
+def idle_icon() -> QIcon:
+    """The tray icon while waiting: the theme's `camera-video`, or a gray dot."""
+    icon = QIcon.fromTheme("camera-video")
+    return icon if not icon.isNull() else _dot("#8a8f98")
 
 
 def hide_from_capture(window: QWidget) -> bool:
@@ -82,7 +90,7 @@ class MainWindow(QMainWindow):
         self._bridge = bridge
         self._device_scale: float | None = None
         self.setWindowTitle("AnyPoach")
-        self._tray: QSystemTrayIcon | None = None
+        self._tray = self._make_tray()
         self._limit = QTimer(self, singleShot=True, interval=MAX_RECORDING_MS)
         self._limit.timeout.connect(self._stop)
         self.area, self.record_button = self._button("Choose area", self._choose), self._button("Record", self._record)
@@ -273,26 +281,49 @@ class MainWindow(QMainWindow):
             self._return_to_screen()
         self._refresh()
 
-    def _return_to_screen(self) -> None:
+    def _make_tray(self) -> QSystemTrayIcon | None:
+        """The always-on tray icon: show the window, record the full screen without opening it, quit. None where
+        the desktop has no tray (e.g. GNOME without an extension)."""
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return None
+        tray = QSystemTrayIcon(idle_icon(), self)
+        tray.activated.connect(lambda reason: self.showNormal() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
+        self._tray_idle_menu = QMenu()
+        self._tray_idle_menu.addAction("Show AnyPoach", self.showNormal)
+        self._tray_idle_menu.addAction("Record full screen", self._record_full_screen)
+        self._tray_idle_menu.addAction("Quit", self.close)
+        self._tray_recording_menu = QMenu()
+        self._tray_recording_menu.addAction("Stop recording", self._stop)
+        tray.setContextMenu(self._tray_idle_menu)
+        tray.setToolTip("AnyPoach")
+        tray.show()
+        return tray
+
+    def _tray_state(self, recording: bool) -> None:
         if self._tray is not None:
-            self._tray.hide()
-            self._tray = None
+            self._tray.setIcon(recording_icon() if recording else idle_icon())
+            self._tray.setContextMenu(self._tray_recording_menu if recording else self._tray_idle_menu)
+            self._tray.setToolTip("AnyPoach is recording" if recording else "AnyPoach")
+
+    def _record_full_screen(self) -> None:
+        if self.controller.state == "recording":
+            return
+        self._choose_full_screen()
+        if self.controller.ready_to_record:
+            self._record()
+
+    def _return_to_screen(self) -> None:
+        self._tray_state(False)
         self.showNormal()
 
     def _leave_the_screen(self) -> None:
-        # Without an OS-level exclusion the window would show up in the video, so hide it; a tray menu stops the recording.
+        # Without an OS-level exclusion the window would show up in the video, so hide it; the tray menu stops it.
+        self._tray_state(True)
         if sys.platform == "win32":
             return
-        if not QSystemTrayIcon.isSystemTrayAvailable():  # e.g. GNOME: minimize, and restore the window to stop
+        if self._tray is None:  # e.g. GNOME: minimize, and restore the window to stop
             self.showMinimized()
             return
-        tray = QSystemTrayIcon(recording_icon(), self)
-        menu = QMenu()
-        menu.addAction("Stop recording", self._stop)
-        tray.setContextMenu(menu)
-        tray.setToolTip("AnyPoach is recording")
-        tray.show()
-        self._tray = tray
         self.hide()
 
     def _stop(self) -> None:

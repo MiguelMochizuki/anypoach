@@ -409,3 +409,21 @@ def test_a_failed_preview_keeps_full_screen_unselected(app):
     window = MainWindow(controller)
     window.full_screen.click()
     assert not controller.calls and "cancelled" in window.status.text()
+
+
+def test_the_tray_menu_records_the_full_screen_and_swaps_menus_while_recording(app, monkeypatch):
+    monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", lambda: True)
+    controller = FakeController()
+    window = MainWindow(controller)
+    assert window._tray is not None and window._tray.contextMenu() is window._tray_idle_menu
+    window._record_full_screen()
+    assert controller.calls[0][0] == "choose"
+    window._tray_state(True)
+    assert window._tray.contextMenu() is window._tray_recording_menu
+    window._return_to_screen()
+    assert window._tray.contextMenu() is window._tray_idle_menu
+
+
+def test_without_a_tray_there_is_no_tray_object(app, monkeypatch):
+    monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", lambda: False)
+    assert MainWindow(FakeController())._tray is None
