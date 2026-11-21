@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import threading
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -35,6 +36,12 @@ def test_manifest_is_minimal_and_ours():
                   *manifest["icons"].values(), *manifest["action"]["default_icon"].values()]
     assert all((EXTENSION / name).is_file() for name in referenced)
     assert (EXTENSION / "capture.js").is_file()
+
+
+def test_extension_version_matches_the_package():
+    project = tomllib.loads((EXTENSION.parent.parent.parent / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    manifest = json.loads((EXTENSION / "manifest.json").read_text(encoding="utf-8"))["version"]
+    assert manifest == project, "bump pyproject.toml and the manifest together"
 
 
 def test_adapted_files_carry_the_license_notice_and_nothing_else_names_the_original():
