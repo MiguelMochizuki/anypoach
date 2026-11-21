@@ -43,7 +43,8 @@ class FakeClient:
     def __init__(self, cancel):
         self.cancel, self.closed = cancel, 0
 
-    def start(self):
+    def start(self, **options):
+        self.types_seen = [*getattr(self, "types_seen", []), options.get("types", 1)]
         if self.cancel:
             raise PermissionError("Screen sharing was cancelled.")
         return types.SimpleNamespace(pipewire_fd=5, streams=[PortalStream(1, (0, 0), (100, 80))])
@@ -149,3 +150,12 @@ def test_a_preview_after_the_stream_ended_starts_a_new_session():
     assert backend.preview().pixels.shape == (80, 100, 4) and backend.active
     assert old_stream.closed == 1 and old_client.closed == 1
     assert backend.grab(Rect(0, 0, 10, 10)).pixels.shape == (10, 10, 4)
+
+
+def test_a_window_preview_asks_the_portal_for_windows_and_a_kind_change_reopens_the_session():
+    rig = Rig()
+    backend = PortalBackend(**rig.kwargs)
+    backend.preview()
+    backend.preview(window=True)
+    backend.preview(window=True)  # same kind: the open session is reused
+    assert rig.client.types_seen == [1, 2] and rig.client.closed == 1 and rig.stream.closed == 1

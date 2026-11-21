@@ -12,7 +12,7 @@ from anypoach.pointer.trace import Rect
 
 from .backend import Frame, Screen
 from .pipewire import PipeWireStream, gst_command
-from .portal import JeepneyTransport, ScreenCastClient, ScreenCastSession
+from .portal import WINDOW, JeepneyTransport, ScreenCastClient, ScreenCastSession
 
 
 def portal_problems(which: Callable[[str], str | None] = shutil.which, run: Callable[..., Any] = subprocess.run) -> list[str]:
@@ -69,19 +69,25 @@ class PortalBackend:
         self._session: ScreenCastSession | None = None
         self._stream: Any = None
         self._size = (0, 0)
+        self._window = False
 
     @property
     def active(self) -> bool:
         """Whether a session is open."""
         return self._stream is not None
 
-    def preview(self) -> Frame:
-        """Open the session and return the first frame of the shared monitor.
+    def preview(self, window: bool = False) -> Frame:
+        """Open the session and return the first frame of the shared monitor, or of the shared window.
+
+        Args:
+            window: Offer windows instead of monitors in the portal dialog. A session of the other kind is closed.
 
         Raises:
             PermissionError: If the user cancels the portal dialog.
             OSError: If packages are missing, the portal fails, or no frame arrives.
         """
+        if self.active and self._window != window:
+            self.close()
         if self.active:
             if not self._stream.ended:
                 return self._stream.latest()
@@ -90,7 +96,7 @@ class PortalBackend:
         if problems:
             raise OSError(" ".join(problems))
         client = self._client_factory()
-        session = client.start()
+        session = client.start(types=WINDOW) if window else client.start()
         stream = self._stream_factory(session)
         try:
             stream.start()
@@ -99,7 +105,7 @@ class PortalBackend:
             stream.close()
             client.close(session)
             raise
-        self._client, self._session, self._stream = client, session, stream
+        self._client, self._session, self._stream, self._window = client, session, stream, window
         self._size = (first.pixels.shape[1], first.pixels.shape[0])
         return first
 

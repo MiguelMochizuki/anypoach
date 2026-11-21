@@ -475,3 +475,14 @@ def test_the_palette_is_capped_at_twelve_and_cleared_by_a_new_result(tmp_path):
     controller.screenshot()
     assert controller.palette != [f"#0000{i:02x}" for i in range(12)]
     assert make(tmp_path).set_palette(["#000000"]) is False
+
+
+def test_windows_come_from_the_lister_and_a_missing_one_is_a_message(tmp_path):
+    from anypoach.capture.windows import WindowInfo
+
+    class Lister:
+        def windows(self):
+            return [WindowInfo("Editor", Rect(1, 2, 300, 200))]
+    assert make(tmp_path, windows=Lister()).windows()[0].title == "Editor"
+    controller = make(tmp_path)
+    assert controller.windows() == [] and "area" in controller.message

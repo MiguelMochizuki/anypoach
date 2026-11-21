@@ -7,7 +7,8 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-MONITOR = 1  # ScreenCast source type
+MONITOR = 1  # ScreenCast source types (a bit mask)
+WINDOW = 2
 EMBEDDED_CURSOR = 2  # ScreenCast cursor mode: the compositor draws the cursor into the video
 
 
@@ -65,11 +66,12 @@ class ScreenCastClient:
     def __init__(self, transport: PortalTransport) -> None:
         self._transport = transport
 
-    def start(self, *, cursor_mode: int = EMBEDDED_CURSOR) -> ScreenCastSession:
-        """Create a session, let the user pick a monitor, and open the PipeWire connection.
+    def start(self, *, cursor_mode: int = EMBEDDED_CURSOR, types: int = MONITOR) -> ScreenCastSession:
+        """Create a session, let the user pick a monitor (or a window), and open the PipeWire connection.
 
         Args:
             cursor_mode: Portal cursor mode; the default has the compositor draw the cursor into the video.
+            types: `MONITOR` or `WINDOW`: what the portal dialog offers to share.
 
         Returns:
             The open session. Close it with `close` when done.
@@ -83,7 +85,7 @@ class ScreenCastClient:
         self._check(code)
         handle = created["session_handle"]
         try:
-            options = {"types": MONITOR, "multiple": False, "cursor_mode": cursor_mode}
+            options = {"types": types, "multiple": False, "cursor_mode": cursor_mode}
             self._check(self._transport.request("SelectSources", handle, options=options)[0])
             code, started = self._transport.request("Start", handle, "", options={})
             self._check(code)

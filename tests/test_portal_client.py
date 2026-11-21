@@ -61,3 +61,9 @@ def test_a_start_without_streams_raises_oserror():
     with pytest.raises(OSError, match="no screen"):
         ScreenCastClient(t).start()
     assert t.closed == ["/s/1"]
+
+
+def test_sources_can_ask_for_windows():
+    t = FakeTransport([SESSION, (0, {}), STREAMS])
+    ScreenCastClient(t).start(types=2)
+    assert t.calls[1][2]["types"] == 2
