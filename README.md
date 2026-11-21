@@ -162,7 +162,7 @@ uv run ruff check src tests tools
 
 ## Key Outputs & Reports
 
-A recording produces a few keyframe PNGs and a brief, a JSON file with the analysis, the pointer trace, your notes, and an instruction for the assistant. The brief is read back through `anypoach_read_brief`; the PNGs through the same tool and `anypoach_read_moment`. The brief records the real size of the capture in `evidence.capture` (`widthPx`, `heightPx`, `deviceScale`) and every image the MCP returns is captioned with its size, because keyframes are reduced to 1280 px (a 1854x962 recording arrives as 1280x664). `deviceScale` is the screen scale on Windows and X11 and `null` where it is unknown, such as Wayland or imported media; the prompt tells the assistant to ask instead of guessing. The repository ships no sample output.
+A recording produces a few keyframe PNGs and a brief, a JSON file with the analysis, the pointer trace, your notes, and an instruction for the assistant. The brief is read back through `anypoach_read_brief`; the PNGs through the same tool and `anypoach_read_moment`. The brief records the real size of the capture in `evidence.capture` (`widthPx`, `heightPx`, `deviceScale`) and every image the MCP returns is captioned with its size, because keyframes are reduced to 1280 px (a 1854x962 recording arrives as 1280x664). `deviceScale` is the number of video pixels per CSS pixel (the screen scale, adjusted when the recorder shrinks a capture past 1920 px) on Windows and X11, and `null` where it is unknown, such as Wayland or imported media; the prompt tells the assistant to ask instead of guessing. The repository ships no sample output.
 
 ## Documentation Conventions
 
