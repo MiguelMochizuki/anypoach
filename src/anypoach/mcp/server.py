@@ -6,6 +6,7 @@ import atexit
 import base64
 import json
 import os
+import struct
 import sys
 import uuid
 from pathlib import Path
@@ -114,7 +115,33 @@ def _brief_json(brief: Brief, raw: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _keyframe(frame: dict[str, Any]) -> list[Any]:
+def size_note(png: bytes, capture: Any) -> str:
+    """Say how big a PNG is next to the capture it came from, e.g. `1280x664, reduced from 1854x962 (x0.69)`.
+
+    Args:
+        png: The image about to be returned.
+        capture: The brief's `evidence.capture`, or anything else when the brief predates it.
+
+    Returns:
+        The note, or an empty string when the brief carries no usable native size.
+    """
+    try:
+        native_w, native_h = capture["widthPx"], capture["heightPx"]
+        width, height = struct.unpack(">II", png[16:24])
+    except (KeyError, TypeError, struct.error):
+        return ""
+    if not all(isinstance(n, int) and n > 0 for n in (native_w, native_h)):
+        return ""
+    if (width, height) == (native_w, native_h):
+        return f"{width}x{height}, native size"
+    return f"{width}x{height}, reduced from {native_w}x{native_h} (x{width / native_w:.2f})"
+
+
+def _noted(note: str) -> str:
+    return f" ({note})" if note else ""
+
+
+def _keyframe(frame: dict[str, Any], capture: Any = None) -> list[Any]:
     try:
         path = Path(frame["imagePath"])
         if not path.is_file() or path.stat().st_size > FIVE_MB:
@@ -122,7 +149,7 @@ def _keyframe(frame: dict[str, Any]) -> list[Any]:
         data = path.read_bytes()
         if data[:8] != PNG_SIGNATURE:
             raise ValueError("Keyframe is not a PNG")
-        return [text(f"{frame['kind']} at {frame['timeMs']} ms"), image(data)]
+        return [text(f"{frame['kind']} at {frame['timeMs']} ms{_noted(size_note(data, capture))}"), image(data)]
     except Exception:  # noqa: BLE001
         return [text(f"The {frame.get('kind')} keyframe is unavailable. Ask the user to capture and share again; do not infer its visual contents.")]
 
@@ -139,7 +166,7 @@ def _num(value: float) -> str:
     return str(int(value)) if float(value).is_integer() else str(value)
 
 
-async def _drag_release_content(source_path: str, actions: list[dict[str, Any]]) -> list[Any]:
+async def _drag_release_content(source_path: str, actions: list[dict[str, Any]], capture: Any = None) -> list[Any]:
     content: list[Any] = []
     drags = [a for a in actions if a["kind"] == "drag"]
     releases = [a for a in drags if a["releaseWithinCapture"]]
@@ -163,7 +190,8 @@ async def _drag_release_content(source_path: str, actions: list[dict[str, Any]])
                     continue
                 offset = frame.time_ms - release_ms
                 phase = "Before drag release" if offset < 0 else "After drag release" if offset > 0 else "At drag release"
-                content += [text(f"{phase}: {_num(frame.time_ms)} ms ({_num(abs(offset))} ms from release)"), image(frame.png)]
+                content += [text(f"{phase}: {_num(frame.time_ms)} ms ({_num(abs(offset))} ms from release){_noted(size_note(frame.png, capture))}"),
+                            image(frame.png)]
         except Exception:  # noqa: BLE001
             content.append(text(f"The drag release candidate is at {_num(release_ms)} ms, but its surrounding frames are unavailable. Inspect the original clip before inferring the result."))
     return content
@@ -190,10 +218,10 @@ async def anypoach_read_brief(briefId: uuid.UUID | None = None,
             if len(frames) > 3:
                 raise ValueError("Too many keyframes")
             for frame in frames:
-                content += _keyframe(frame.model_dump())
+                content += _keyframe(frame.model_dump(), brief.evidence.get("capture"))
             source = brief.evidence.get("sourcePath")
             if brief.evidence.get("mediaType") == "video" and isinstance(source, str) and source:
-                content += await _drag_release_content(source, actions["actions"])
+                content += await _drag_release_content(source, actions["actions"], brief.evidence.get("capture"))
         return CallToolResult(content=content, structured_content=response)
     except Exception as error:  # noqa: BLE001
         return failure(f"No readable shared brief. Choose Copy handoff for chat in AnyPoach. {error}")
@@ -300,7 +328,7 @@ async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, de
                    if trace and trace.available is not False else "No native pointer trace was included with this media.")
         browser = _browser_near(evidence.get("browserEvidence"), timeMs)
         lines = [
-            f"Shared recording at {_num(timeMs)} ms. Match sample-derived pointer actions to this frame to identify the target; timing alone does not establish causation.",
+            f"Shared recording at {_num(timeMs)} ms{_noted(size_note(png, evidence.get('capture')))}. Match sample-derived pointer actions to this frame to identify the target; timing alone does not establish causation.",
             summary,
             *(["Trace reached its event limit; later actions may be incomplete."] if trace and trace.truncated else []),
             *([f"Nearby user notes: {dumps(near_notes)}"] if near_notes else []),
