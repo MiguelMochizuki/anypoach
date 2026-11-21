@@ -1,0 +1,34 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>inspector test page</title>
+<body style="margin: 0; font: 16px Arial">
+<div id="plain" class="stage card" style="width: 300px; height: 120px; background: rgba(0, 0, 0, 0); border: 1px dashed #888; border-radius: 12px; color: #2025C8; font: 500 24px/28px Arial">Secret words</div>
+<div id="tint" style="width: 50px; height: 50px; background: rgba(255, 99, 59, 0.5); opacity: 0.3; transform: rotate(3deg)">x</div>
+<div id="fade" style="width: 50px; height: 50px; background: #1C2D1C">y</div>
+<pre id="out"></pre>
+<script>
+  window.chrome = { runtime: { id: "test", sendMessage: () => Promise.resolve({ ok: true }), onMessage: { addListener: () => {} } } };
+</script>
+<script src="capture.js"></script>
+<script>
+  const t = window.__anypoachTest;
+  const fade = document.getElementById("fade");
+  fade.animate([{ opacity: 1 }, { opacity: 0.3 }], { duration: 300, easing: "cubic-bezier(0.4, 0, 0.2, 1)" });
+  const models = { plain: t.cardModel(document.getElementById("plain")), tint: t.cardModel(document.getElementById("tint")),
+                   fade: t.cardModel(fade) };
+  const placements = {
+    edge: t.placeCard([1700, 10, 100, 50], [260, 200], [1854, 960]),
+    bottom: t.placeCard([100, 900, 100, 50], [260, 200], [1854, 960]),
+    tiny: t.placeCard([10, 10, 50, 50], [260, 200], [200, 100]),
+    roomy: t.placeCard([100, 100, 100, 50], [260, 200], [1854, 960]),
+  };
+  t.showCard(document.getElementById("plain"));
+  const shown = document.querySelectorAll("[data-anypoach-inspector]").length;
+  const host = document.querySelector("[data-anypoach-inspector]");
+  const closed = host.shadowRoot === null;
+  const insideViewport = (() => { const r = host.getBoundingClientRect(); return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; })();
+  t.endSelection();
+  document.getElementById("out").textContent = JSON.stringify({
+    models, placements, shown, closed, insideViewport, after: document.querySelectorAll("[data-anypoach-inspector]").length });
+  document.title = "done";
+</script>

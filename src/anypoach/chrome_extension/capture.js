@@ -101,6 +101,119 @@
     });
   }
 
+  // ---- the inspector card shown while choosing a component ----
+  const cardWidth = 260;
+  const number = value => String(round(value));
+
+  function toHex(color) {
+    const match = /^rgba?\(([^)]+)\)$/.exec(color);
+    const parts = match?.[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    if (!parts || parts.length < 3 || parts.some(Number.isNaN)) return null;
+    const alpha = parts.length > 3 ? parts[3] : 1;
+    if (alpha <= 0) return null;
+    const hex = parts.slice(0, 3).map(part => Math.round(part).toString(16).padStart(2, "0")).join("");
+    return ("#" + hex + (alpha < 1 ? Math.round(alpha * 255).toString(16).padStart(2, "0") : "")).toUpperCase();
+  }
+
+  function cardModel(element) {
+    const computed = getComputedStyle(element);
+    const [, , width, height] = rect(element);
+    const family = (computed.fontFamily.split(",")[0] ?? "").trim().replace(/^["']|["']$/g, "");
+    const px = value => (value.endsWith("px") ? number(parseFloat(value)) : value);
+    const firstClass = (element.getAttribute("class") ?? "").trim().split(/\s+/)[0];
+    const colors = [{ label: "Text", hex: toHex(computed.color) }, { label: "Background", hex: toHex(computed.backgroundColor) }];
+    if (parseFloat(computed.borderTopWidth) > 0 && computed.borderTopStyle !== "none") {
+      colors.push({ label: "Border", hex: toHex(computed.borderTopColor) });
+    }
+    const extras = [];
+    if (parseFloat(computed.borderTopLeftRadius) > 0) extras.push("radius " + limit(computed.borderTopLeftRadius, 24));
+    if (computed.opacity !== "1") extras.push("opacity " + limit(computed.opacity, 12));
+    if (computed.transform !== "none") extras.push("transform " + limit(computed.transform, 48));
+    if (computed.boxShadow !== "none") extras.push("shadow");
+    const animations = element.getAnimations().filter(animation => animation.playState === "running").flatMap(animation => {
+      const timing = animation.effect?.getTiming();
+      return timing && Number.isFinite(timing.duration) ? [number(timing.duration) + "ms " + limit(timing.easing, 60)] : [];
+    });
+    return {
+      name: element.localName + (firstClass ? "." + limit(firstClass, 24) : ""), size: number(width) + " × " + number(height),
+      font: [family, px(computed.fontSize) + "/" + px(computed.lineHeight), computed.fontWeight].join(" · "),
+      colors, extras, animations,
+    };
+  }
+
+  // Where the card goes: right of the target, else left, else below, else above, always 8 px inside the viewport.
+  function placeCard([x, y, width, height], [cardW, cardH], [viewW, viewH]) {
+    const margin = 8, gap = 12;
+    const clamp = (value, high) => Math.max(margin, Math.min(value, high));
+    const top = clamp(y, viewH - cardH - margin), left = clamp(x, viewW - cardW - margin);
+    if (x + width + gap + cardW <= viewW - margin) return [x + width + gap, top];
+    if (x - gap - cardW >= margin) return [x - gap - cardW, top];
+    if (y + height + gap + cardH <= viewH - margin) return [left, y + height + gap];
+    if (y - gap - cardH >= margin) return [left, y - gap - cardH];
+    return [left, top];
+  }
+
+  let cardHost, cardShadow, cardFrame, cardKey, cardElement;
+
+  function renderCard(model) {
+    const shadow = cardShadow;
+    const make = (tag, text, css) => {
+      const node = document.createElement(tag);
+      if (text !== undefined) node.textContent = text;
+      if (css) node.style.cssText = css;
+      return node;
+    };
+    const box = make("div", undefined, `width: ${cardWidth}px; box-sizing: border-box; padding: 12px; background: #FAFAF8; color: #292927;
+      border: 1px solid #D8D8D3; border-radius: 14px; box-shadow: 0 8px 26px rgba(0,0,0,.18); font: 12px/16px system-ui, sans-serif`);
+    const title = make("div", undefined, "display: flex; justify-content: space-between; gap: 8px; margin-bottom: 2px");
+    title.append(make("b", model.name, "font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"),
+                 make("span", model.size, "color: #6b6b66; white-space: nowrap"));
+    box.append(title, make("div", model.font, "color: #6b6b66; margin-bottom: 8px"));
+    const swatches = make("div", undefined, "display: flex; gap: 10px; margin-bottom: 8px");
+    for (const { label, hex } of model.colors) {
+      const cell = make("div", undefined, "text-align: center");
+      const pill = make("span", undefined, `display: block; width: 44px; height: 18px; border-radius: 10px; border: 3px solid #EDEDEB;
+        box-shadow: 0 0 0 1px #D8D8D3; background: ${hex ?? "repeating-conic-gradient(#e5e5e0 0 25%, #fff 0 50%) 0 0 / 8px 8px"}`);
+      cell.append(pill, make("div", hex ?? "transparent", "font: 10px/14px ui-monospace, monospace; color: #6b6b66"), make("div", label, "font-size: 10px; color: #6b6b66"));
+      swatches.append(cell);
+    }
+    box.append(swatches);
+    const notes = [...model.extras, ...model.animations];
+    if (notes.length) box.append(make("div", notes.join(" · "), "background: #EDEDEB; border-radius: 8px; padding: 6px 8px; margin-bottom: 8px"));
+    box.append(make("div", "Click to pin · ↑ parent · Esc cancel", "background: #292927; color: #fff; text-align: center; border-radius: 9px; padding: 6px; font-weight: 600"));
+    shadow.replaceChildren(box);
+    return box;
+  }
+
+  function showCard(element) {
+    cardElement = element;
+    if (!cardHost) {
+      cardHost = document.createElement("div");
+      cardHost.setAttribute("data-anypoach-inspector", "");
+      cardHost.setAttribute("aria-hidden", "true");
+      Object.assign(cardHost.style, { position: "fixed", left: "0", top: "0", pointerEvents: "none", zIndex: "2147483647" });
+      cardShadow = cardHost.attachShadow({ mode: "closed" });
+      document.documentElement.append(cardHost);
+    }
+    const model = cardModel(element);
+    const key = JSON.stringify(model);
+    if (key !== cardKey) {
+      cardKey = key;
+      renderCard(model);
+    }
+    const box = cardShadow.firstElementChild;
+    const [left, top] = placeCard(rect(element), [box.offsetWidth, box.offsetHeight], [innerWidth, innerHeight]);
+    Object.assign(cardHost.style, { left: left + "px", top: top + "px" });
+    cancelAnimationFrame(cardFrame);
+    if (model.animations.length) cardFrame = requestAnimationFrame(() => { if (cardHost && cardElement === element) showCard(element); });
+  }
+
+  function hideCard() {
+    cancelAnimationFrame(cardFrame);
+    cardHost?.remove();
+    cardHost = cardShadow = cardKey = cardElement = undefined;
+  }
+
   function sample() {
     if (!recording || !recording.root.isConnected) return;
     const { root, states, animations, seenAnimations } = recording;
@@ -223,6 +336,7 @@
   }
 
   function endSelection() {
+    hideCard();
     selection?.abort();
     selection = undefined;
     overlay?.remove();
@@ -256,6 +370,8 @@
       ? document.activeElement : null;
     function highlight(element) {
       candidate = element;
+      selectionBanner.style.display = "none";
+      showCard(element);
       const [left, top, width, height] = rect(element);
       Object.assign(overlay.style, {
         left: left + "px", top: top + "px", width: width + "px", height: height + "px",

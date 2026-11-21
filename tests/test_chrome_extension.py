@@ -94,7 +94,7 @@ def run_capture_page(tmp_path, page, fragment=""):
     JSON the page writes into `#out`. The hook exists because a page cannot press Enter on a trusted keydown."""
     source = (EXTENSION / "capture.js").read_text(encoding="utf-8")
     assert source.rstrip().endswith("})();")
-    hook = source.rstrip()[: -len("})();")] + "  globalThis.__anypoachTest = { start, measureComponents };\n})();\n"
+    hook = source.rstrip()[: -len("})();")] + "  globalThis.__anypoachTest = { start, select, endSelection, measureComponents, cardModel, placeCard, showCard };\n})();\n"
     (tmp_path / "capture.js").write_text(hook, encoding="utf-8")
     shutil.copy(CHROME_DIR / page, tmp_path / "index.html")
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(tmp_path))
@@ -161,3 +161,37 @@ def test_more_than_forty_descendants_keep_the_largest_in_document_order(tmp_path
 @needs_chrome
 def test_a_detached_root_measures_nothing(tmp_path):
     assert run_capture_page(tmp_path, "components_page.html", "#detached")["components"] == []
+
+
+@needs_chrome
+def test_card_model_reports_measurements_and_never_the_text(tmp_path):
+    models = run_capture_page(tmp_path, "inspector_page.html")["models"]
+    plain, tint, fade = models["plain"], models["tint"], models["fade"]
+    assert plain["name"] == "div.stage" and plain["size"] == "302 × 122"
+    assert plain["font"] == "Arial · 24/28 · 500"
+    colors = {c["label"]: c["hex"] for c in plain["colors"]}
+    assert colors == {"Text": "#2025C8", "Background": None, "Border": "#888888"}, "a transparent background has no hex"
+    assert "radius 12px" in plain["extras"]
+    assert "Secret" not in json.dumps(models), "element text must never reach the card"
+    assert {c["label"]: c["hex"] for c in tint["colors"]}["Background"] == "#FF633B80"
+    assert "opacity 0.3" in tint["extras"] and any(item.startswith("transform") for item in tint["extras"])
+    assert fade["animations"] == ["300ms cubic-bezier(0.4, 0, 0.2, 1)"]
+
+
+@needs_chrome
+def test_the_card_is_placed_inside_the_viewport(tmp_path):
+    places = run_capture_page(tmp_path, "inspector_page.html")["placements"]
+    assert places["roomy"][0] == 212, "right of the target with a 12 px gap"
+    assert places["edge"][0] == 1428, "no room on the right, so on the left"
+    assert places["bottom"][1] == 752, "pushed up so the bottom stays 8 px inside the viewport"
+    assert places["tiny"] == [8, 8], "a viewport smaller than the card clamps to the 8 px margin"
+    for left, top in (places["roomy"], places["edge"], places["bottom"]):
+        assert left >= 0 and top >= 0 and left + 260 <= 1854 and top + 200 <= 960
+
+
+@needs_chrome
+def test_one_card_exists_while_choosing_and_none_after(tmp_path):
+    out = run_capture_page(tmp_path, "inspector_page.html")
+    assert out["shown"] == 1 and out["after"] == 0
+    assert out["closed"] is True, "the page must not be able to reach into the card"
+    assert out["insideViewport"] is True
