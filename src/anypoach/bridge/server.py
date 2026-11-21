@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hmac
+import sys
 import threading
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -11,6 +12,13 @@ from .evidence import BYTE_LIMIT, EvidenceStore, parse_evidence
 HOST = "127.0.0.1"
 DEFAULT_PORT = 47832
 _MARGIN = 4096
+
+
+class _Server(ThreadingHTTPServer):
+    def server_bind(self) -> None:
+        # On Windows SO_REUSEADDR lets a second process bind a port that is already in use, so the busy-port error never shows.
+        self.allow_reuse_address = sys.platform != "win32"
+        super().server_bind()
 
 
 class BridgeServer:
@@ -33,7 +41,7 @@ class BridgeServer:
                  on_open: Callable[[], bool] | None = None, timeout: float = 5.0) -> None:
         self._store, self._code, self._requested_port = store, code, port
         self._on_open, self._timeout = on_open, timeout
-        self._httpd: ThreadingHTTPServer | None = None
+        self._httpd: _Server | None = None
         self._thread: threading.Thread | None = None
         self.connected = False
 
@@ -60,7 +68,7 @@ class BridgeServer:
             bridge = owner
 
         try:
-            self._httpd = ThreadingHTTPServer((HOST, self._requested_port), Handler)
+            self._httpd = _Server((HOST, self._requested_port), Handler)
         except OSError as error:
             raise OSError(f"Port {self._requested_port} is already in use, so Chrome cannot connect ({error.strerror})") from error
         httpd = self._httpd

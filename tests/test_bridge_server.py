@@ -161,3 +161,14 @@ def test_stop_releases_the_port():
     probe = socket.socket()
     probe.bind(("127.0.0.1", port))
     probe.close()
+
+
+def test_windows_binds_the_port_exclusively(monkeypatch):
+    """On Windows SO_REUSEADDR lets a second process share the port, so a busy port would go unnoticed."""
+    monkeypatch.setattr("anypoach.bridge.server.sys.platform", "win32")
+    server = BridgeServer(EvidenceStore(), CODE, port=0)
+    server.start()
+    try:
+        assert server._httpd.allow_reuse_address is False
+    finally:
+        server.stop()
