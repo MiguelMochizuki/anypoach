@@ -16,7 +16,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 
 | Área | Poach | AnyPoach hoje |
 | --- | --- | --- |
-| Captura | área, janela por prévia, tela cheia, screenshot, importar vídeo ou imagem | área e tela cheia (v0.3.1) |
+| Captura | área, janela por prévia, tela cheia, screenshot, importar vídeo ou imagem | área, tela cheia, screenshot e importar vídeo ou imagem (v0.6.0) |
 | Controle | atalho que liga e desliga, ícone na barra de menu, sombra na área, janelas próprias fora do vídeo | botões na janela; janelas próprias fora do vídeo |
 | Editor | comentários presos à timeline, paleta ajustável, instruções gerais | comentários, timeline, play e instruções gerais (v0.3.0); falta a paleta ajustável |
 | Entrega | "Continue com Codex/Claude Code" abre o app e copia o prompt | só copia o prompt |
@@ -45,8 +45,9 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.3.1 | Botão de tela cheia (um clique, sem arrastar) | publicada (pré-release) |
 | v0.4.0 | Bandeja permanente com menu (mostrar, gravar tela cheia, sair; parar durante a gravação) | publicada (pré-release) |
 | v0.4.1+ | Modo janela, atalho global (conflita com a promessa de não usar hooks globais; só com o portal GlobalShortcuts), onboarding, paleta ajustável | não começou |
-| v0.5.0 | `anypoach-setup` (comandos do Claude Code, do Codex e JSON) e instalação por `uv tool install` sem clonar | pronta; checagem manual pendente |
-| v0.6.0+ | Instalador sem `uv` (PyInstaller), `.mcpb`; verificação de atualização só se for sob demanda, por causa da promessa de não usar rede | não começou |
+| v0.5.0 | `anypoach-setup` (comandos do Claude Code, do Codex e JSON) e instalação por `uv tool install` sem clonar | publicada (pré-release) |
+| v0.6.0 | Alcance do Poach de 2026-11-21: `pageRect` (âncora em coordenadas do documento depois de rolar a página), screenshot da área e importação de vídeo ou imagem | pronta; checagem manual pendente |
+| v0.7.0+ | Instalador sem `uv` (PyInstaller), `.mcpb`; verificação de atualização só se for sob demanda, por causa da promessa de não usar rede | não começou |
 | Depois, sem data | Importar vídeo ou imagem, screenshot, limpeza de armazenamento; painel lateral do Chrome e lista na janela (opções B e C do inspetor); PyInstaller, `.mcpb` e comando do Codex; favoritos e font matcher (o matcher depende de OCR e CoreText do Mac) | ideias |
 
 O Poach resolve tudo isso apenas para quem tem um Mac, o que continua sendo um recorte de público impressionante.
