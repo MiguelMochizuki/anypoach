@@ -39,8 +39,8 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | Versão | Conteúdo | Estado |
 | --- | --- | --- |
 | v0.1.0 | Tamanho e escala da captura no brief e nas legendas; captura no Wayland | publicada (pré-release) |
-| v0.2.0 | Extensão do Chrome (PR #3) e inspetor de página: cartão ao passar o mouse e medidas dos componentes filhos | publicada (pré-release); verificação manual no Chrome ainda não registrada |
-| v0.2.1 | macOS: ponteiro por CoreGraphics, regiões Retina e aviso de permissão de gravação de tela | em andamento (PR #15; plano `2026-11-21-anypoach-v021-macos.md`); falta rodar o spike e as checagens num Mac |
+| v0.2.0 | Extensão do Chrome (PR #3) e inspetor de página: cartão ao passar o mouse e medidas dos componentes filhos | publicada (pré-release) |
+| v0.2.1 | macOS: ponteiro por CoreGraphics, regiões Retina e aviso de permissão de gravação de tela | pronta (pré-release); spike e checagens manuais num Mac ainda não rodados |
 | v0.3.0 | Trechos de movimento (várias interações por gravação) e fase 2b: editor com comentários, atalho global e bandeja, onboarding, modo janela | não começou |
 | Depois, sem data | Importar vídeo ou imagem, screenshot, limpeza de armazenamento; painel lateral do Chrome e lista na janela (opções B e C do inspetor); PyInstaller, `.mcpb` e comando do Codex; favoritos e font matcher (o matcher depende de OCR e CoreText do Mac) | ideias |
 
