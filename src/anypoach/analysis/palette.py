@@ -1,4 +1,4 @@
-"""Quantized weighted color histogram (port of packages/core/src/palette.ts)."""
+"""Quantized weighted color histogram."""
 from __future__ import annotations
 
 import numpy as np

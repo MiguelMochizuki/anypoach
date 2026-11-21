@@ -1,4 +1,4 @@
-"""Video and image inspection (port of packages/core/src/extractor.ts), in one process."""
+"""Video and image inspection, decoding in a single process."""
 from __future__ import annotations
 
 import math

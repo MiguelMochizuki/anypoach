@@ -1,4 +1,4 @@
-"""Polls a PointerSource at 120 Hz while a capture is active (port of PointerTraceRecorder.swift)."""
+"""Polls a PointerSource at 120 Hz while a capture is active."""
 from __future__ import annotations
 
 import math

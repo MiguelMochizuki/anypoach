@@ -1,4 +1,4 @@
-"""Keyframe selection (port of chooseKeyframes in packages/core/src/extractor.ts)."""
+"""Keyframe selection."""
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -8,8 +8,8 @@ Kind = Literal["start", "peak", "settled"]
 
 
 def choose_keyframes(deltas: Sequence[float], count: int) -> list[tuple[Kind, int]]:
-    """`deltas[i]` is the change into frame i+1. Indices mirror the TS core, which keeps
-    the frame before the largest change, so goldens stay comparable."""
+    """`deltas[i]` is the change into frame i+1. Indices keep the frame before the largest change,
+    so the golden files stay comparable."""
     if count == 1:
         return [("start", 0)]
     peak_delta = max(deltas)

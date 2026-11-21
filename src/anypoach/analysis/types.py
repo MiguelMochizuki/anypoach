@@ -1,4 +1,4 @@
-"""Result types; `to_json` matches packages/core/src/types.ts (camelCase)."""
+"""Result types; `to_json` produces the camelCase JSON stored in briefs."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field

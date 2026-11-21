@@ -1,4 +1,4 @@
-"""Pointer-trace parsing and click/drag summary (port of summarizePointerActions in packages/mcp-server)."""
+"""Pointer-trace parsing and click/drag summary."""
 from __future__ import annotations
 
 import math

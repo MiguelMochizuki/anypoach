@@ -1,4 +1,4 @@
-"""Frame-to-frame motion and easing estimate (port of packages/core/src/motion.ts)."""
+"""Frame-to-frame motion and easing estimate."""
 from __future__ import annotations
 
 from collections.abc import Sequence

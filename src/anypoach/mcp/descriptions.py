@@ -1,4 +1,4 @@
-"""Tool titles and descriptions, extracted verbatim from packages/mcp-server/src/index.ts."""
+"""Tool titles and descriptions."""
 
 TOOLS = {
     "anypoach_inspect": {

@@ -43,7 +43,7 @@ def _pointer_guidance(trace: dict[str, Any] | None) -> str:
 
 
 def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
-    """The same text the macOS app copies for a video brief (FloatingHUDView.swift), without browser evidence."""
+    """The prompt copied for an assistant to read a video brief."""
     return (f"{_LOOKUP.format(id=brief_id)} Use its images, pointer trace, and timestamped notes. {_pointer_guidance(trace)} "
             "Match pointer coordinates and timestamps to the frames to identify targets. For a drag, inspect the frames "
             "after release and include visible changes through the end of the response. Use the video and notes to "

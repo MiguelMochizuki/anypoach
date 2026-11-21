@@ -1,4 +1,4 @@
-"""Private temporary directories named like the Swift app's (`anypoach-xxxxxx`), so storage cleanup can recognize them."""
+"""Private temporary directories named `anypoach-xxxxxx` so storage cleanup can recognize them."""
 import os
 import secrets
 import string
