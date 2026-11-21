@@ -35,6 +35,7 @@ from anypoach.pointer.trace import Rect
 from anypoach.tempdirs import make_temp_dir
 
 from .controller import Controller, physical_rect
+from .favorites import FavoritesDialog
 from .frozen_selection import FrozenSelection
 from .palette import PaletteEditor
 from .review import ReviewPanel
@@ -103,6 +104,8 @@ class MainWindow(QMainWindow):
         self.window_button = self._button("Window", self._choose_window)
         self.screenshot = self._button("Screenshot", self._screenshot)
         self.import_button = self._button("Import…", self._import)
+        self.save_favorite_button = self._button("Save as favorite…", self._save_favorite)
+        self.favorites_button = self._button("Favorites…", self._favorites)
         self.settings_button = self._button("Settings…", self._settings)
         self.stop_button, self.copy_button = self._button("Stop", self._stop), self._button("Copy prompt for assistant", self._copy)
         self.status = QLabel("Choose an area, then record.")
@@ -112,7 +115,7 @@ class MainWindow(QMainWindow):
         self.frames.setIconSize(QSize(160, 100))
         self.frames.setAccessibleName("Keyframes")
         buttons = QHBoxLayout()
-        for button in (self.area, self.full_screen, self.window_button, self.screenshot, self.import_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
+        for button in (self.area, self.full_screen, self.window_button, self.screenshot, self.import_button, self.save_favorite_button, self.favorites_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
             buttons.addWidget(button)
         body = QVBoxLayout()
         body.addLayout(buttons)
@@ -215,6 +218,7 @@ class MainWindow(QMainWindow):
         self.record_button.setEnabled(state != "recording")
         self.stop_button.setEnabled(state == "recording")
         self.copy_button.setEnabled(state == "ready")
+        self.save_favorite_button.setEnabled(state == "ready")
         if self.controller.message:
             self.status.setText(self.controller.message)
 
@@ -375,6 +379,14 @@ class MainWindow(QMainWindow):
     def _open_media(self) -> list[str]:
         result = self.controller.result
         return [] if result is None else [p for p in (result.source_path, *(k.image_path for k in result.keyframes)) if p]
+
+    def _save_favorite(self) -> None:
+        name, accepted = QInputDialog.getText(self, "Save as favorite", "Name:")
+        if accepted:
+            self.status.setText("Saved as a favorite." if self.controller.save_favorite(name) else self.controller.message)
+
+    def _favorites(self) -> None:
+        FavoritesDialog(self.controller, parent=self).exec()
 
     def _settings(self) -> None:
         SettingsDialog(self._open_media, parent=self).exec()
