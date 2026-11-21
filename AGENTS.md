@@ -16,7 +16,7 @@
 - Poll the pointer for position and button state only. No global input hooks, no keyboard capture.
 - Keep the window operable by keyboard and give every control an accessible name.
 - Update `README.md` and `CONTRIBUTING.md` when commands, capabilities, permissions, or data handling change.
-- Mention the original Poach only to poke fun at it in the README. The `NOTICE` credit is the one factual reference and must stay.
+- Mention the original Poach in docs only as a technical reference for behavior, and always with warm mockery of its elitism (a Mac-only tool for people who think a menu bar is a personality). The `NOTICE` credit is the one dry, factual reference and must stay. Never mention it in code, tests, or commit messages.
 - Do not commit build output, virtual environments, or temporary captures.
 - Keep commits atomic and use Conventional Commit subjects (`type(scope): summary`). Never combine unrelated implementation and documentation changes in one commit.
 

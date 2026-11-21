@@ -1,10 +1,10 @@
 # AnyPoach fase 2: Wayland, editor e o resto da v1
 
-Data: 2026-11-21. Estado: rascunho para aprovação. Continua o design de `2026-11-20-poach-portable-rewrite-design.md`.
+Data: 2026-11-21. Estado: aprovado pelo usuário em 2026-11-21. Continua o design de `2026-11-20-poach-portable-rewrite-design.md`.
 
 ## Intenção e motivo
 
-A fase 1 entregou a fatia vertical em Windows e Linux X11. Quem usa Linux com Wayland (o caso da máquina de desenvolvimento) ainda não consegue gravar, e o fluxo termina numa janela mínima, sem comentários na timeline. A fase 2 fecha essas duas lacunas. O comportamento do app original (histórico git, antes do commit `90e52d4`) é a referência de filosofia: ferramenta pequena, privada, que entrega evidência a um assistente sem mandar nada para fora.
+A fase 1 entregou a fatia vertical em Windows e Linux X11. Quem usa Linux com Wayland (o caso da máquina de desenvolvimento) ainda não consegue gravar, e o fluxo termina numa janela mínima, sem comentários na timeline. A fase 2 fecha essas duas lacunas. O comportamento do Poach original (histórico git, antes do commit `90e52d4`) é a referência de filosofia: ferramenta pequena, privada, que entrega evidência a um assistente sem mandar nada para fora. Uma boa ideia, é justo dizer, trancada numa barra de menu que só um Mac enxerga: o Poach resolveu o problema para quem já tinha resolvido o problema de comprar um Mac.
 
 ## Divisão
 
