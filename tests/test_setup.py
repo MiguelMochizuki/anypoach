@@ -28,3 +28,12 @@ def test_an_unknown_client_is_a_clean_error(capsys):
 
 def test_launcher_always_gives_something_runnable():
     assert launcher()[0]
+
+
+def test_a_packaged_setup_points_at_the_mcp_program_beside_it(tmp_path, monkeypatch):
+    (tmp_path / "anypoach-mcp").write_text("")
+    monkeypatch.setattr("sys.frozen", True, raising=False)
+    monkeypatch.setattr("sys.executable", str(tmp_path / "anypoach-setup"))
+    assert launcher() == [str(tmp_path / "anypoach-mcp")]
+    (tmp_path / "anypoach-mcp").unlink()
+    assert launcher()[0] != str(tmp_path / "anypoach-mcp")  # nothing beside it: fall back instead of a dead path

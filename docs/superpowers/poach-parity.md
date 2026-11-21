@@ -23,7 +23,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 | Conector MCP | instalador do Codex e extensão `.mcpb` | `anypoach-setup` imprime o comando do Claude Code, do Codex ou JSON; `.mcpb` (v0.14.0, ainda não instalado num Claude Desktop real) |
 | Extras | favoritos `.poach`, "Snatch font", limpeza de armazenamento, atualização, onboarding | limpeza e atualização sob demanda (v0.7.0) e favoritos (v0.10.0); Snatch font sem OCR (v0.13.0) e onboarding (v0.11.0) |
 | Chrome | extensão com estilos computados, eventos e tempos de animação | extensão própria na v0.2.0 (porta 47832, sem loja): estilos, animações, eventos, cartão do inspetor e componentes filhos |
-| Distribuição | `.zip` pronto | instalação por `uv` |
+| Distribuição | `.zip` pronto | `.zip` por sistema sem Python nem `uv` (v0.15.0, sem assinatura) e instalação por `uv` |
 | Ponteiro | macOS | Windows, X11 e macOS (Wayland sem trace; macOS só testado com fakes e CI até alguém rodar o spike) |
 
 ## O que o Poach também não resolve
@@ -53,7 +53,8 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.11.0 | Onboarding: boas-vindas com a exigência do sistema e passo opcional de pareamento do Chrome; reabre em Settings | publicada (pré-release) |
 | v0.12.0 | Atalho global opcional (Ctrl+Alt+Shift+P, desligado por padrão): registra só o acorde com `RegisterHotKey` (Windows) ou `XGrabKey` (X11); Wayland e macOS ficam de fora | publicada (pré-release) |
 | v0.13.0 | Snatch font à nossa maneira: arrastar sobre uma linha, dizer o que ela diz e ranquear as fontes instaladas pelo formato das letras (sem OCR); vai no brief como `visualFontMatch` | publicada (pré-release) |
-| v0.14.0 | Extensão `.mcpb` para o Claude Desktop (tipo `uv` do MCPB), gerada por `tools/build_mcpb.py` e anexada à release; o servidor do pacote extraído foi iniciado à mão, falta instalar no Claude Desktop | pronta; checagem manual pendente |
-| v0.15.0+ | Resto do Poach, nesta ordem: instalador sem `uv`; atalho global e modo janela no macOS e no Wayland | não começou |
+| v0.14.0 | Extensão `.mcpb` para o Claude Desktop (tipo `uv` do MCPB), gerada por `tools/build_mcpb.py` e anexada à release; o servidor do pacote extraído foi iniciado à mão, falta instalar no Claude Desktop | publicada (pré-release) |
+| v0.15.0 | Instalador sem `uv`: pasta do PyInstaller com a janela, o servidor MCP e o `anypoach-setup`, um zip por sistema com `SHA256SUMS.txt`, montados pela CI a cada tag (sem assinatura) | pronta; checagem manual pendente |
+| v0.16.0+ | Resto do Poach: atalho global e modo janela no macOS e no Wayland, "Continuar com Claude Code ou Codex", sombra na área, menu da bandeja com nova captura | não começou |
 
 O Poach resolve tudo isso apenas para quem tem um Mac, o que continua sendo um recorte de público impressionante.
