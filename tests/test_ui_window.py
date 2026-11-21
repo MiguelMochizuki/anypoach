@@ -29,8 +29,8 @@ class FakeController:
     def close(self):
         self.calls.append("close")
 
-    def choose_region(self, region):
-        self.calls.append(("choose", region))
+    def choose_region(self, region, device_scale=None):
+        self.calls.append(("choose", region, device_scale))
 
     def start(self):
         self.calls.append("start")
@@ -190,3 +190,21 @@ def test_a_start_that_fails_brings_the_window_back(app, monkeypatch):
     window.record_button.click()
     QTest.qWait(300)
     assert not window.isMinimized() and "Could not start" in window.status.text()
+
+
+def test_the_overlay_screen_scale_is_passed_to_the_controller(app):
+    controller = FakeController()
+    window = MainWindow(controller)
+    window._choose()
+    window._overlay.close()
+    window._chosen(Rect(0, 0, 40, 40))
+    assert controller.calls[-1] == ("choose", Rect(0, 0, 40, 40), app.primaryScreen().devicePixelRatio())
+
+
+def test_a_preview_backend_passes_no_scale(app):
+    controller = PreviewController()
+    window = MainWindow(controller)
+    window._choose()
+    window._overlay.close()
+    window._chosen(Rect(0, 0, 40, 40))
+    assert controller.calls[-1] == ("choose", Rect(0, 0, 40, 40), None)

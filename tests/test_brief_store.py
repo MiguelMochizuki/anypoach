@@ -1,4 +1,5 @@
 """Brief storage: writing, reading, archiving, expiry, permissions, and storage cleanup."""
+import dataclasses
 import json
 import os
 import re
@@ -8,7 +9,7 @@ import uuid
 import pytest
 
 from anypoach.analysis.motion import MotionTiming
-from anypoach.analysis.types import InspectionResult, Keyframe
+from anypoach.analysis.types import CaptureInfo, InspectionResult, Keyframe
 from anypoach.brief.cleanup import clear_storage, scan_storage
 from anypoach.brief.store import read_brief, share
 
@@ -183,3 +184,11 @@ def test_malformed_briefs_stop_the_scan_instead_of_risking_media(env):
 
 def test_missing_cache_is_an_empty_scan(env):
     assert scan_storage(temp=env[1], cache=env[0] / "nope").total == 0
+
+
+def test_share_keeps_capture_in_the_evidence(env):
+    cache, temp = env
+    measured = dataclasses.replace(result(make_media(temp)), capture=CaptureInfo(1854, 962, None))
+    brief_id = share(measured, "", [], cache=cache)
+    assert read_brief(brief_id, cache=cache)["evidence"]["capture"] == {
+        "widthPx": 1854, "heightPx": 962, "deviceScale": None, "imageMaxSize": 1280}

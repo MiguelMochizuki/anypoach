@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
     def __init__(self, controller: Controller) -> None:
         super().__init__()
         self.controller = controller
+        self._device_scale: float | None = None
         self.setWindowTitle("AnyPoach")
         self._tray: QSystemTrayIcon | None = None
         self._limit = QTimer(self, singleShot=True, interval=MAX_RECORDING_MS)
@@ -111,10 +112,13 @@ class MainWindow(QMainWindow):
                 self.show()
                 self._refresh()
                 return
+            self._device_scale = None  # the portal reports the stream size only, not the screen scale
             overlay = FrozenSelection(frame)
             overlay.cancelled.connect(self._selection_cancelled)
         else:
-            overlay = SelectionOverlay(QApplication.screenAt(self.pos()) or QApplication.primaryScreen())
+            screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
+            self._device_scale = screen.devicePixelRatio()
+            overlay = SelectionOverlay(screen)
             overlay.cancelled.connect(self.show)
         overlay.selected.connect(self._chosen)
         self._overlay = overlay
@@ -131,7 +135,7 @@ class MainWindow(QMainWindow):
         super().closeEvent(event)
 
     def _chosen(self, region) -> None:
-        self.controller.choose_region(region)
+        self.controller.choose_region(region, self._device_scale)
         self.status.setText("Area selected." if not self.controller.message else self.controller.message)
         self.show()
         self._refresh()

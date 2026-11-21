@@ -89,6 +89,7 @@ class Controller:
         self.annotations: list[dict[str, Any]] = []
         self.result: InspectionResult | None = None
         self._region: Rect | None = None
+        self._device_scale: float | None = None
         self._recorder: Recorder | None = None
 
     @property
@@ -128,13 +129,24 @@ class Controller:
 
     def close(self) -> None:
         """Release the backend's session (the portal's sharing indicator goes away) and forget the area."""
-        self._region = None
+        self._region, self._device_scale = None, None
         closer = getattr(self._backend, "close", None)
         if closer is not None:
             closer()
 
-    def choose_region(self, region: Rect) -> None:
-        """Remember the area to record. Anything smaller than 2 px in either direction is refused with a message."""
+    @property
+    def device_scale(self) -> float | None:
+        """Scale factor of the screen the area was chosen on, or None when it is not known."""
+        return self._device_scale
+
+    def choose_region(self, region: Rect, device_scale: float | None = None) -> None:
+        """Remember the area to record. Anything smaller than 2 px in either direction is refused with a message.
+
+        Args:
+            region: The area in physical pixels.
+            device_scale: Scale factor of its screen, or None when unknown (it is then written as null, never 1.0).
+        """
+        self._device_scale = device_scale
         self._region = Rect(*region) if region.width >= 2 and region.height >= 2 else None
         self.message = "" if self._region else "Choose an area to record."
 
@@ -171,6 +183,7 @@ class Controller:
             self.message = "There is no recording to stop."
             return None
         self._recorder, self.state = None, "idle"
+        scale = self._device_scale  # close() below forgets the area, and the scale with it
         try:
             try:
                 recording = recorder.stop()
@@ -184,7 +197,8 @@ class Controller:
         except (ValueError, OSError) as error:
             self.message = f"Could not finish the recording: {error}"
             return None
-        self.result = dataclasses.replace(result, pointer_trace=recording.trace.to_json())
+        capture = dataclasses.replace(result.capture, device_scale=scale) if result.capture else None
+        self.result = dataclasses.replace(result, pointer_trace=recording.trace.to_json(), capture=capture)
         self.state, self.message = "ready", ""
         return self.result
 
