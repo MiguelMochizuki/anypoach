@@ -172,3 +172,19 @@ def test_windows_binds_the_port_exclusively(monkeypatch):
         assert server._httpd.allow_reuse_address is False
     finally:
         server.stop()
+
+
+def test_an_oversized_body_still_gets_its_413_while_the_client_is_sending(running):
+    """Closing with the body unread resets the connection, so the sender would see an error instead of the status."""
+    server, _ = running
+    for _ in range(20):
+        sock = socket.create_connection(("127.0.0.1", server.port), timeout=5)
+        body = b"x" * (900 * 1024)
+        sock.sendall(f"POST /v1/capture HTTP/1.1\r\nHost: 127.0.0.1:{server.port}\r\nAuthorization: Bearer {CODE}\r\n"
+                     f"Content-Type: application/json\r\nContent-Length: {len(body)}\r\n\r\n".encode() + body)
+        try:
+            reply = sock.recv(64)
+        except ConnectionResetError:
+            reply = b"reset"
+        sock.close()
+        assert b" 413 " in reply, reply

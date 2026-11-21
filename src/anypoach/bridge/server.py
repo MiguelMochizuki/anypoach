@@ -132,6 +132,19 @@ class _Handler(BaseHTTPRequestHandler):
             return self._reply(204 if self.bridge._on_open and self.bridge._on_open() else 503)
         return self._capture()
 
+    def _discard(self, length: int) -> None:
+        """Read and drop up to 1 MiB of a refused body: closing with it unread resets the connection, and the sender
+        would see a network error instead of the status."""
+        remaining = min(length, 1 << 20)
+        while remaining > 0:
+            try:
+                chunk = self.rfile.read(min(remaining, 65536))
+            except OSError:
+                return
+            if not chunk:
+                return
+            remaining -= len(chunk)
+
     def _capture(self) -> None:
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self._reply(400)
@@ -142,6 +155,7 @@ class _Handler(BaseHTTPRequestHandler):
         if length < 1:
             return self._reply(400)
         if length > BYTE_LIMIT + _MARGIN:
+            self._discard(length)
             return self._reply(413)
         body = self.rfile.read(length)
         if len(body) != length:
