@@ -13,8 +13,8 @@ uv sync --group dev --extra ui
 uv run pytest                                  # headless suites; needs the ffmpeg CLI only to synthesize test clips
 uv run pytest tests/test_inspect_golden.py -k motion
 QT_QPA_PLATFORM=offscreen uv run pytest tests/test_ui_window.py
-uv run pytest -m live                          # real screen capture; needs an X11 or Windows desktop
-uv run ruff check src tests tools
+uv run pytest -m live                          # real screen capture; needs an X11 or Windows desktop (`addopts` skips `live` by default)
+uv run ruff check src tests tools              # line length 110
 uv run anypoach                                # PySide6 window
 uv run anypoach-mcp                            # stdio MCP server
 ```
@@ -31,6 +31,8 @@ Pieces connected by files on disk, not by network:
 6. **`anypoach.ui`**: `Controller` (no Qt) runs choose area, record, analyze, share and returns the assistant prompt; `app.py` and `selection.py` are the PySide6 window and area overlay.
 
 ## Gotchas
+
+- CI runs `ruff check` and `pytest -q`, then `pytest -m live` under `xvfb-run` on Linux and directly on Windows (`.github/workflows`). Run the first two locally before pushing.
 
 - The extension's card lives in a closed shadow DOM, so its tests read `cardModel()` and `placeCard()` through a test-only hook instead of the DOM. `bridge.js` drops `componentsAtEnd` when a session is over the 256 KiB body limit, and gives up only if it is still too big. Pinning measures at most 40 descendants to DOM depth 6, keeping the largest by area.
 - The bridge's `open-capture` route answers 503: the server thread cannot touch Qt, so no callback is wired yet. The extension does not call it.
