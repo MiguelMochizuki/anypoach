@@ -442,3 +442,36 @@ def test_nothing_is_imported_or_captured_while_recording(tmp_path):
         assert "Stop" in controller.message
     finally:
         controller.stop()
+
+
+def shot(tmp_path):
+    controller = make(tmp_path)
+    controller.choose_region(Rect(10, 10, 160, 90))
+    controller.screenshot()
+    return controller
+
+
+def test_the_palette_edit_reaches_the_brief_and_reset_restores_the_analysis(tmp_path):
+    controller = shot(tmp_path)
+    analyzed = controller.palette
+    assert analyzed and controller.set_palette(["#FF0000", "#ff0000", "#00ff00"])
+    assert controller.palette == ["#ff0000", "#00ff00"]
+    controller.copy_handoff()
+    assert read_brief(cache=tmp_path / "cache")["evidence"]["palette"] == ["#ff0000", "#00ff00"]
+    controller.reset_palette()
+    assert controller.palette == analyzed
+
+
+@pytest.mark.parametrize("colors", [[], ["red"], ["#12345"], ["#ff0000", 5]])
+def test_a_bad_palette_is_refused_with_a_message_and_changes_nothing(tmp_path, colors):
+    controller = shot(tmp_path)
+    before = controller.palette
+    assert controller.set_palette(colors) is False and controller.message and controller.palette == before
+
+
+def test_the_palette_is_capped_at_twelve_and_cleared_by_a_new_result(tmp_path):
+    controller = shot(tmp_path)
+    assert controller.set_palette([f"#0000{i:02x}" for i in range(20)]) and len(controller.palette) == 12
+    controller.screenshot()
+    assert controller.palette != [f"#0000{i:02x}" for i in range(12)]
+    assert make(tmp_path).set_palette(["#000000"]) is False
