@@ -26,11 +26,11 @@ AnyPoach captures a screen area, samples the pointer (position and button state 
 
 ### Status and limitations
 
-Early. Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Not done: comment editor, global shortcut, Wayland capture, macOS pointer sampling. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
+Early. Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. Not done: comment editor, global shortcut, macOS pointer sampling. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
 
 ### Why not just use Poach?
 
-AnyPoach started as a fork of Poach, a charming Mac menu-bar app. It is lovely, provided you own a Mac, want macOS 15 for the good recorder, and do not mind it launching `ffmpeg` 364 times to look at 30 seconds of video (we counted). AnyPoach does the job in one process, runs where Poach never will, and has since been rewritten so thoroughly that the fork is mostly a matter of etiquette. The credit stays in [NOTICE](NOTICE), as the license asks.
+AnyPoach started as a fork of Poach, a charming Mac menu-bar app. It is lovely, provided you own a Mac, want macOS 15 for the good recorder, and do not mind it launching `ffmpeg` 364 times to look at 30 seconds of video (we counted). AnyPoach does the job in one process, runs where Poach never will, and has since been rewritten so thoroughly that the fork is mostly a matter of etiquette. It needed a Mac, a menu bar, and macOS 15, and never once asked how the Wayland people were holding up. The credit stays in [NOTICE](NOTICE), as the license asks.
 
 ## Highlights
 
@@ -47,6 +47,8 @@ Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 uv sync --extra ui    # PySide6 for the window, mss for screen capture
 uv run anypoach       # choose an area, record, stop, copy the prompt
 ```
+
+On a Wayland session the screen comes through the desktop portal, which asks you to confirm each recording, and needs GStreamer with its PipeWire plugin (on Debian and Ubuntu: `sudo apt install gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-pipewire`). AnyPoach tells you what is missing.
 
 Paste the copied prompt into your assistant. It tells the assistant to read the brief through the MCP server described under [Usage](#usage).
 
