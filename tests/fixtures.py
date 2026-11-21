@@ -35,6 +35,8 @@ def build_multi(directory: Path, bursts: list[tuple[float, float, int]], name: s
     A box waits off screen, then eases out cubically across its window, like the `motion` clip, and stays where it
     lands. The clip ends one second after the last burst.
     """
+    if any(size < 2 or size % 2 for _, _, size in bursts):
+        raise ValueError("Box sizes must be even and at least 2: older ffmpeg rejects a 1-pixel yuv420p input")
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / name
     end = max(start + length for start, length, _ in bursts) + 1.0

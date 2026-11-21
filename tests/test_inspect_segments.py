@@ -12,8 +12,8 @@ def made(tmp_path_factory):
     directory = tmp_path_factory.mktemp("multi")
     return {
         "one": build_multi(directory, [(0.5, 0.6, 24)], "one.mov"),
-        "clean": build_multi(directory, [(0.5, 0.6, 24), (1.8, 0.3, 1)], "clean.mov"),  # same length as `residual`
-        "residual": build_multi(directory, [(0.5, 0.6, 24), (1.8, 0.3, 5)], "residual.mov"),
+        "clean": build_multi(directory, [(0.5, 0.6, 24), (1.8, 0.3, 2)], "clean.mov"),  # same length as `residual`
+        "residual": build_multi(directory, [(0.5, 0.6, 24), (1.8, 0.3, 6)], "residual.mov"),
         "three": build_multi(directory, [(0.5, 0.6, 24), (2.5, 0.6, 24), (4.5, 0.6, 24)], "three.mov"),
         "small_after_big": build_multi(directory, [(0.5, 0.6, 40), (4.0, 0.4, 16)], "small.mov"),
         "many": build_multi(directory, [(0.3 + k, 0.4, 14 + 2 * k) for k in range(14)], "many.mov"),
