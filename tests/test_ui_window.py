@@ -209,3 +209,66 @@ def test_a_preview_backend_passes_no_scale(app):
     window._overlay.close()
     window._chosen(Rect(0, 0, 40, 40))
     assert controller.calls[-1] == ("choose", Rect(0, 0, 40, 40), None)
+
+
+class FakeBridge:
+    """Stands in for BridgeController: a code, a status, and calls to record."""
+
+    def __init__(self, status="listening"):
+        self.code, self.status, self.calls = "AAAA-1111", status, []
+
+    def rotate(self):
+        self.code = "BBBB-2222"
+        self.calls.append("rotate")
+        return self.code
+
+    def stop(self):
+        self.calls.append("stop")
+
+
+def test_the_chrome_section_shows_the_code_and_every_control_is_named(app):
+    window = MainWindow(FakeController(), FakeBridge())
+    assert window.code_field.text() == "AAAA-1111" and window.code_field.isReadOnly()
+    names = {b.accessibleName() for b in window.findChildren(QPushButton)}
+    assert {"Copy pairing code", "Create a new pairing code", "Open the extension folder"} <= names
+    assert window.code_field.accessibleName() == "Pairing code" and window.chrome_status.accessibleName() == "Chrome status"
+
+
+def test_copy_and_rotate_the_pairing_code(app):
+    bridge = FakeBridge()
+    window = MainWindow(FakeController(), bridge)
+    window.copy_code_button.click()
+    assert QApplication.clipboard().text() == "AAAA-1111"
+    window.new_code_button.click()
+    assert window.code_field.text() == "BBBB-2222" and bridge.calls == ["rotate"]
+
+
+def test_a_port_error_is_visible_and_recording_still_works(app):
+    controller = FakeController()
+    window = MainWindow(controller, FakeBridge("error: Port 47832 is already in use"))
+    assert "47832" in window.chrome_status.text()
+    assert window.record_button.isEnabled()
+
+
+def test_open_the_extension_folder(app, monkeypatch, tmp_path):
+    opened = []
+    monkeypatch.setattr("anypoach.ui.app.extension_dir", lambda: tmp_path)
+    monkeypatch.setattr("anypoach.ui.app.QDesktopServices.openUrl", lambda url: opened.append(url.toLocalFile()) or True)
+    window = MainWindow(FakeController(), FakeBridge())
+    window.open_extension_button.click()
+    assert opened == [str(tmp_path)]
+    monkeypatch.setattr("anypoach.ui.app.extension_dir", lambda: tmp_path / "missing")
+    window.open_extension_button.click()
+    assert "not found" in window.chrome_status.text() and len(opened) == 1
+
+
+def test_closing_the_window_stops_the_bridge(app):
+    bridge = FakeBridge()
+    window = MainWindow(FakeController(), bridge)
+    window.close()
+    assert "stop" in bridge.calls
+
+
+def test_without_a_bridge_there_is_no_chrome_section(app):
+    window = MainWindow(FakeController())
+    assert not hasattr(window, "code_field")
