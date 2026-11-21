@@ -4,7 +4,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer, QUrl
+from PySide6.QtCore import QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeyEvent, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -29,6 +29,7 @@ from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.paths import cache_dir
 from anypoach.capture.default import default_backend
 from anypoach.capture.windows import default_windows
+from anypoach.hotkey import default_hotkey, remember_shortcut, shortcut_enabled
 from anypoach.macos import macos_screen_access
 from anypoach.onboarding import mark_done, needs_onboarding
 from anypoach.pointer import default_source
@@ -92,8 +93,12 @@ class MainWindow(QMainWindow):
     Args:
         controller: The flow this window drives.
     """
-    def __init__(self, controller: Controller, bridge: BridgeController | None = None) -> None:
+    hotkey_pressed = Signal()  # emitted from the shortcut's thread, handled on the Qt thread
+
+    def __init__(self, controller: Controller, bridge: BridgeController | None = None, hotkey_factory=default_hotkey) -> None:
         super().__init__()
+        self._hotkey_factory, self._hotkey = hotkey_factory, None
+        self.hotkey_pressed.connect(self._toggle_recording)
         self.controller = controller
         self._bridge = bridge
         self._device_scale: float | None = None
@@ -292,6 +297,8 @@ class MainWindow(QMainWindow):
         """Release the capture backend (closing any portal session) and the Chrome server before the window goes away."""
         self._close_review()
         self.controller.close()
+        if self._hotkey is not None:
+            self._hotkey.stop()
         if self._bridge is not None:
             self._bridge.stop()
         super().closeEvent(event)
@@ -348,6 +355,34 @@ class MainWindow(QMainWindow):
             self._tray.setContextMenu(self._tray_recording_menu if recording else self._tray_idle_menu)
             self._tray.setToolTip("AnyPoach is recording" if recording else "AnyPoach")
 
+    @property
+    def shortcut_available(self) -> bool:
+        """Whether this system can register a global shortcut."""
+        return self._hotkey is not None or self._hotkey_factory() is not None
+
+    def set_global_shortcut(self, enabled: bool) -> bool:
+        """Turn the global shortcut on or off and remember the choice.
+
+        Returns:
+            Whether the shortcut is now on; False when enabling failed (unsupported, or another program owns it).
+        """
+        if self._hotkey is not None:
+            self._hotkey.stop()
+            self._hotkey = None
+        if enabled and (hotkey := self._hotkey_factory()) is not None:
+            if hotkey.start(self.hotkey_pressed.emit):
+                self._hotkey = hotkey
+            else:
+                hotkey.stop()
+        remember_shortcut(self._hotkey is not None)
+        return self._hotkey is not None
+
+    def _toggle_recording(self) -> None:
+        if self.controller.state == "recording":
+            self._stop()
+        else:
+            self._record_full_screen()
+
     def _record_full_screen(self) -> None:
         if self.controller.state == "recording":
             return
@@ -396,7 +431,8 @@ class MainWindow(QMainWindow):
         mark_done()
 
     def _settings(self) -> None:
-        SettingsDialog(self._open_media, on_tour=self.show_tour, parent=self).exec()
+        shortcut = (self._hotkey is not None, self.set_global_shortcut) if self.shortcut_available else None
+        SettingsDialog(self._open_media, on_tour=self.show_tour, shortcut=shortcut, parent=self).exec()
 
     def _import(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Import a video or image", "",
@@ -454,6 +490,8 @@ def main() -> int:
                             screen_access=screen_access, windows=default_windows())
     window = MainWindow(controller, bridge)
     window.show()
+    if shortcut_enabled():
+        window.set_global_shortcut(True)
     if needs_onboarding():
         window.show_tour()
     return app.exec()

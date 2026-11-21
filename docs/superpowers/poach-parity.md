@@ -50,7 +50,8 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.8.0 | Paleta ajustável (trocar, tirar, acrescentar e restaurar cores; o brief leva a versão editada) | publicada (pré-release) |
 | v0.9.0 | Modo janela: lista de janelas no X11 e no Windows, seletor do portal no Wayland (sem miniaturas e sem seguir a janela; macOS de fora) | publicada (pré-release) |
 | v0.10.0 | Favoritos: salvar o handoff, copiar um novo prompt, exportar e importar `.anypoach` (formato próprio, validado com rigor; sem vídeo) | publicada (pré-release) |
-| v0.11.0 | Onboarding: boas-vindas com a exigência do sistema e passo opcional de pareamento do Chrome; reabre em Settings | pronta; checagem manual pendente |
-| v0.12.0+ | Resto do Poach, nesta ordem: atalho global opcional (desligado por padrão, exceção à promessa de não usar hooks), Snatch font, instalador sem `uv`, `.mcpb`, modo janela no macOS | não começou |
+| v0.11.0 | Onboarding: boas-vindas com a exigência do sistema e passo opcional de pareamento do Chrome; reabre em Settings | publicada (pré-release) |
+| v0.12.0 | Atalho global opcional (Ctrl+Alt+Shift+P, desligado por padrão): registra só o acorde com `RegisterHotKey` (Windows) ou `XGrabKey` (X11); Wayland e macOS ficam de fora | pronta; checagem manual pendente |
+| v0.13.0+ | Resto do Poach, nesta ordem: Snatch font, instalador sem `uv`, `.mcpb`; atalho global e modo janela no macOS e no Wayland | não começou |
 
 O Poach resolve tudo isso apenas para quem tem um Mac, o que continua sendo um recorte de público impressionante.

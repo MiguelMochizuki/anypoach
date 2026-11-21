@@ -6,9 +6,10 @@ from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QApplication, QDialog, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QApplication, QCheckBox, QDialog, QLabel, QPushButton, QVBoxLayout
 
 from anypoach.brief.cleanup import clear_storage, scan_storage
+from anypoach.hotkey import CHORD
 from anypoach.setup import setup_text
 from anypoach.updates import check_for_update
 
@@ -33,11 +34,13 @@ class SettingsDialog(QDialog):
         cache: Brief cache directory (the default one when omitted); a parameter for tests.
         check: The update check; a parameter for tests.
         on_tour: Shows the welcome tour; the button is left out when None.
+        shortcut: The shortcut's current state and a function that turns it on or off and says whether it is on; the
+            checkbox is left out when None.
         parent: The owning window.
     """
     def __init__(self, open_paths: Callable[[], list[str]], *, temp: Path | None = None, cache: Path | None = None,
                  check: Callable[[], str] = check_for_update, on_tour: Callable[[], None] | None = None,
-                 parent=None) -> None:
+                 shortcut: tuple[bool, Callable[[bool], bool]] | None = None, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("AnyPoach settings")
         self._open_paths, self._temp, self._cache, self._check = open_paths, temp, cache, check
@@ -57,7 +60,22 @@ class SettingsDialog(QDialog):
                        self.update_label, self.update_button,
                        *([self._button("Welcome tour…", lambda _=False: on_tour())] if on_tour else [])):
             layout.addWidget(widget)
+        self.shortcut_box = None
+        if shortcut is not None:
+            self._set_shortcut = shortcut[1]
+            self.shortcut_box = QCheckBox(f"Global shortcut {CHORD} starts and stops a full-screen recording")
+            self.shortcut_box.setAccessibleName("Global shortcut")
+            self.shortcut_box.setChecked(shortcut[0])
+            self.shortcut_box.toggled.connect(self._shortcut_toggled)
+            layout.addWidget(self.shortcut_box)
         self.refresh()
+
+    def _shortcut_toggled(self, checked: bool) -> None:
+        if self._set_shortcut(checked) != checked:
+            self.shortcut_box.blockSignals(True)
+            self.shortcut_box.setChecked(not checked)
+            self.shortcut_box.blockSignals(False)
+            self.update_label.setText("The shortcut could not be registered: another program may be using it.")
 
     def _button(self, text: str, slot) -> QPushButton:
         button = QPushButton(text)
