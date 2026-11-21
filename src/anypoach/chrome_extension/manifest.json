@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "AnyPoach",
+  "version": "0.1.0",
+  "description": "Collect browser evidence for a component in an AnyPoach recording.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AnyPoach this component",
+    "default_icon": {"128": "icon.png"}
+  },
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {"service_worker": "bridge.js"},
+  "icons": {"128": "icon.png"}
+}
