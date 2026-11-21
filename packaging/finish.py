@@ -28,7 +28,7 @@ def smoke(folder: Path) -> None:
 
 
 if __name__ == "__main__":
-    folder, target = Path(sys.argv[1]), Path(sys.argv[2])
+    folder, target = Path(sys.argv[1]).resolve(), Path(sys.argv[2])
     smoke(folder)
     shutil.make_archive(str(target.with_suffix("")), "zip", folder.parent, folder.name)
     print(target)
