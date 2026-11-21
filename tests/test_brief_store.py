@@ -38,7 +38,7 @@ def make_media(temp, name="capture-%s.mov"):
 
 def age(cache, brief_id, seconds):
     for path in (cache / "briefs" / f"{brief_id.lower()}.json", cache / "active-brief.json"):
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         if data["briefId"] == brief_id:
             data["sharedAt"] -= seconds
             path.write_text(json.dumps(data))
@@ -48,12 +48,12 @@ def test_share_writes_the_v1_brief_without_keyframe_motion(env):
     cache, temp = env
     brief_id = share(result(make_media(temp)), "ctx", [{"timeMs": 5, "text": "note"}], cache=cache)
     assert re.fullmatch(UUID, brief_id)
-    brief = json.loads((cache / "active-brief.json").read_text())
+    brief = json.loads((cache / "active-brief.json").read_text(encoding="utf-8"))
     assert (brief["version"], brief["briefId"], brief["context"]) == (1, brief_id, "ctx")
     assert "Inspect the keyframes" in brief["instruction"]
     assert set(brief["evidence"]["keyframes"][0]) == {"kind", "timeMs", "imagePath"}
     assert brief["evidence"]["annotations"] == [{"timeMs": 5, "text": "note"}]
-    assert (cache / "briefs" / f"{brief_id.lower()}.json").read_text() == (cache / "active-brief.json").read_text()
+    assert (cache / "briefs" / f"{brief_id.lower()}.json").read_text(encoding="utf-8") == (cache / "active-brief.json").read_text(encoding="utf-8")
 
 
 @posix_only
