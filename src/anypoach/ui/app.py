@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt, QTimer, QUrl
-from PySide6.QtGui import QDesktopServices, QIcon, QKeyEvent
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeyEvent, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QGroupBox,
@@ -36,6 +36,23 @@ from .selection import SelectionOverlay
 
 MAX_RECORDING_MS = 30_000  # the analysis only reads the first 30 s
 LEAVE_SCREEN_MS = 500  # time for the compositor to take the window off the screen before capture starts
+
+
+def recording_icon() -> QIcon:
+    """The tray icon while recording: the theme's `media-record`, or a red dot where the theme has none (macOS,
+    Windows), because a blank menu-bar item leaves no visible way to stop the recording."""
+    icon = QIcon.fromTheme("media-record")
+    if not icon.isNull():
+        return icon
+    pixmap = QPixmap(44, 44)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setBrush(QColor("#e5322d"))
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.drawEllipse(6, 6, 32, 32)
+    painter.end()
+    return QIcon(pixmap)
 
 
 def hide_from_capture(window: QWidget) -> bool:
@@ -246,7 +263,7 @@ class MainWindow(QMainWindow):
         if not QSystemTrayIcon.isSystemTrayAvailable():  # e.g. GNOME: minimize, and restore the window to stop
             self.showMinimized()
             return
-        tray = QSystemTrayIcon(QIcon.fromTheme("media-record"), self)
+        tray = QSystemTrayIcon(recording_icon(), self)
         menu = QMenu()
         menu.addAction("Stop recording", self._stop)
         tray.setContextMenu(menu)

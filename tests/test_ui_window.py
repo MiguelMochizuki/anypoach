@@ -10,12 +10,13 @@ pytest.importorskip("PySide6")
 
 import numpy as np
 from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QPushButton, QSystemTrayIcon
 
 from anypoach.capture.backend import Frame
 from anypoach.pointer.trace import Rect
-from anypoach.ui.app import MainWindow, hide_from_capture
+from anypoach.ui.app import MainWindow, hide_from_capture, recording_icon
 from anypoach.ui.frozen_selection import FrozenSelection
 from anypoach.ui.selection import SelectionOverlay
 
@@ -106,6 +107,12 @@ def test_overlay_reports_the_dragged_area_in_physical_pixels_and_esc_cancels(app
 @pytest.mark.skipif(sys.platform == "win32", reason="the exclusion flag exists only on Windows")
 def test_hide_from_capture_is_a_no_op_outside_windows(app):
     assert hide_from_capture(MainWindow(FakeController())) is False
+
+
+def test_recording_icon_is_never_null(app, monkeypatch):
+    monkeypatch.setattr(QIcon, "fromTheme", staticmethod(lambda name: QIcon()))  # macOS and Windows have no theme
+    icon = recording_icon()
+    assert not icon.isNull() and not icon.pixmap(22, 22).isNull()
 
 
 class PreviewController(FakeController):
