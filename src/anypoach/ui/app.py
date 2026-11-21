@@ -31,6 +31,7 @@ from anypoach.tempdirs import make_temp_dir
 
 from .controller import Controller
 from .frozen_selection import FrozenSelection
+from .review import ReviewPanel
 from .selection import SelectionOverlay
 
 MAX_RECORDING_MS = 30_000  # the analysis only reads the first 30 s
@@ -80,6 +81,7 @@ class MainWindow(QMainWindow):
         body.addLayout(buttons)
         body.addWidget(self.status)
         body.addWidget(self.frames)
+        self._body, self.review = body, None
         if bridge is not None:
             body.addWidget(self._chrome_group(bridge))
         root = QWidget()
@@ -200,6 +202,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         """Release the capture backend (closing any portal session) and the Chrome server before the window goes away."""
+        self._close_review()
         self.controller.close()
         if self._bridge is not None:
             self._bridge.stop()
@@ -216,6 +219,7 @@ class MainWindow(QMainWindow):
             self.controller.start()  # only sets the reason (no area chosen, already recording); nothing to hide
             self._refresh()
             return
+        self._close_review()  # stops decoding the previous recording before a new one starts
         self.record_button.setEnabled(False)
         self._leave_the_screen()  # first, so the window is not in the first frames of the video
         QTimer.singleShot(0 if sys.platform == "win32" else LEAVE_SCREEN_MS, self._begin_recording)
@@ -261,7 +265,27 @@ class MainWindow(QMainWindow):
                 item = QListWidgetItem(QIcon(key.image_path), f"{key.kind} · {key.time_ms} ms")
                 self.frames.addItem(item)
             self.status.setText(f"Recorded {result.duration_ms} ms. Copy the prompt and paste it to your assistant.")
+            self._show_review(result)
         self._refresh()
+
+    def _show_review(self, result) -> None:
+        """Open the review panel for a video result; the keyframes stay as they are if the video cannot be read."""
+        self._close_review()
+        if result.media_type != "video" or not result.source_path:
+            return
+        try:
+            panel = ReviewPanel(self.controller, result)
+        except (ValueError, OSError):
+            return
+        self._body.insertWidget(self._body.indexOf(self.frames) + 1, panel)
+        self.review = panel
+
+    def _close_review(self) -> None:
+        if self.review is not None:
+            self.review.shutdown()
+            self._body.removeWidget(self.review)
+            self.review.deleteLater()
+            self.review = None
 
     def _copy(self) -> None:
         prompt = self.controller.copy_handoff()
