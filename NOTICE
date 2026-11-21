@@ -3,5 +3,9 @@ Copyright 2026 Miguel Mochizuki and the AnyPoach contributors
 
 AnyPoach started as a fork of Poach (https://github.com/guilopeszw/poach),
 released under the Apache License 2.0. It has since been rewritten in Python
-and no longer contains that project's source files, but it is a derivative
-work of it. See LICENSE for the license terms.
+and no longer contains that project's source files, with one exception: the
+Chrome companion extension in src/anypoach/chrome_extension is adapted from
+Poach's Chrome extension (renamed, moved to another port and message names,
+and extended), and its icon is a flipped derivative of Poach's logo. Each
+adapted file carries a notice of the change. AnyPoach is a derivative work of
+Poach. See LICENSE for the license terms.
