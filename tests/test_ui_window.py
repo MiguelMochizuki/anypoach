@@ -10,12 +10,13 @@ pytest.importorskip("PySide6")
 
 import numpy as np
 from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QPushButton, QSystemTrayIcon
 
 from anypoach.capture.backend import Frame
 from anypoach.pointer.trace import Rect
-from anypoach.ui.app import MainWindow, hide_from_capture
+from anypoach.ui.app import MainWindow, hide_from_capture, recording_icon
 from anypoach.ui.frozen_selection import FrozenSelection
 from anypoach.ui.selection import SelectionOverlay
 
@@ -23,12 +24,16 @@ from anypoach.ui.selection import SelectionOverlay
 class FakeController:
     supports_preview = False
     ready_to_record = True
+    screen_access = True
 
     def __init__(self):
         self.state, self.message, self.calls = "idle", "", []
 
     def close(self):
         self.calls.append("close")
+
+    def check_screen_access(self):
+        return self.screen_access
 
     def choose_region(self, region, device_scale=None):
         self.calls.append(("choose", region, device_scale))
@@ -104,6 +109,12 @@ def test_hide_from_capture_is_a_no_op_outside_windows(app):
     assert hide_from_capture(MainWindow(FakeController())) is False
 
 
+def test_recording_icon_is_never_null(app, monkeypatch):
+    monkeypatch.setattr(QIcon, "fromTheme", staticmethod(lambda name: QIcon()))  # macOS and Windows have no theme
+    icon = recording_icon()
+    assert not icon.isNull() and not icon.pixmap(22, 22).isNull()
+
+
 class PreviewController(FakeController):
     """A controller whose backend needs a preview frame, like the Wayland portal."""
     supports_preview = True
@@ -172,6 +183,18 @@ def test_recording_starts_only_after_the_window_has_left_the_screen(app, monkeyp
     assert controller.calls == [] and window.isMinimized()  # the window goes first, so it is not in the video
     QTest.qWait(300)
     assert controller.calls == ["start"]
+
+
+def test_a_denied_permission_keeps_the_window_where_it_is_and_says_why(app):
+    controller = FakeController()
+    controller.screen_access = False
+    controller.message = "AnyPoach needs Screen Recording permission."
+    window = MainWindow(controller)
+    window.show()
+    window.record_button.click()
+    QTest.qWait(300)
+    assert controller.calls == [] and window.isVisible() and not window.isMinimized()
+    assert "Screen Recording" in window.status.text()
 
 
 def test_record_without_an_area_keeps_the_window_where_it_is(app):
