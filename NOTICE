@@ -6,6 +6,10 @@ released under the Apache License 2.0. It has since been rewritten in Python
 and no longer contains that project's source files, with one exception: the
 Chrome companion extension in src/anypoach/chrome_extension is adapted from
 Poach's Chrome extension (renamed, moved to another port and message names,
-and extended), and its icon is a flipped derivative of Poach's logo. Each
+and extended), and its icon is a derivative of Poach's logo. Each
 adapted file carries a notice of the change. AnyPoach is a derivative work of
 Poach. See LICENSE for the license terms.
+
+The extension icon also carries Tux, the Linux penguin, created by Larry Ewing
+with contributions from Simon Budig and Garrett LeSage (Wikimedia Commons,
+File:Tux.svg), used under its attribution license.
