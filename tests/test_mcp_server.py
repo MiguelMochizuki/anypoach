@@ -101,6 +101,61 @@ def chrome_line(text):
     return line[: line.index("): ")], json.loads(line[line.index("): ") + 3:])
 
 
+def parts(count):
+    return [{"id": i, "parent": i - 1, "target": {"tag": "div", "role": "", "classes": ""}, "rect": [0, 0, 10, 10], "styles": {"width": "10px"},
+             "text": f"item {i}"} for i in range(count)]
+
+
+def test_read_brief_summarizes_the_chrome_components(server, home):
+    brief = base_brief(home)
+    brief["evidence"]["browserEvidence"] = {"videoOffsetMs": 0, "origin": "https://example.com", "events": [], "states": [],
+                                            "components": parts(3), "componentsAtEnd": parts(2)}
+    write_active(home, brief)
+
+    async def scenario():
+        async with connect(server, home) as client:
+            shared = await client.call_tool("anypoach_read_brief", {})
+            assert not is_error(shared), texts(shared)
+            lines = [t for t in texts(shared) if t.startswith("Chrome components")]
+            expected = ("Chrome components: 3 measured at pin time (2 at the end) on https://example.com; "
+                        "the full list is in evidence.browserEvidence.components.")
+            assert lines == [expected]
+            assert structured(shared)["evidence"]["browserEvidence"]["components"] == parts(3)
+
+    asyncio.run(scenario())
+
+
+def test_read_brief_has_no_components_line_for_older_or_malformed_sessions(server, home):
+    brief = base_brief(home)
+    base = {"videoOffsetMs": 0, "origin": "https://example.com", "events": [], "states": []}
+
+    async def scenario():
+        async with connect(server, home) as client:
+            for extra in ({}, {"components": []}, {"components": "garbage"}, {"components": [1, 2]}):
+                brief["evidence"]["browserEvidence"] = {**base, **extra}
+                write_active(home, brief)
+                shared = await client.call_tool("anypoach_read_brief", {})
+                assert not is_error(shared), (extra, texts(shared))
+                assert not any(t.startswith("Chrome components") for t in texts(shared)), extra
+
+    asyncio.run(scenario())
+
+
+def test_read_moment_does_not_repeat_the_component_list(server, home):
+    brief = base_brief(home)
+    brief["evidence"]["browserEvidence"] = {"videoOffsetMs": 0, "origin": "https://example.com", "events": [], "states": [],
+                                            "components": parts(3)}
+    write_active(home, brief)
+
+    async def scenario():
+        async with connect(server, home) as client:
+            moment = await client.call_tool("anypoach_read_moment", {"timeMs": 1000})
+            assert not is_error(moment)
+            assert "Chrome components" not in texts(moment)[0] and "item 1" not in texts(moment)[0]
+
+    asyncio.run(scenario())
+
+
 def test_moment_reports_the_pages_own_sizes_and_animation_timing(server, home):
     brief = base_brief(home)
     brief["evidence"]["browserEvidence"] = {"videoOffsetMs": 0, "devicePixelRatio": 2, "viewport": {"width": 1280, "height": 720},

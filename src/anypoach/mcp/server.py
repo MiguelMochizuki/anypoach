@@ -235,6 +235,8 @@ async def anypoach_read_brief(briefId: uuid.UUID | None = None,
         actions = summarize_pointer_actions(brief.evidence.get("pointerTrace"))
         response["evidence"]["interactionActions"] = actions
         content: list[Any] = [text(dumps(response, 2))]
+        if components_line := _components_line(brief.evidence.get("browserEvidence")):
+            content.append(text(components_line))
         if includeKeyframes:
             frames = [Frame.model_validate(f) for f in brief.evidence.get("keyframes", [])]
             if len(frames) > 3:
@@ -320,6 +322,24 @@ class _Note(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
     timeMs: Num
     text: str
+
+
+class _ComponentsSummary(BaseModel):
+    model_config = ConfigDict(strict=True, extra="ignore")
+    origin: str
+    components: list[dict[str, Any]] = Field(min_length=1, max_length=40)
+    componentsAtEnd: list[dict[str, Any]] | None = Field(default=None, max_length=40)
+
+
+def _components_line(raw: Any) -> str | None:
+    """One line saying how many components the Chrome extension measured, or None for older or malformed sessions."""
+    try:
+        data = _ComponentsSummary.model_validate(raw)
+    except ValidationError:
+        return None
+    end = f" ({len(data.componentsAtEnd)} at the end)" if data.componentsAtEnd is not None else ""
+    return (f"Chrome components: {len(data.components)} measured at pin time{end} on {data.origin}; "
+            "the full list is in evidence.browserEvidence.components.")
 
 
 def _browser_near(raw: Any, time_ms: float) -> tuple[str, list[dict[str, Any]]]:
