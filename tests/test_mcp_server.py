@@ -392,10 +392,9 @@ def test_read_moment_reports_a_bad_crop(server, home):
     asyncio.run(scenario())
 
 
-def test_read_moment_refuses_an_oversized_result(home, monkeypatch):
+def test_an_oversized_image_is_refused_with_a_hint(monkeypatch):
     from anypoach.mcp import server as mcp_server
-    make_wide(home)
-    monkeypatch.setenv("ANYPOACH_CACHE_DIR", str(home / "Library/Caches/AnyPoach"))
+    mcp_server.ensure_png_fits(b"x" * 1000)
     monkeypatch.setattr(mcp_server, "FIVE_MB", 1000)
-    result = asyncio.run(mcp_server.anypoach_read_moment(timeMs=0))
-    assert is_error(result) and "use a smaller crop or maxSize" in texts(result)[0]
+    with pytest.raises(ValueError, match="use a smaller crop or maxSize"):
+        mcp_server.ensure_png_fits(b"x" * 1001)

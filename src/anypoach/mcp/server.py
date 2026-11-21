@@ -125,6 +125,12 @@ class Crop(BaseModel):
     height: int = Field(ge=1)
 
 
+def ensure_png_fits(png: bytes) -> None:
+    """Raise `ValueError` when `png` is over the 5 MB image limit, suggesting how to shrink it."""
+    if len(png) > FIVE_MB:
+        raise ValueError("Reference image exceeds the 5 MB limit; use a smaller crop or maxSize")
+
+
 def size_note(png: bytes, capture: Any, crop: Crop | None = None) -> str:
     """Say how big a PNG is next to the capture it came from, e.g. `1280x664, reduced from 1854x962 (x0.69)`.
 
@@ -323,8 +329,7 @@ async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, de
             raise ValueError("This brief keeps reference frames without the original recording. Use anypoach_read_brief to see its saved frames.")
         png = await asyncio.to_thread(read_video_moment, evidence["sourcePath"], timeMs, max_size=maxSize,
                                       crop=(crop.x, crop.y, crop.width, crop.height) if crop else None)
-        if len(png) > FIVE_MB:
-            raise ValueError("Reference image exceeds the 5 MB limit; use a smaller crop or maxSize")
+        ensure_png_fits(png)
         try:
             notes = [n.model_dump() for n in (_Note.model_validate(n) for n in evidence["annotations"])]
         except (KeyError, TypeError, ValidationError):
