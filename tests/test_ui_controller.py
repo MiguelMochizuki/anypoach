@@ -99,3 +99,59 @@ def test_prompt_guidance_follows_the_pointer_evidence():
 ])
 def test_selection_is_converted_to_physical_pixels(drag, dpr, origin, expected):
     assert physical_rect(*drag, origin=origin, dpr=dpr) == expected
+
+
+class PreviewBackend(LiveBackend):
+    """A portal-like backend: a preview frame first, and a session that must be closed."""
+
+    def __init__(self):
+        super().__init__()
+        self.closed, self.failure = 0, None
+
+    def preview(self):
+        if self.failure:
+            raise self.failure
+        return Frame(np.zeros((120, 200, 4), np.uint8), time.perf_counter())
+
+    def close(self):
+        self.closed += 1
+
+
+@pytest.fixture
+def preview_controller(tmp_path):
+    return make(tmp_path, backend=PreviewBackend())
+
+
+def test_controller_without_a_preview_backend_does_not_support_it(tmp_path):
+    controller = make(tmp_path)
+    assert not controller.supports_preview and controller.preview() is None
+
+
+def test_a_cancelled_portal_dialog_becomes_a_message(preview_controller):
+    preview_controller.backend.failure = PermissionError("Screen sharing was cancelled.")
+    assert preview_controller.preview() is None and "cancelled" in preview_controller.message
+
+
+def test_stop_closes_the_portal_and_forgets_the_region(preview_controller):
+    assert preview_controller.preview() is not None
+    record(preview_controller)
+    assert preview_controller.backend.closed == 1
+    preview_controller.start()
+    assert "Choose an area" in preview_controller.message
+
+
+def test_a_stream_that_ended_before_recording_is_a_message(preview_controller):
+    preview_controller.preview()
+    preview_controller.choose_region(Rect(0, 0, 50, 50))
+    preview_controller.backend.error = OSError("The screen sharing stopped.")
+    preview_controller.start()
+    assert preview_controller.state == "idle" and "stopped" in preview_controller.message
+
+
+def test_close_releases_the_backend_and_the_region(preview_controller):
+    preview_controller.preview()
+    preview_controller.choose_region(Rect(0, 0, 50, 50))
+    preview_controller.close()
+    assert preview_controller.backend.closed == 1
+    preview_controller.start()
+    assert "Choose an area" in preview_controller.message

@@ -8,7 +8,7 @@ from typing import Any, Literal
 from anypoach.analysis.inspect import inspect_recording
 from anypoach.analysis.types import InspectionResult
 from anypoach.brief.store import share
-from anypoach.capture.backend import CaptureBackend
+from anypoach.capture.backend import CaptureBackend, Frame
 from anypoach.capture.recorder import Recorder
 from anypoach.pointer.recorder import PointerTraceRecorder
 from anypoach.pointer.trace import PointerSource, Rect
@@ -91,6 +91,43 @@ class Controller:
         self._region: Rect | None = None
         self._recorder: Recorder | None = None
 
+    @property
+    def backend(self) -> CaptureBackend:
+        """The capture backend in use."""
+        return self._backend
+
+    @property
+    def supports_preview(self) -> bool:
+        """Whether the backend needs a preview frame to choose the area (the Wayland portal does)."""
+        return hasattr(self._backend, "preview")
+
+    def preview(self) -> Frame | None:
+        """Open the backend's session and return its first frame, so the user can pick an area on it.
+
+        Returns:
+            The frame, or None with `message` set when the backend has no preview, the user cancelled the
+            portal dialog, or sharing could not start.
+        """
+        if not self.supports_preview:
+            return None
+        try:
+            frame = self._backend.preview()  # type: ignore[attr-defined]
+        except PermissionError as error:
+            self.message = str(error) or "Screen sharing was not allowed."
+            return None
+        except OSError as error:
+            self.message = f"Could not start screen sharing: {error}"
+            return None
+        self.message = ""
+        return frame
+
+    def close(self) -> None:
+        """Release the backend's session (the portal's sharing indicator goes away) and forget the area."""
+        self._region = None
+        closer = getattr(self._backend, "close", None)
+        if closer is not None:
+            closer()
+
     def choose_region(self, region: Rect) -> None:
         """Remember the area to record. Anything smaller than 2 px in either direction is refused with a message."""
         self._region = Rect(*region) if region.width >= 2 and region.height >= 2 else None
@@ -107,6 +144,8 @@ class Controller:
         pointer = PointerTraceRecorder(self._region, self._source)
         recorder = Recorder(self._backend, pointer, self._work)
         try:
+            if self.supports_preview:  # the recorder grabs on a thread: probe now so a dead stream fails fast
+                self._backend.grab(self._region)
             recorder.start(self._region)
         except OSError as error:
             self.message = f"Could not start recording: {error}"
@@ -127,6 +166,8 @@ class Controller:
         self._recorder, self.state = None, "idle"
         try:
             recording = recorder.stop()
+            if self.supports_preview:
+                self.close()  # the session is over: stop sharing now, the next recording asks again
             result = inspect_recording(recording.path, output_dir=self._work / "frames")
         except PermissionError:
             self.message = "AnyPoach cannot capture the screen. Check the screen recording permission and try again."
