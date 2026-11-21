@@ -1,7 +1,3 @@
-node_modules/
-.turbo/
-dist/
-.build/
 .DS_Store
 .serena/
 .semble/
@@ -10,12 +6,12 @@ dist/
 *.p12
 *.p8
 *.key
-outputs/Poach.app/
 *.mp4
 *.mov
-outputs/connectors/
-outputs/compiled-icon/
-outputs/beta/
-outputs/runtime-cache/
-outputs/.poach-build.*/
-outputs/poach-launch-kit/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/

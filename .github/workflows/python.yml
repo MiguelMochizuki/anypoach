@@ -1,0 +1,41 @@
+name: Python
+on:
+  push:
+    branches: [main]
+    paths: ["src/**", "tests/**", "tools/**", "pyproject.toml", "uv.lock", ".github/workflows/python.yml"]
+  pull_request:
+    paths: ["src/**", "tests/**", "tools/**", "pyproject.toml", "uv.lock", ".github/workflows/python.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # ffmpeg synthesizes the test fixtures; the lib* packages are what PySide6 loads on Linux.
+      - name: Install ffmpeg for the test fixtures
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux) sudo apt-get update && sudo apt-get install -y ffmpeg xvfb libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 ;;
+            macOS) brew install ffmpeg ;;
+            Windows) choco install ffmpeg -y --no-progress ;;
+          esac
+      - run: uv sync --group dev --extra ui
+      - run: uv run ruff check src tests tools
+      - run: uv run pytest -q
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Live capture under Xvfb (Linux X11)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a uv run pytest -m live -q
+      - name: Live capture in the desktop session (Windows)
+        if: runner.os == 'Windows'
+        run: uv run pytest -m live -q

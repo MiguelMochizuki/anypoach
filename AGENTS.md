@@ -1,29 +1,30 @@
-# Poach repository guidance
+# AnyPoach repository guidance
 
 ## Project shape
 
-- `apps/macos` is the native SwiftUI client and ScreenCaptureKit integration.
-- `packages/core` is the headless TypeScript engine. Keep it independent of AppKit and Swift.
-- `packages/mcp-server` exposes local core capabilities through the Model Context Protocol.
+- `src/anypoach/analysis` decodes video and images in one process (PyAV, numpy): keyframes, palette, motion timing.
+- `src/anypoach/brief` writes and reads shared briefs and cleans up temporary media.
+- `src/anypoach/mcp` is the stdio MCP server (`anypoach-mcp`).
+- `src/anypoach/capture` and `src/anypoach/pointer` record a screen area and sample the pointer.
+- `src/anypoach/ui` is the PySide6 window; `ui/controller.py` holds the Qt-free flow it delegates to.
 
 ## Working rules
 
-- Read the relevant package files before changing behavior; preserve the pnpm workspace and package boundaries.
-- Use strict TypeScript. Keep public inputs and outputs represented by explicit types.
+- Read the relevant module and its tests before changing behavior.
 - Treat recordings, screenshots, and keyframes as private local data. Do not add network transmission, analytics, or persistent retention without an explicit product decision.
-- Keep stdout clean in the MCP server; use stderr for diagnostics.
-- Match the app's native macOS interaction patterns and support keyboard operation and accessibility labels.
+- MCP stdout is the protocol channel. Never print to stdout in `anypoach.mcp` or anything it imports; use stderr.
+- Poll the pointer for position and button state only. No global input hooks, no keyboard capture.
+- Keep the window operable by keyboard and give every control an accessible name.
 - Update `README.md` and `CONTRIBUTING.md` when commands, capabilities, permissions, or data handling change.
-- Do not commit build output, dependency directories, temporary captures, or generated `.app` bundles.
+- Mention the original Poach only to poke fun at it in the README. The `NOTICE` credit is the one factual reference and must stay.
+- Do not commit build output, virtual environments, or temporary captures.
 - Keep commits atomic and use Conventional Commit subjects (`type(scope): summary`). Never combine unrelated implementation and documentation changes in one commit.
 
 ## Useful commands
 
 ```sh
-pnpm build
-pnpm exec turbo run typecheck
-swift build --package-path apps/macos
-bash scripts/build-macos-app.sh
+uv sync --group dev --extra ui
+uv run pytest
+uv run ruff check src tests tools
+uv run anypoach
 ```
-
-Screen capture requires user-granted macOS Screen Recording permission. The direct `SCRecordingOutput` path requires macOS 15; keep existing-file inspection usable on macOS 14.

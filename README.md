@@ -1,65 +1,175 @@
-<p align="center"><img src="docs/media/poach-logo.png" width="88" alt="Orange Poach pouch on a cobalt tile"></p>
-<h1 align="center">Poach</h1>
-<p align="center">A lightweight Mac app for the UI you wish you’d made.</p>
-<p align="center"><strong><a href="https://github.com/guilopeszw/poach/releases/download/v1.0.0/Poach-arm64.zip">Download for Apple silicon</a></strong></p>
+# AnyPoach
 
-<p align="center"><a href="docs/media/poach-editor.png"><img src="docs/media/poach-editor.png" width="800" alt="Poach’s editor showing a blue and orange Night Shift Radio player, its color palette, the Snatch font button, and a handoff to Codex."></a></p>
+Record a UI interaction on Windows, Linux, or macOS and hand it to your coding assistant as evidence it can read.
 
-## Poach with taste
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Python tests](https://github.com/MiguelMochizuki/anypoach/actions/workflows/python.yml/badge.svg)](https://github.com/MiguelMochizuki/anypoach/actions/workflows/python.yml)
 
-Taste is still your job. When a hover makes you stop and try it again, record it. Poach gives your coding agent the timing, motion, and little details that made you stop.
+- [Overview](#overview)
+- [Highlights](#highlights)
+- [Quick Start](#quick-start)
+- [Project Organization](#project-organization)
+- [Main Tools & Stack](#main-tools--stack)
+- [Usage](#usage)
+- [Key Outputs & Reports](#key-outputs--reports)
+- [Documentation Conventions](#documentation-conventions)
+- [Contributing](#contributing)
+- [License](#license)
 
-During native screen recordings, Poach keeps a local, timestamped pointer trace and lets you add notes directly to the video timeline. Share the capture with Codex or Claude so your assistant can inspect the frames, sample-derived click/drag candidates, and your notes while recreating the interaction. Polling can miss or misclassify brief actions, and the trace alone cannot confirm what an action did.
+## Overview
 
-## From screen to chat
+### Problem
 
-1. **Capture the interaction.** Record a screen area, a window, or a full display. In **App window** mode, select the window by its preview. Move Poach wherever it fits on your screen. Poach excludes its own windows and controls from captures. For a selected area, a click-through shadow marks the recording boundary. Press **⌘⇧P** to select an area, then press it again to stop. For a still frame, switch to **Screenshot**, choose what to capture, then click **Take screenshot**. You can also drop in an existing video or image.
-2. **Mark the details.** Pause the video and click the comment icon to label what happened at the playhead. Click a comment to return to its frame. Native recordings include a bounded pointer trace with button transitions and drag samples. Adjust the extracted palette and add any instructions that apply to the whole capture.
-3. **Build with your assistant.** Choose **Continue with Codex** or **Continue with Claude Code** to open the app and copy the prompt. Paste it into the chat you want to use. Choose **Copy prompt** from the switch menu to copy it without switching apps. The MCP connector lets the assistant read your notes, see representative frames, and request a frame at a specific timestamp. Poach needs no separate AI API key.
+You are building a UI and a hover, a drag, or an easing curve is right in your head but hard to put in words. AnyPoach records the interaction and hands your coding assistant what it needs to rebuild it: keyframes, the color palette, motion timing, and a local pointer trace with your notes.
 
-**From the menu bar.** Click the pouch icon and choose **Open Poach**, **New Screenshot**, or **New Recording**. The capture shortcuts open Capture with the corresponding type selected. Choose a source before starting. Closing the Poach window leaves the menu bar icon available. Choose **Quit Poach** to exit the app.
+AnyPoach captures a screen area, samples the pointer (position and button state only), picks the moments that matter, and writes a brief that expires after 24 hours. The assistant reads it through a local MCP server. Nothing leaves your machine.
 
-**Reuse a handoff.** Bookmark a handoff in the editor and give it a name. In **Favorites**, click its cover to copy a fresh handoff. A favorite keeps the notes, palette, sampled pointer evidence, and up to three reference images totaling 768 KiB or less. To share it with someone, open its menu and choose **Export Poach**. They can open **Favorites → Import** and select the `.poach` file. Use the original capture when you need a frame at another timestamp.
+### Status and limitations
 
-**Match a font from a screenshot.** When Poach detects readable text in a screenshot, **Snatch font** appears below Palette. Drag over a line or pick it from **Choose text line**. Compare the screenshot with editable previews from fonts installed on your Mac. Choose a visual match to include its family and face in your handoff.
+Early. Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Not done: comment editor, global shortcut, Wayland capture, macOS pointer sampling. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
 
-**Chrome companion preview.** Pair Chrome in the optional second step of onboarding or in Settings. Poach opens Capture when you pair or skip the step. Select a component in Chrome, then take a screenshot or record its interaction in Poach. The extension sends computed typography, browser events, visible state changes, and available animation timing directly to Poach. Poach automatically includes evidence when the Chrome session overlaps a recording. For screenshots, check the displayed site and choose **Include Chrome evidence** if it matches the image. The preview uses the unpacked extension bundled in Poach.app. [Set up the preview and try the dropzone benchmark](CONTRIBUTING.md#chrome-companion-preview).
+### Why not just use Poach?
 
-In **Settings → Storage**, see how much space Poach uses and choose **Clear unused captures** to remove old recordings, screenshots, and extracted frames. Poach keeps the open edit, media and frames referenced by handoffs that are still available, and your imported originals.
+AnyPoach started as a fork of Poach, a charming Mac menu-bar app. It is lovely, provided you own a Mac, want macOS 15 for the good recorder, and do not mind it launching `ffmpeg` 364 times to look at 30 seconds of video (we counted). AnyPoach does the job in one process, runs where Poach never will, and has since been rewritten so thoroughly that the fork is mostly a matter of etiquette. The credit stays in [NOTICE](NOTICE), as the license asks.
 
-## Install on your Mac
+## Highlights
 
-Download the Apple silicon build above, unzip it, and move **Poach.app** to Applications. To update, choose **Check for Updates…** from the Poach menu. If a newer release is available, download it, quit Poach, and replace the app in Applications. Choose the connector for your assistant, then open a new chat.
+- Windows, Linux, and macOS from one Python code base (X11 and Windows first; see the status above).
+- One process decodes the video. On the same small test clips the analysis takes 0.06 s and 0.17 s, against 3.76 s and 33.5 s for the one-`ffmpeg`-per-sample approach ([measurements](docs/superpowers/baseline.md)).
+- Private by construction: no network, telemetry, audio, global input hooks, or keyboard capture; files are owner-only.
+- Four MCP tools that any assistant able to launch a stdio command can use.
 
-| Assistant | Install the MCP connector |
+## Quick Start
+
+Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
+
+```sh
+uv sync --extra ui    # PySide6 for the window, mss for screen capture
+uv run anypoach       # choose an area, record, stop, copy the prompt
+```
+
+Paste the copied prompt into your assistant. It tells the assistant to read the brief through the MCP server described under [Usage](#usage).
+
+## Project Organization
+
+```text
+anypoach/
+├── .github/           # GitHub config
+│   ├── workflows/
+│   │   ├── conventional-commits.yml
+│   │   └── python.yml
+│   └── CODEOWNERS
+├── docs/              # documentation
+│   └── superpowers/   # design, plan, measured baseline
+│       ├── plans/
+│       ├── specs/
+│       └── baseline.md
+├── src/               # source code
+│   └── anypoach/      # the package
+│       ├── analysis/  # decode video, motion, palette, keyframes
+│       ├── brief/     # shared briefs and temp-media cleanup
+│       ├── capture/   # screen grabbing, recording, cursor overlay
+│       ├── mcp/       # the stdio MCP server
+│       ├── pointer/   # pointer polling and trace
+│       ├── ui/        # window and area overlay
+│       └── … +2 more
+├── tests/             # test suite
+│   ├── golden/        # expected results for the synthetic clips
+│   │   ├── image-start.png
+│   │   ├── image.json
+│   │   ├── motion-peak.png
+│   │   ├── motion-settled.png
+│   │   ├── motion-start.png
+│   │   ├── motion.json
+│   │   └── … +10 more
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── fixtures.py
+│   ├── test_brief_store.py
+│   ├── test_capture_recorder.py
+│   └── … +13 more
+├── tools/             # benchmark and jitter scripts
+│   ├── bench.py
+│   └── jitter.py
+├── .gitignore
+└── … +8 more
+```
+
+### Key modules
+
+- `analysis`: `VideoSource` decodes with PyAV and seeks by presentation time; `motion`, `palette`, and `keyframes` are numpy code; `inspect` ties them into an `InspectionResult`.
+- `capture` and `pointer`: `MssBackend` grabs frames, `Recorder` encodes H.264 with real frame times and draws the cursor and click ring, and `PointerTraceRecorder` polls a Windows or X11 source at 120 Hz (at most 5,000 events).
+- `brief`: writes `active-brief.json` plus one archive per share into the per-OS cache directory, and cleans up temporary media.
+- `mcp`: the `anypoach-mcp` server and its presence files.
+- `ui`: `Controller` runs the flow without Qt; `app.py` and `selection.py` are the PySide6 window and the area overlay.
+
+## Main Tools & Stack
+
+### Language and runtime
+
+Python 3.11 or newer, managed with `uv`; `hatchling` builds the package.
+
+### Key libraries
+
+| Library | Used for |
 | --- | --- |
-| [Codex installer](https://github.com/guilopeszw/poach/releases/download/v1.0.0/Poach-Codex.zip) | Unzip and double-click **Install Codex.command**. |
-| [Claude Desktop extension](https://github.com/guilopeszw/poach/releases/download/v1.0.0/Poach.mcpb) | Open **Settings → Extensions → Advanced settings → Install Extension**. Select the downloaded file and enable Poach. |
+| `av` (PyAV) | Decoding video and encoding the H.264 recording, in process |
+| `numpy` | Motion, palette, and frame math |
+| `mcp` | The stdio MCP server |
+| `platformdirs` | The per-OS cache directory |
+| `PySide6`, `mss` (extra `ui`) | The window and screen capture |
+| `pytest`, `ruff` (group `dev`) | Tests and lint |
 
-**Requirements.** Native recording and screenshots require macOS 15 or later. On macOS 14 you can import images and videos. Clips can be up to 30 seconds long. Poach records the screen without audio.
+### CI
 
-<details>
-<summary>Download and first-launch help</summary>
+`.github/workflows/python.yml` runs lint and tests on Ubuntu 22.04, Windows, and macOS, plus the live capture test under Xvfb and on Windows. `conventional-commits.yml` checks commit subjects on pull requests.
 
-Poach includes Node.js and FFmpeg. Verify the downloads with the [SHA-256 checksums](https://github.com/guilopeszw/poach/releases/download/v1.0.0/SHA256SUMS.txt).
+## Usage
 
-Poach 1.0 uses a local development signature and ships without Apple notarization. On first launch, macOS may block it:
+### Run the window
 
-1. Try to open **Poach.app** once, then dismiss the warning.
-2. Open **System Settings → Privacy & Security**, scroll to Security, and click **Open Anyway** for Poach.
-3. Confirm **Open** in the follow-up alert.
+`uv run anypoach` opens the window: choose an area, record (up to 30 s), stop, look at the keyframes, and copy the prompt. Enter activates the focused button. Outside Windows the window hides while recording and a tray menu stops it.
 
-After Poach opens, allow it under **Screen & System Audio Recording**, then quit and reopen the app. If capture is refused even though Poach is enabled, first confirm the running copy is in Applications and restart it. Local builds without an Apple Team ID may lose Screen Recording approval after rebuilds; see [Contributing](CONTRIBUTING.md#screen-recording-signing). Apple’s [Open Anyway instructions](https://support.apple.com/en-gb/102445) explain this one-time Gatekeeper override.
+### Connect an assistant
 
-Keep Poach in Applications so the connector can find it. After updating Poach or its Claude extension, quit and reopen Claude Desktop to reload the connector. If the handoff button is disabled, open a new chat with the connector enabled. For manual setup, open Poach’s **Settings** and choose **Copy Codex MCP** for the Terminal command or **Copy Claude MCP** for the Claude Desktop configuration.
+```sh
+claude mcp add anypoach -- uv run --project /absolute/path/to/anypoach anypoach-mcp
+```
 
-</details>
+Any MCP client that launches a stdio command works the same way.
 
-<details>
-<summary>What does my assistant receive?</summary>
+| Tool | Purpose |
+| --- | --- |
+| `anypoach_read_brief` | Read the latest shared brief, or one by `briefId`: keyframes, palette, timing, pointer trace, notes. |
+| `anypoach_read_moment` | Read one frame of the shared recording at a timestamp, plus frames after drag releases. |
+| `anypoach_inspect` | Analyze a local `.mp4` or `.mov` file. |
+| `anypoach_inspect_image` | Analyze a local still image. |
 
-Poach analyzes the media on your Mac. During an explicit native screen recording, it samples pointer position and mouse-button state at a nominal 120 Hz; the trace is capped at 5,000 events and reports how many samples fell inside the capture bounds and observed a held button. It does not capture keyboard input or scroll events. Samples outside the captured bounds are flagged and clamped to the capture edge, so raw screen coordinates outside the selected area are not shared. The trace stays local until you explicitly share a handoff. When your assistant reads it, it receives your instructions, timestamped notes, pointer trace, derived click/drag candidates when button events were sampled, palette, and requested frames. If no button events were observed, the copied handoff tells the assistant not to assume clicks or drags. Match action coordinates to frames to identify targets; the trace alone cannot establish what an interaction did. Motion timing and easing are estimates from sampled frames. The handoff includes frames around up to three recent drag releases inside the capture, including a final sample before the next sampled drag or at the end of the clip. Keep recording until the drop animation finishes. Each handoff is stored locally and can be read by its brief ID for 24 hours; sharing another handoff does not replace earlier ones during that window. The latest handoff remains the default when no ID is provided.
+### Configuration
 
-</details>
+Briefs live in `~/Library/Caches/AnyPoach` (macOS), `~/.cache/AnyPoach` (Linux), or `%LOCALAPPDATA%\AnyPoach\Cache` (Windows). Set `ANYPOACH_CACHE_DIR` to use another folder.
 
-[Contributing and local development](CONTRIBUTING.md) · [License](LICENSE)
+### Tests
+
+```sh
+uv sync --group dev --extra ui
+uv run pytest                    # needs the ffmpeg CLI to synthesize test clips
+uv run pytest -m live            # real capture; needs an X11 or Windows desktop
+uv run ruff check src tests tools
+```
+
+## Key Outputs & Reports
+
+A recording produces a few keyframe PNGs and a brief, a JSON file with the analysis, the pointer trace, your notes, and an instruction for the assistant. The brief is read back through `anypoach_read_brief`; the PNGs through the same tool and `anypoach_read_moment`. The repository ships no sample output.
+
+## Documentation Conventions
+
+Docstrings follow the Google style described in [CONTRIBUTING.md](CONTRIBUTING.md#documentation-conventions).
+
+## Contributing
+
+Branch names, Conventional Commits, and the manual platform checks are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

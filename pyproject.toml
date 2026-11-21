@@ -1,0 +1,32 @@
+[project]
+name = "anypoach"
+version = "0.1.0"
+description = "AnyPoach: record a UI interaction on any OS and hand it to a coding assistant over MCP."
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = ["av", "numpy", "mcp", "platformdirs"]
+
+[project.optional-dependencies]
+ui = ["PySide6", "mss"]
+
+[project.scripts]
+anypoach-mcp = "anypoach.mcp.server:main"
+anypoach = "anypoach.ui.app:main"
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/anypoach"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: needs a real display (run with -m live)"]
+addopts = "-m 'not live'"
+
+[tool.ruff]
+line-length = 110

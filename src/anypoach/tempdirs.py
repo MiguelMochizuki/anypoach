@@ -1,0 +1,23 @@
+"""Private temporary directories named `anypoach-xxxxxx` so storage cleanup can recognize them."""
+import os
+import secrets
+import string
+import tempfile
+from pathlib import Path
+
+_ALPHABET = string.ascii_letters + string.digits
+
+
+def make_temp_dir(prefix: str = "anypoach-") -> Path:
+    """Create a new private (`0700`) folder in the system temp directory and return its path.
+
+    Args:
+        prefix: Start of the folder name; six random letters or digits are appended.
+    """
+    while True:
+        path = Path(tempfile.gettempdir()) / (prefix + "".join(secrets.choice(_ALPHABET) for _ in range(6)))
+        try:
+            os.mkdir(path, 0o700)
+            return path
+        except FileExistsError:
+            continue
