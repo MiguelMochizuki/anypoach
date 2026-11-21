@@ -12,7 +12,7 @@
 ## Working rules
 
 - Read the relevant module and its tests before changing behavior.
-- Treat recordings, screenshots, and keyframes as private local data. Do not add network transmission, analytics, or persistent retention without an explicit product decision.
+- Treat recordings, screenshots, and keyframes as private local data. Do not add network transmission, analytics, or persistent retention without an explicit product decision. The one decided exception is the update check in Settings: one GET of the releases list, started by the user, sending nothing.
 - MCP stdout is the protocol channel. Never print to stdout in `anypoach.mcp` or anything it imports; use stderr.
 - The Chrome bridge listens on `127.0.0.1` only, only while the window is open, and holds evidence in memory for a few minutes. That evidence is private local data like a recording: never log it, persist it outside a brief, or widen the listener beyond loopback.
 - Poll the pointer for position and button state only. No global input hooks, no keyboard capture.

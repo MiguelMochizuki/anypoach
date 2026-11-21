@@ -65,7 +65,7 @@ def test_every_button_has_an_accessible_name_and_state_follows_the_controller(ap
     controller = FakeController()
     window = MainWindow(controller)
     buttons = window.findChildren(QPushButton)
-    assert len(buttons) == 7 and all(b.accessibleName() for b in buttons)
+    assert len(buttons) == 8 and all(b.accessibleName() for b in buttons)
     assert (window.stop_button.isEnabled(), window.copy_button.isEnabled()) == (False, False)
     window.record_button.click()
     QTest.qWait(300)
