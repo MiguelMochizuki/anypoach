@@ -1,6 +1,6 @@
 # Linha de base de desempenho
 
-Medida em 2026-11-20 no Linux (x86_64), Node 26.9, ffmpeg 8.0.1, com o `packages/core` atual. O wrapper no `PATH` conta cada execução de `ffmpeg`/`ffprobe`. RSS é o do `/usr/bin/time` e cobre o maior processo, não a soma dos filhos.
+Medida em 2026-11-20 no Linux (x86_64), Node 26.9, ffmpeg 8.0.1, com o código original, que era o que existia para medir. O wrapper no `PATH` conta cada execução de `ffmpeg`/`ffprobe`. RSS é o do `/usr/bin/time` e cobre o maior processo, não a soma dos filhos.
 
 | Caso | Amostras | Tempo (parede) | CPU (user+sys) | Pico de RSS | Processos ffmpeg / ffprobe |
 |---|---|---|---|---|---|
@@ -18,7 +18,7 @@ Medido com `tools/bench.py` (PyAV 19.0.2, decodificação em um único processo,
 | `inspect_video` em `motion.mov` | 0,06 s | 1,27 s (inclui importar PyAV/numpy) | 62 MB |
 | `inspect_recording` em `overrun.mov` | 0,17 s | 1,49 s | 69 MB |
 
-Contra a linha de base do TS (3,76 s e 33,5 s) a análise ficou cerca de 60x e 200x mais rápida nessas fixtures pequenas (96x64 e 160x90). Em gravações reais de até 1920 px o custo de decodificação domina; medir de novo com uma gravação real antes de fixar metas.
+Contra o original (3,76 s e 33,5 s, porque ele abre um `ffmpeg` novo a cada amostra, como quem reabre a geladeira a cada garfada) a análise ficou cerca de 60x e 200x mais rápida nessas fixtures pequenas (96x64 e 160x90). Em gravações reais de até 1920 px o custo de decodificação domina; medir de novo com uma gravação real antes de fixar metas.
 
 ## Polling a 120 Hz (Task 7), Linux
 

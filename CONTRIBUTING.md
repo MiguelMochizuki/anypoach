@@ -57,7 +57,7 @@ Before relying on a change to capture or the window, check by hand on Windows an
 
 Google-style docstrings, in English, with a summary line in the imperative mood (`Write`, `Return`, not `Writes`). Lines stay within 110 columns, like the code.
 
-- Every module starts with a one-line docstring saying what it owns.
+- Every module, tests included, starts with a one-line docstring saying what it owns. Empty `__init__.py` files are exempt.
 - Every public class, function, and method has a docstring. Names starting with `_`, one-line properties, `__init__` that only stores arguments, and test functions are exempt (a test's name is its documentation).
 - Add `Args:`, `Returns:`, and `Raises:` only when they say something the name and type hints do not: units, coordinate spaces, ranges, side effects, what `None` means. A one-line summary is enough for an obvious function.
 - Do not repeat types in the docstring. The type hints carry the type; the docstring carries the meaning.
