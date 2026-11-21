@@ -50,6 +50,34 @@ class CaptureInfo:
 
 
 @dataclass(frozen=True)
+class MotionSegment:
+    """One interaction of the recording, with its own frames and timing.
+
+    Attributes:
+        start_ms: Where the movement begins.
+        peak_ms: The sample before the biggest change.
+        end_ms: Where it has settled, plus the slack kept after it.
+        strength: The biggest change inside the segment, from 0 to 1.
+        timing: Estimated duration and easing of this segment only.
+        keyframes: Frames for the strongest segments; empty for the rest (ask `anypoach_read_moment`).
+    """
+    start_ms: int
+    peak_ms: int
+    end_ms: int
+    strength: float
+    timing: MotionTiming
+    keyframes: list[Keyframe]
+
+    def to_json(self) -> dict[str, Any]:
+        """Return the camelCase dictionary stored in briefs."""
+        return {"startMs": self.start_ms, "peakMs": self.peak_ms, "endMs": self.end_ms, "strength": self.strength,
+                "timing": {"durationMs": self.timing.duration_ms,
+                           "bezier": list(self.timing.bezier) if self.timing.bezier else None,
+                           "token": self.timing.token},
+                "keyframes": [k.to_json() for k in self.keyframes]}
+
+
+@dataclass(frozen=True)
 class InspectionResult:
     """Everything learned from analyzing one video or image.
 
@@ -64,6 +92,8 @@ class InspectionResult:
         annotations: Notes pinned to timestamps, when there are any.
         capture: Native size and screen scale of the media, when known.
         browser_evidence: The Chrome companion's session that overlaps the recording, when there is one.
+        segments: The interactions of a video in time order (at most 12), empty when nothing moves; None for images.
+            `keyframes` and `timing` above stay those of the whole clip, which are the strongest segment's.
     """
     media_type: Literal["video", "image"]
     source_path: str
@@ -75,6 +105,7 @@ class InspectionResult:
     annotations: list[dict[str, Any]] | None = field(default=None)
     capture: CaptureInfo | None = field(default=None)
     browser_evidence: dict[str, Any] | None = field(default=None)
+    segments: list[MotionSegment] | None = field(default=None)
 
     def to_json(self) -> dict[str, Any]:
         """Return the camelCase dictionary stored in briefs; optional parts appear only when set."""
@@ -93,6 +124,8 @@ class InspectionResult:
             out["capture"] = self.capture.to_json()
         if self.browser_evidence is not None:
             out["browserEvidence"] = self.browser_evidence
+        if self.segments is not None:
+            out["segments"] = [segment.to_json() for segment in self.segments]
         return out
 
 
