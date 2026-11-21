@@ -47,7 +47,7 @@ Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 
 ```sh
 uv sync --extra ui    # PySide6 for the window, mss for screen capture
-uv run anypoach       # choose an area, record, stop, copy the prompt
+uv run anypoach       # choose an area or the full screen, record, stop, copy the prompt
 ```
 
 On macOS the first recording triggers the system Screen Recording prompt; allow AnyPoach (or the terminal that runs it) in System Settings > Privacy & Security > Screen Recording, then quit and reopen it.
@@ -145,7 +145,7 @@ Python 3.11 or newer, managed with `uv`; `hatchling` builds the package.
 
 ### Run the window
 
-`uv run anypoach` opens the window: choose an area, record (up to 30 s), stop, and review. The review panel plays the recording frame by frame (Space plays and pauses, Left and Right step one frame), shows where the video moves as bands on the timeline, and lets you pin a comment to any moment (up to 50, 500 characters each) and write general instructions for the whole capture. Comments and instructions travel in the brief as `evidence.annotations` and `context`, and the assistant sees each comment next to the frame it is pinned to. The frames of the panel are decoded once, kept in memory, and dropped when you record again or close the window. Copy the prompt when you are done; it does not wait for the frames. Enter activates the focused button. Outside Windows the window hides while recording and a tray menu stops it.
+`uv run anypoach` opens the window: choose an area (or press Full screen for the whole screen), record (up to 30 s), stop, and review. The review panel plays the recording frame by frame (Space plays and pauses, Left and Right step one frame), shows where the video moves as bands on the timeline, and lets you pin a comment to any moment (up to 50, 500 characters each) and write general instructions for the whole capture. Comments and instructions travel in the brief as `evidence.annotations` and `context`, and the assistant sees each comment next to the frame it is pinned to. The frames of the panel are decoded once, kept in memory, and dropped when you record again or close the window. Copy the prompt when you are done; it does not wait for the frames. Enter activates the focused button. Outside Windows the window hides while recording and a tray menu stops it.
 
 ### Chrome companion
 

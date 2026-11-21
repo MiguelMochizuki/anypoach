@@ -16,7 +16,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 
 | Área | Poach | AnyPoach hoje |
 | --- | --- | --- |
-| Captura | área, janela por prévia, tela cheia, screenshot, importar vídeo ou imagem | só área |
+| Captura | área, janela por prévia, tela cheia, screenshot, importar vídeo ou imagem | área e tela cheia (v0.3.1) |
 | Controle | atalho que liga e desliga, ícone na barra de menu, sombra na área, janelas próprias fora do vídeo | botões na janela; janelas próprias fora do vídeo |
 | Editor | comentários presos à timeline, paleta ajustável, instruções gerais | comentários, timeline, play e instruções gerais (v0.3.0); falta a paleta ajustável |
 | Entrega | "Continue com Codex/Claude Code" abre o app e copia o prompt | só copia o prompt |
@@ -42,7 +42,8 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.2.0 | Extensão do Chrome (PR #3) e inspetor de página: cartão ao passar o mouse e medidas dos componentes filhos | publicada (pré-release) |
 | v0.2.1 | macOS: ponteiro por CoreGraphics, regiões Retina e aviso de permissão de gravação de tela | pronta (pré-release); spike e checagens manuais num Mac ainda não rodados |
 | v0.3.0 | Trechos de movimento (várias interações por gravação) e editor com comentários, instruções gerais e timeline | pronta (pré-release); checagens manuais da janela ainda não rodadas |
-| v0.4.0 | Resto da 2b: tela cheia, modo janela, atalho global e bandeja, onboarding, paleta ajustável | não começou |
+| v0.3.1 | Botão de tela cheia (um clique, sem arrastar) | pronta |
+| v0.4.0 | Resto da 2b: modo janela, atalho global e bandeja, onboarding, paleta ajustável | não começou |
 | v0.5.0 | Instalador sem `uv`, `.mcpb` e comando do Codex, verificação de atualização | não começou |
 | Depois, sem data | Importar vídeo ou imagem, screenshot, limpeza de armazenamento; painel lateral do Chrome e lista na janela (opções B e C do inspetor); PyInstaller, `.mcpb` e comando do Codex; favoritos e font matcher (o matcher depende de OCR e CoreText do Mac) | ideias |
 

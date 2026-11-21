@@ -65,7 +65,7 @@ def test_every_button_has_an_accessible_name_and_state_follows_the_controller(ap
     controller = FakeController()
     window = MainWindow(controller)
     buttons = window.findChildren(QPushButton)
-    assert len(buttons) == 4 and all(b.accessibleName() for b in buttons)
+    assert len(buttons) == 5 and all(b.accessibleName() for b in buttons)
     assert (window.stop_button.isEnabled(), window.copy_button.isEnabled()) == (False, False)
     window.record_button.click()
     QTest.qWait(300)
@@ -384,3 +384,28 @@ def test_copying_the_prompt_works_while_the_frames_are_still_being_prepared(app,
     window.copy_button.click()
     assert controller.calls[-1] == "copy" and "copied" in window.status.text().lower()
     window.close()
+
+
+def test_full_screen_selects_the_whole_screen_in_physical_pixels(app):
+    controller = FakeController()
+    window = MainWindow(controller)
+    window.full_screen.click()
+    screen = app.primaryScreen()
+    geometry, dpr = screen.geometry(), screen.devicePixelRatio()
+    name, region, scale = controller.calls[-1]
+    assert (name, scale) == ("choose", dpr)
+    assert (region.width, region.height) == (geometry.width() * dpr, geometry.height() * dpr)
+
+
+def test_full_screen_on_a_preview_backend_uses_the_whole_frame_and_no_scale(app):
+    controller = PreviewController()
+    window = MainWindow(controller)
+    window.full_screen.click()
+    assert controller.calls[-1] == ("choose", Rect(0, 0, 20, 10), None)
+
+
+def test_a_failed_preview_keeps_full_screen_unselected(app):
+    controller = PreviewController("Screen sharing was cancelled.")
+    window = MainWindow(controller)
+    window.full_screen.click()
+    assert not controller.calls and "cancelled" in window.status.text()
