@@ -128,6 +128,7 @@ class Controller:
         self.annotations: list[dict[str, Any]] = []
         self.result: InspectionResult | None = None
         self._palette: list[str] | None = None  # the user's edit of result.palette
+        self.font_match: dict[str, Any] | None = None  # the family the user picked for a line of text
         self._region: Rect | None = None
         self._device_scale: float | None = None
         self._recorder: Recorder | None = None
@@ -315,7 +316,7 @@ class Controller:
                 self.close()  # a dead share must not be reused by the next choice
             return
         self._recorder, self.state, self.message, self.result = recorder, "recording", "", None
-        self._palette = None
+        self._palette, self.font_match = None, None
         self.annotations = []  # the moments belonged to the previous video; the general instructions stay
         self._epoch_range, self._started_ms = None, int(time.time() * 1000)
 
@@ -410,9 +411,34 @@ class Controller:
     def _ready(self, result: InspectionResult, scale: float | None) -> InspectionResult:
         capture = dataclasses.replace(result.capture, device_scale=scale) if result.capture else None
         self.result = dataclasses.replace(result, capture=capture)
-        self.annotations, self._epoch_range, self._palette = [], None, None
+        self.annotations, self._epoch_range, self._palette, self.font_match = [], None, None, None
         self.state, self.message = "ready", ""
         return self.result
+
+    def select_font(self, family: str, text: str, region: tuple[float, float, float, float], distance: float) -> bool:
+        """Record the font family the user picked as the closest to a line of text of the image.
+
+        Args:
+            family: The installed family's name.
+            text: What the line reads.
+            region: The line's box as fractions of the image: x, y, width, height.
+            distance: How far the render was from the crop (`anypoach.fontmatch`).
+
+        Returns:
+            False, with `message` saying why, when there is no image or the values are not usable.
+        """
+        if self.result is None or self.result.media_type != "image":
+            self.message = "Font matching works on a screenshot or an imported image."
+            return False
+        family, text = family.strip(), text.strip()
+        if not (0 < len(family) <= 120 and 0 < len(text) <= 200) or len(region) != 4 \
+                or not all(0 <= v <= 1 for v in region) or not distance >= 0:
+            self.message = "That font match cannot be used."
+            return False
+        self.font_match = {"family": family, "text": text, "region": [round(v, 4) for v in region],
+                           "distance": round(float(distance), 3)}
+        self.message = ""
+        return True
 
     def save_favorite(self, name: str) -> str | None:
         """Keep the current handoff (notes, instructions, palette, up to three frames) under `name`.
@@ -447,7 +473,7 @@ class Controller:
         if self.result is None:
             self.message = "Record something first."
             return ""
-        result = dataclasses.replace(self.result, palette=self.palette)
+        result = dataclasses.replace(self.result, palette=self.palette, visual_font_match=self.font_match)
         matched = (self._store.latest_for(self._epoch_range) if self._store and self._epoch_range else None)
         if matched is not None:
             result = dataclasses.replace(result, browser_evidence=matched)

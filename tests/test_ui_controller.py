@@ -503,3 +503,20 @@ def test_a_favorite_gives_back_a_fresh_brief_without_a_video(tmp_path):
     assert brief["briefId"] in prompt and brief["context"] == "Match this."
     assert brief["evidence"]["sourcePath"] == "" and brief["evidence"]["annotations"][0]["text"] == "note"
     assert controller.favorite_handoff("nope") == "" and controller.message
+
+
+def test_a_font_match_is_checked_and_goes_into_the_brief(tmp_path):
+    controller = shot(tmp_path)
+    assert controller.select_font("Inter", "Pay now", (0.1, 0.2, 0.3, 0.05), 0.12) is True
+    controller.copy_handoff()
+    match = read_brief(cache=tmp_path / "cache")["evidence"]["visualFontMatch"]
+    assert match == {"family": "Inter", "text": "Pay now", "region": [0.1, 0.2, 0.3, 0.05], "distance": 0.12}
+    for bad in (("", "x", (0, 0, 1, 1), 0.1), ("F", " ", (0, 0, 1, 1), 0.1), ("F", "x", (0, 0, 2, 1), 0.1),
+                ("F", "x", (0, 0, 1), 0.1), ("F", "x", (0, 0, 1, 1), -1), ("F" * 121, "x", (0, 0, 1, 1), 0.1)):
+        assert controller.select_font(*bad) is False and controller.message
+    controller.screenshot()
+    assert controller.font_match is None  # a new result starts clean
+
+
+def test_font_matching_is_for_images_only(tmp_path):
+    assert make(tmp_path).select_font("F", "x", (0, 0, 1, 1), 0.1) is False

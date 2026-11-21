@@ -94,6 +94,8 @@ class InspectionResult:
         browser_evidence: The Chrome companion's session that overlaps the recording, when there is one.
         segments: The interactions of a video in time order (at most 12), empty when nothing moves; None for images.
             `keyframes` and `timing` above stay those of the whole clip, which are the strongest segment's.
+        visual_font_match: The font family the user picked as the closest to a line of text, with the line's `text`
+            and its `region` as fractions of the image (x, y, width, height); an approximation, never a certainty.
     """
     media_type: Literal["video", "image"]
     source_path: str
@@ -106,6 +108,7 @@ class InspectionResult:
     capture: CaptureInfo | None = field(default=None)
     browser_evidence: dict[str, Any] | None = field(default=None)
     segments: list[MotionSegment] | None = field(default=None)
+    visual_font_match: dict[str, Any] | None = field(default=None)
 
     def to_json(self) -> dict[str, Any]:
         """Return the camelCase dictionary stored in briefs; optional parts appear only when set."""
@@ -126,6 +129,8 @@ class InspectionResult:
             out["browserEvidence"] = self.browser_evidence
         if self.segments is not None:
             out["segments"] = [segment.to_json() for segment in self.segments]
+        if self.visual_font_match is not None:
+            out["visualFontMatch"] = self.visual_font_match
         return out
 
 
