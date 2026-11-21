@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from anypoach.bridge.evidence import EvidenceStore, align, parse_evidence
+from anypoach.bridge.evidence import BYTE_LIMIT, EvidenceStore, align, parse_evidence
 
 START = 1_700_000_000_000
 TARGET = {"tag": "button", "role": "", "classes": "btn"}
@@ -24,6 +24,44 @@ def state(at=0):
 def animation(keyframes=0, at=0):
     return {"atMs": at, "target": TARGET, "durationMs": 300, "delayMs": 0, "easing": "ease",
             "keyframes": [{"offset": 0, "easing": "ease", "styles": {}}] * keyframes}
+
+
+def component(i, parent=-1, text="Go"):
+    return {"id": i, "parent": parent, "target": TARGET, "rect": [0, 10.5, 100, 40], "styles": {"width": "100px"}, "text": text}
+
+
+def test_components_round_trip_and_stay_optional():
+    both = session(components=[component(0), component(1, 0), component(2, 0)], componentsAtEnd=[component(0), component(1, 0)])
+    assert parse_evidence(json.dumps(both)) == both
+    plain = parse_evidence(json.dumps(session()))
+    assert "components" not in plain and "componentsAtEnd" not in plain
+
+
+def test_forty_components_are_accepted_and_forty_one_refused():
+    assert len(parse_evidence(session(components=[component(i) for i in range(40)]))["components"]) == 40
+    with pytest.raises(ValueError):
+        parse_evidence(session(components=[component(i) for i in range(41)]))
+
+
+def test_component_ids_must_follow_the_list_and_parents_come_first():
+    for bad in ([component(0), component(2)], [component(0), component(1, 1)], [component(0, -2)], [component(0, 0)]):
+        with pytest.raises(ValueError):
+            parse_evidence(session(componentsAtEnd=bad))
+    assert parse_evidence(session(components=[component(0), component(1, -1), component(2, 1)]))
+
+
+def test_component_text_is_limited_to_80_characters():
+    assert parse_evidence(session(components=[component(0, text="x" * 80)]))
+    with pytest.raises(ValueError):
+        parse_evidence(session(components=[component(0, text="x" * 81)]))
+
+
+def test_a_realistic_session_with_both_lists_fits_the_body_limit():
+    styles = {f"style{n}": "x" * 25 for n in range(17)}
+    full = [{**component(i, i - 1 if i else -1, text="t" * 40), "styles": styles} for i in range(40)]
+    big = session(components=full, componentsAtEnd=full, states=[{**state(i), "styles": styles, "text": "t" * 120} for i in range(48)],
+                  animations=[animation(keyframes=8, at=i) for i in range(16)])
+    assert len(json.dumps(parse_evidence(big)).encode()) < BYTE_LIMIT
 
 
 def test_a_valid_session_round_trips_and_drops_a_stored_offset():

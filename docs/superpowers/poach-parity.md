@@ -22,7 +22,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 | Entrega | "Continue com Codex/Claude Code" abre o app e copia o prompt | só copia o prompt |
 | Conector MCP | instalador do Codex e extensão `.mcpb` | comando manual no README |
 | Extras | favoritos `.poach`, "Snatch font", limpeza de armazenamento, atualização, onboarding | nenhum |
-| Chrome | extensão com estilos computados, eventos e tempos de animação | feita na v0.2a (extensão própria, porta 47832, sem loja) |
+| Chrome | extensão com estilos computados, eventos e tempos de animação | extensão própria feita na v0.2a (porta 47832, sem loja); inspetor de página com cartão e componentes filhos no plano `2026-11-21-anypoach-chrome-inspector.md` |
 | Distribuição | `.zip` pronto | instalação por `uv` |
 | Ponteiro | macOS | Windows e X11 (macOS e Wayland sem trace) |
 
@@ -32,11 +32,16 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 - Uma só estimativa de timing cobre o vídeo todo, mesmo com várias interações; o próprio documento de fidelidade avisa que lê-la como a duração de uma interação dá resultado errado.
 - A precisão de tamanho e tipografia de interfaces web vem da extensão do Chrome (`width`, `height`, `fontSize`, `lineHeight`, `borderRadius`...), não do vídeo.
 
-## Ordem proposta
+## Roteiro de releases
 
-1. **Pacote de fidelidade:** tamanho real e escala da captura no brief e nas legendas das imagens; trechos de movimento múltiplos.
-2. **Fase 2b:** editor com comentários, atalho global e bandeja, onboarding, modo janela.
-3. **Extensão do Chrome (feita na v0.2a):** extensão própria adaptada da do Poach, ligada ao servidor local na porta 47832; falta a loja do Chrome.
-4. **Importar vídeo ou imagem, screenshot, limpeza de armazenamento.**
-5. **Distribuição e conectores:** PyInstaller, `.mcpb`, comando do Codex.
-6. **macOS:** ponteiro por `CGEventSource` e aviso de permissão de gravação de tela. Favoritos e font matcher por último; o font matcher depende de OCR e CoreText do Mac.
+Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um teste garante). Todas ficam como pré-release até a 1.0, e tag e release só saem quando o usuário manda.
+
+| Versão | Conteúdo | Estado |
+| --- | --- | --- |
+| v0.1.0 | Tamanho e escala da captura no brief e nas legendas; captura no Wayland | publicada (pré-release) |
+| v0.2.0 | Extensão do Chrome (PR #3) e inspetor de página: cartão ao passar o mouse e medidas dos componentes filhos | em andamento |
+| v0.2.1 | macOS: ponteiro por `CGEventSource` e aviso de permissão de gravação de tela | plano próprio, não começou |
+| v0.3.0 | Trechos de movimento (várias interações por gravação) e fase 2b: editor com comentários, atalho global e bandeja, onboarding, modo janela | não começou |
+| Depois, sem data | Importar vídeo ou imagem, screenshot, limpeza de armazenamento; painel lateral do Chrome e lista na janela (opções B e C do inspetor); PyInstaller, `.mcpb` e comando do Codex; favoritos e font matcher (o matcher depende de OCR e CoreText do Mac) | ideias |
+
+O Poach resolve tudo isso apenas para quem tem um Mac, o que continua sendo um recorte de público impressionante.

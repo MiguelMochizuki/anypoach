@@ -64,7 +64,8 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
             "caption before measuring, and use evidence.capture for the native size. Divide native pixels by "
             "evidence.capture.deviceScale to get CSS pixels; when deviceScale is null the scale is unknown, so ask. "
             "When evidence.browserEvidence is present, its CSS sizes, typography and animation timing come from the page "
-            "itself: use them instead of measuring the video, and use the video to confirm the result. "
+            "itself: use them instead of measuring the video, and use the video to confirm the result; "
+            "evidence.browserEvidence.components lists the measured descendants of the chosen component (size, font, colors, text). "
             "Recreate the recorded interaction in this project. For video details, call anypoach_read_moment with the "
             "same briefId and timeMs; pass crop and maxSize to read a detail at native scale.")
 

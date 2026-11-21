@@ -223,6 +223,7 @@ def test_handoff_prompt_prefers_browser_evidence():
     assert "evidence.browserEvidence" in prompt
     tail = prompt.split("evidence.browserEvidence")[1]
     assert "instead of measuring the video" in tail and "confirm" in tail
+    assert "evidence.browserEvidence.components" in prompt
 
 
 def test_device_scale_counts_video_pixels_when_the_recorder_downsizes(tmp_path):
