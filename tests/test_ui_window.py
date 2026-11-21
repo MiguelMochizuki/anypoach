@@ -23,12 +23,16 @@ from anypoach.ui.selection import SelectionOverlay
 class FakeController:
     supports_preview = False
     ready_to_record = True
+    screen_access = True
 
     def __init__(self):
         self.state, self.message, self.calls = "idle", "", []
 
     def close(self):
         self.calls.append("close")
+
+    def check_screen_access(self):
+        return self.screen_access
 
     def choose_region(self, region, device_scale=None):
         self.calls.append(("choose", region, device_scale))
@@ -172,6 +176,18 @@ def test_recording_starts_only_after_the_window_has_left_the_screen(app, monkeyp
     assert controller.calls == [] and window.isMinimized()  # the window goes first, so it is not in the video
     QTest.qWait(300)
     assert controller.calls == ["start"]
+
+
+def test_a_denied_permission_keeps_the_window_where_it_is_and_says_why(app):
+    controller = FakeController()
+    controller.screen_access = False
+    controller.message = "AnyPoach needs Screen Recording permission."
+    window = MainWindow(controller)
+    window.show()
+    window.record_button.click()
+    QTest.qWait(300)
+    assert controller.calls == [] and window.isVisible() and not window.isMinimized()
+    assert "Screen Recording" in window.status.text()
 
 
 def test_record_without_an_area_keeps_the_window_where_it_is(app):

@@ -26,6 +26,7 @@ from anypoach.bridge.control import BridgeController, extension_dir
 from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.paths import cache_dir
 from anypoach.capture.default import default_backend
+from anypoach.macos import macos_screen_access
 from anypoach.pointer import default_source
 from anypoach.tempdirs import make_temp_dir
 
@@ -216,6 +217,9 @@ class MainWindow(QMainWindow):
             self.controller.start()  # only sets the reason (no area chosen, already recording); nothing to hide
             self._refresh()
             return
+        if not self.controller.check_screen_access():  # before the window hides: nothing to bring back
+            self._refresh()
+            return
         self.record_button.setEnabled(False)
         self._leave_the_screen()  # first, so the window is not in the first frames of the video
         QTimer.singleShot(0 if sys.platform == "win32" else LEAVE_SCREEN_MS, self._begin_recording)
@@ -278,7 +282,9 @@ def main() -> int:
     store = EvidenceStore()
     bridge = BridgeController(store, cache=cache_dir())
     bridge.start()
-    controller = Controller(default_backend(), default_source(), Path(work), cache=cache_dir(), store=store)
+    screen_access = macos_screen_access() if sys.platform == "darwin" else None
+    controller = Controller(default_backend(), default_source(), Path(work), cache=cache_dir(), store=store,
+                            screen_access=screen_access)
     window = MainWindow(controller, bridge)
     window.show()
     return app.exec()

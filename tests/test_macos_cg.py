@@ -97,3 +97,18 @@ def test_a_missing_library_is_an_oserror(monkeypatch):
 def test_real_displays_have_a_positive_scale():
     displays = CoreGraphics().displays()
     assert displays and all(display.scale >= 1.0 for display in displays)
+
+
+def test_the_prompt_is_requested_once_and_an_unknown_state_never_asks():
+    lib, cf, _ = fake_lib(preflight=False)
+    asked = []
+    lib.CGRequestScreenCaptureAccess = Fn(lambda: asked.append(1) or False)
+    check = macos.macos_screen_access(CoreGraphics(lib, cf))
+    assert (check(), check()) == (False, False) and asked == [1]
+    lib, cf, _ = fake_lib(symbols=False)
+    assert macos.macos_screen_access(CoreGraphics(lib, cf))() is None
+
+
+def test_a_missing_coregraphics_leaves_the_gate_open(monkeypatch):
+    monkeypatch.setattr(ctypes.util, "find_library", lambda name: None)
+    assert macos.macos_screen_access()() is None

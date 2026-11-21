@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.util
+from collections.abc import Callable
 from typing import Any, NamedTuple
 
 from anypoach.pointer.trace import Button, Rect
@@ -122,3 +123,30 @@ def _load(name: str) -> ctypes.CDLL:
     if path is None:
         raise OSError(f"{name} is not available")
     return ctypes.CDLL(path)
+
+
+def macos_screen_access(cg: CoreGraphics | None = None) -> Callable[[], bool | None]:
+    """Build the Screen Recording check the controller uses.
+
+    The check returns the permission state (None when it cannot be known, which never blocks a recording) and, the
+    first time it finds the permission denied, asks macOS to show its prompt. Without that call the app would not
+    even appear in the Screen Recording list.
+
+    Args:
+        cg: The CoreGraphics wrapper; created on first use when omitted, and a failure to load it means None.
+    """
+    state = {"cg": cg, "asked": False}
+
+    def check() -> bool | None:
+        try:
+            if state["cg"] is None:
+                state["cg"] = CoreGraphics()
+        except OSError:
+            return None
+        allowed = state["cg"].screen_recording_allowed()
+        if allowed is False and not state["asked"]:
+            state["asked"] = True
+            state["cg"].request_screen_recording()
+        return allowed
+
+    return check
