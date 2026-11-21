@@ -192,3 +192,13 @@ def test_share_keeps_capture_in_the_evidence(env):
     brief_id = share(measured, "", [], cache=cache)
     assert read_brief(brief_id, cache=cache)["evidence"]["capture"] == {
         "widthPx": 1854, "heightPx": 962, "deviceScale": None, "imageMaxSize": 1280}
+
+
+def test_share_keeps_browser_evidence(env):
+    cache, temp = env
+    session = {"version": 1, "origin": "https://example.com", "videoOffsetMs": 120}
+    measured = dataclasses.replace(result(make_media(temp)), browser_evidence=session)
+    brief_id = share(measured, "", [], cache=cache)
+    assert read_brief(brief_id, cache=cache)["evidence"]["browserEvidence"] == session
+    plain = share(result(make_media(temp)), "", [], cache=cache)
+    assert "browserEvidence" not in read_brief(plain, cache=cache)["evidence"]

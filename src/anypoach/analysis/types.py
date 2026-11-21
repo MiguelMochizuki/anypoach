@@ -63,6 +63,7 @@ class InspectionResult:
         pointer_trace: Pointer samples recorded alongside the clip, when there are any.
         annotations: Notes pinned to timestamps, when there are any.
         capture: Native size and screen scale of the media, when known.
+        browser_evidence: The Chrome companion's session that overlaps the recording, when there is one.
     """
     media_type: Literal["video", "image"]
     source_path: str
@@ -73,6 +74,7 @@ class InspectionResult:
     pointer_trace: dict[str, Any] | None = field(default=None)
     annotations: list[dict[str, Any]] | None = field(default=None)
     capture: CaptureInfo | None = field(default=None)
+    browser_evidence: dict[str, Any] | None = field(default=None)
 
     def to_json(self) -> dict[str, Any]:
         """Return the camelCase dictionary stored in briefs; optional parts appear only when set."""
@@ -89,6 +91,8 @@ class InspectionResult:
             out["annotations"] = self.annotations
         if self.capture is not None:
             out["capture"] = self.capture.to_json()
+        if self.browser_evidence is not None:
+            out["browserEvidence"] = self.browser_evidence
         return out
 
 

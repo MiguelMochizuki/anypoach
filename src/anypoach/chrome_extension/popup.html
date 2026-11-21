@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- Adapted from the Poach Chrome extension (Apache-2.0) and changed for AnyPoach. See NOTICE. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AnyPoach</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="icon.png" alt="" width="38" height="38">
+      <div><h1>AnyPoach</h1><p>Chrome companion</p></div>
+    </header>
+    <p id="status" role="status">Connecting to AnyPoach…</p>
+    <form id="pairing" hidden>
+      <h2>Connect Chrome</h2>
+      <p class="setup-help">Copy the pairing code from the AnyPoach window and paste it below.</p>
+      <label for="code">Pairing code</label>
+      <input id="code" autocomplete="off" spellcheck="false" aria-describedby="status" placeholder="Paste from AnyPoach" required>
+      <button type="submit">Connect to AnyPoach</button>
+    </form>
+    <section id="paired" hidden>
+      <div class="success-mark" aria-hidden="true">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
+      </div>
+      <div role="status">
+        <h2>Connected</h2>
+        <p id="paired-detail">Choose a component next.</p>
+      </div>
+    </section>
+    <button id="action" type="button" disabled>Choose a component</button>
+    <footer>
+      <button id="cancel" type="button" hidden>Discard</button>
+      <button id="reconnect" type="button" hidden>Pair again</button>
+    </footer>
+  </main>
+</body>
+</html>

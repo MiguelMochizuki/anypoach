@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import dataclasses
+import time
 from pathlib import Path
 from typing import Any, Literal
 
 from anypoach.analysis.inspect import inspect_recording
 from anypoach.analysis.types import InspectionResult
+from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.store import share
 from anypoach.capture.backend import CaptureBackend, Frame
 from anypoach.capture.recorder import Recorder
@@ -61,6 +63,8 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
             "describe visible results, and ask if behavior is ambiguous. Images may be reduced from the capture: read the "
             "caption before measuring, and use evidence.capture for the native size. Divide native pixels by "
             "evidence.capture.deviceScale to get CSS pixels; when deviceScale is null the scale is unknown, so ask. "
+            "When evidence.browserEvidence is present, its CSS sizes, typography and animation timing come from the page "
+            "itself: use them instead of measuring the video, and use the video to confirm the result. "
             "Recreate the recorded interaction in this project. For video details, call anypoach_read_moment with the "
             "same briefId and timeMs; pass crop and maxSize to read a detail at native scale.")
 
@@ -82,10 +86,14 @@ class Controller:
         pointer_source: Where the pointer is read from, or None for no pointer trace.
         work_dir: Folder for recordings and keyframes.
         cache: Brief cache directory; the per-OS default when omitted.
+        store: Where the Chrome companion's sessions arrive, or None when it is not in use.
     """
     def __init__(self, backend: CaptureBackend, pointer_source: PointerSource | None, work_dir: Path, *,
-                 cache: Path | None = None) -> None:
+                 cache: Path | None = None, store: EvidenceStore | None = None) -> None:
         self._backend, self._source, self._work, self._cache = backend, pointer_source, Path(work_dir), cache
+        self._store = store
+        self._epoch_range: tuple[int, int] | None = None
+        self._started_ms = 0
         self.state: State = "idle"
         self.message = ""
         self.context = ""
@@ -142,6 +150,20 @@ class Controller:
         """Scale factor of the screen the area was chosen on, or None when it is not known."""
         return self._device_scale
 
+    @property
+    def browser_status(self) -> str:
+        """The Chrome companion's state: `off`, `waiting`, `receiving` (a session is streaming) or `attached`."""
+        if self._store is None:
+            return "off"
+        window = self._epoch_range
+        if window is None and self.state == "recording":
+            window = (self._started_ms, int(time.time() * 1000))  # the recording is still running
+        if window is None:
+            return "waiting"
+        if self._store.latest_for(window) is not None:
+            return "attached"
+        return "receiving" if self._store.receiving_for(window) else "waiting"
+
     def choose_region(self, region: Rect, device_scale: float | None = None) -> None:
         """Remember the area to record. Anything smaller than 2 px in either direction is refused with a message.
 
@@ -173,6 +195,7 @@ class Controller:
                 self.close()  # a dead share must not be reused by the next choice
             return
         self._recorder, self.state, self.message, self.result = recorder, "recording", "", None
+        self._epoch_range, self._started_ms = None, int(time.time() * 1000)
 
     def stop(self) -> InspectionResult | None:
         """End the recording and analyze it.
@@ -193,6 +216,7 @@ class Controller:
             finally:
                 if self.supports_preview:
                     self.close()  # the session is over, even if it ended on its own: the next recording asks again
+            self._epoch_range = recording.epoch_range_ms
             result = inspect_recording(recording.path, output_dir=self._work / "frames")
         except PermissionError:
             self.message = "AnyPoach cannot capture the screen. Check the screen recording permission and try again."
@@ -215,8 +239,11 @@ class Controller:
         if self.result is None:
             self.message = "Record something first."
             return ""
+        result, matched = self.result, (self._store.latest_for(self._epoch_range) if self._store and self._epoch_range else None)
+        if matched is not None:
+            result = dataclasses.replace(result, browser_evidence=matched)
         try:
-            brief_id = share(self.result, self.context, self.annotations, cache=self._cache)
+            brief_id = share(result, self.context, self.annotations, cache=self._cache)
         except OSError as error:
             self.message = f"Could not share: {error}"
             return ""

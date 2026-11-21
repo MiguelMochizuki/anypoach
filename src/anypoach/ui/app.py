@@ -4,12 +4,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer
-from PySide6.QtGui import QIcon, QKeyEvent
+from PySide6.QtCore import QSize, Qt, QTimer, QUrl
+from PySide6.QtGui import QDesktopServices, QIcon, QKeyEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
@@ -20,6 +22,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from anypoach.bridge.control import BridgeController, extension_dir
+from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.paths import cache_dir
 from anypoach.capture.default import default_backend
 from anypoach.pointer import default_source
@@ -52,9 +56,10 @@ class MainWindow(QMainWindow):
     Args:
         controller: The flow this window drives.
     """
-    def __init__(self, controller: Controller) -> None:
+    def __init__(self, controller: Controller, bridge: BridgeController | None = None) -> None:
         super().__init__()
         self.controller = controller
+        self._bridge = bridge
         self._device_scale: float | None = None
         self.setWindowTitle("AnyPoach")
         self._tray: QSystemTrayIcon | None = None
@@ -75,11 +80,75 @@ class MainWindow(QMainWindow):
         body.addLayout(buttons)
         body.addWidget(self.status)
         body.addWidget(self.frames)
+        if bridge is not None:
+            body.addWidget(self._chrome_group(bridge))
         root = QWidget()
         root.setLayout(body)
         self.setCentralWidget(root)
         self._refresh()
         hide_from_capture(self)
+
+    def _chrome_group(self, bridge: BridgeController) -> QGroupBox:
+        group = QGroupBox("Chrome")
+        group.setAccessibleName("Chrome companion")
+        self.code_field = QLineEdit(bridge.code)
+        self.code_field.setReadOnly(True)
+        self.code_field.setAccessibleName("Pairing code")
+        self.copy_code_button = self._button("Copy pairing code", self._copy_code)
+        self.new_code_button = self._button("Create a new pairing code", self._new_code)
+        self.open_extension_button = self._button("Open the extension folder", self._open_extension)
+        self.chrome_status = QLabel()
+        self.chrome_status.setAccessibleName("Chrome status")
+        row = QHBoxLayout()
+        for widget in (self.code_field, self.copy_code_button, self.new_code_button, self.open_extension_button):
+            row.addWidget(widget)
+        layout = QVBoxLayout(group)
+        layout.addLayout(row)
+        layout.addWidget(self.chrome_status)
+        self._chrome_note, self._note_ticks = "", 0
+        self._chrome_timer = QTimer(self, interval=1000)
+        self._chrome_timer.timeout.connect(self._tick_chrome)
+        self._chrome_timer.start()
+        self._refresh_chrome()
+        return group
+
+    def _tick_chrome(self) -> None:
+        """Refresh once a second and let a one-off note (copied, new code) fade after about five seconds."""
+        self._note_ticks += 1
+        if self._note_ticks >= 5:
+            self._chrome_note = ""
+        self._refresh_chrome()
+
+    def _refresh_chrome(self) -> None:
+        status = self._bridge.status
+        text = {"listening": "Waiting for Chrome. Pair the extension with this code.",
+                "stopped": "The Chrome connection is off."}.get(status, status)
+        browser = getattr(self.controller, "browser_status", "off")
+        if status == "listening" and browser == "receiving":
+            text = "Receiving a session from Chrome."
+        elif status == "listening" and browser == "attached":
+            text = "A Chrome session matches this recording and will be included."
+        self.chrome_status.setText(self._chrome_note or text)
+
+    def _copy_code(self) -> None:
+        QApplication.clipboard().setText(self._bridge.code)
+        self._chrome_note, self._note_ticks = "Pairing code copied.", 0
+        self._refresh_chrome()
+
+    def _new_code(self) -> None:
+        self.code_field.setText(self._bridge.rotate())
+        self._chrome_note, self._note_ticks = "New pairing code. Pair the extension again.", 0
+        self._refresh_chrome()
+
+    def _open_extension(self) -> None:
+        folder = extension_dir()
+        if not folder.is_dir():
+            self._chrome_note, self._note_ticks = "The extension folder was not found in this installation.", 0
+        elif QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder))):
+            self._chrome_note, self._note_ticks = "Load this folder in Chrome from chrome://extensions with Developer mode on.", 0
+        else:
+            self._chrome_note, self._note_ticks = f"Could not open the folder. It is at {folder}.", 0
+        self._refresh_chrome()
 
     def _button(self, text: str, slot) -> QPushButton:
         button = QPushButton(text)
@@ -130,8 +199,10 @@ class MainWindow(QMainWindow):
         self.show()
 
     def closeEvent(self, event) -> None:
-        """Release the capture backend (closing any portal session) before the window goes away."""
+        """Release the capture backend (closing any portal session) and the Chrome server before the window goes away."""
         self.controller.close()
+        if self._bridge is not None:
+            self._bridge.stop()
         super().closeEvent(event)
 
     def _chosen(self, region) -> None:
@@ -204,8 +275,11 @@ def main() -> int:
     """Start the AnyPoach window and return the Qt exit code. This is the `anypoach` command."""
     app = QApplication(sys.argv)
     work = make_temp_dir()
-    controller = Controller(default_backend(), default_source(), Path(work), cache=cache_dir())
-    window = MainWindow(controller)
+    store = EvidenceStore()
+    bridge = BridgeController(store, cache=cache_dir())
+    bridge.start()
+    controller = Controller(default_backend(), default_source(), Path(work), cache=cache_dir(), store=store)
+    window = MainWindow(controller, bridge)
     window.show()
     return app.exec()
 
