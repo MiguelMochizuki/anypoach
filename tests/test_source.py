@@ -47,3 +47,8 @@ def test_source_closes_and_rejects_bad_input(clips, tmp_path):
         VideoSource(tmp_path / "x.txt")
     with pytest.raises(ValueError, match="file"):
         VideoSource(tmp_path / "missing.mov")
+
+
+def test_size_is_the_native_frame_size(clips):
+    with VideoSource(clips["wide"]) as source:
+        assert source.size == (1600, 900)

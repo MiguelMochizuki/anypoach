@@ -10,6 +10,7 @@ from typing import Self, TypeVar
 import av
 import numpy as np
 
+IMAGE_MAX_SIZE = 1280
 MAX_VIDEO_BYTES = 512 * 1024 * 1024
 T = TypeVar("T")
 
@@ -94,6 +95,12 @@ class VideoSource:
             raise ValueError("Video has no valid duration")
         self._times: list[float] | None = None
 
+    @property
+    def size(self) -> tuple[int, int]:
+        """Native `(width, height)` of the video frames in pixels."""
+        context = self._stream.codec_context
+        return context.width, context.height
+
     def __enter__(self) -> Self:
         return self
 
@@ -169,7 +176,7 @@ class VideoSource:
         """
         return self._collect(seeks, lambda frame: scaled_rgb(frame, width))
 
-    def png_at(self, seek: float, max_size: int = 1280) -> bytes:
+    def png_at(self, seek: float, max_size: int = IMAGE_MAX_SIZE) -> bytes:
         """Decode the frame shown at `seek` and return it as PNG bytes.
 
         Args:

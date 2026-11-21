@@ -13,8 +13,16 @@ from ..tempdirs import make_temp_dir
 from .keyframes import choose_keyframes
 from .motion import MotionTiming, approximate_timing, pixel_difference
 from .palette import extract_palette
-from .source import MAX_VIDEO_BYTES, VideoSource, read_still, scaled_png, scaled_rgb, seek_for_moment
-from .types import DragFrame, DragFrames, InspectionResult, Keyframe
+from .source import (
+    IMAGE_MAX_SIZE,
+    MAX_VIDEO_BYTES,
+    VideoSource,
+    read_still,
+    scaled_png,
+    scaled_rgb,
+    seek_for_moment,
+)
+from .types import CaptureInfo, DragFrame, DragFrames, InspectionResult, Keyframe
 
 MAX_DURATION_SECONDS = 30
 DEFAULT_SAMPLE_WIDTH = 96
@@ -97,7 +105,8 @@ def inspect_video(path: str | Path, *, output_dir: str | Path | None = None, sam
         timing = approximate_timing(times_ms, deltas, motion_start, duration_ms)
         progress("palette")
         palette = extract_palette(frames[settled if settled is not None else count - 1], palette_size)
-        return InspectionResult("video", str(source.path), duration_ms, keyframes, palette, timing)
+        return InspectionResult("video", str(source.path), duration_ms, keyframes, palette, timing,
+                                capture=CaptureInfo(*source.size, image_max_size=IMAGE_MAX_SIZE))
 
 
 def inspect_recording(path: str | Path, **options) -> InspectionResult:
@@ -168,11 +177,12 @@ def inspect_image(path: str | Path, *, output_dir: str | Path | None = None, sam
     progress("frames")
     out = _output_dir(output_dir)
     image = out / f"{_safe_base(source_path, 'image')}-image.png"
-    image.write_bytes(scaled_png(frame, 1280))
+    image.write_bytes(scaled_png(frame, IMAGE_MAX_SIZE))
     progress("palette")
     return InspectionResult("image", str(source_path), 0, [Keyframe("start", 0, str(image), 0)],
                             extract_palette(sample, palette_size),
-                            MotionTiming(0, None, "Still image · no motion duration"))
+                            MotionTiming(0, None, "Still image · no motion duration"),
+                            capture=CaptureInfo(frame.width, frame.height, image_max_size=IMAGE_MAX_SIZE))
 
 
 def _probe_moment_source(path: str | Path) -> tuple[Path, float]:
