@@ -47,3 +47,10 @@ def test_no_session_bus_is_an_oserror(monkeypatch):
     monkeypatch.setenv("XDG_RUNTIME_DIR", "/nonexistent")
     with pytest.raises(OSError):
         JeepneyTransport()
+
+
+@pytest.mark.parametrize("error", ["org.freedesktop.DBus.Error.ServiceUnknown", "org.freedesktop.DBus.Error.UnknownMethod"])
+def test_a_dbus_error_from_the_portal_becomes_oserror(fake_portal, error):
+    fake_portal.error_name = error
+    with pytest.raises(OSError, match="portal"):
+        ScreenCastClient(JeepneyTransport()).start()

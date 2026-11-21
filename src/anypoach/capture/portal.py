@@ -129,6 +129,15 @@ def _plain(results: dict[str, tuple[str, Any]]) -> dict[str, Any]:
     return plain
 
 
+def _answer(reply: Any) -> Any:
+    """Return `reply`, or raise `OSError` when it is a DBus error (no portal running, no ScreenCast support)."""
+    from jeepney import HeaderFields, MessageType
+    if reply.header.message_type == MessageType.error:
+        name = reply.header.fields.get(HeaderFields.error_name, "unknown error")
+        raise OSError(f"The screen sharing portal is not available ({name}).")
+    return reply
+
+
 class JeepneyTransport:
     """Reaches the portal over the DBus session bus with `jeepney`.
 
@@ -159,7 +168,7 @@ class JeepneyTransport:
         address = DBusAddress(_PATH, bus_name=_PORTAL, interface="org.freedesktop.portal.ScreenCast")
         body = (*args, _variants({**options, "handle_token": token}))
         with self._conn.filter(rule) as responses:
-            self._conn.send_and_get_reply(new_method_call(address, method, _SIGNATURES[method], body))
+            _answer(self._conn.send_and_get_reply(new_method_call(address, method, _SIGNATURES[method], body)))
             try:
                 message = self._conn.recv_until_filtered(responses, timeout=120)
             except TimeoutError as error:
@@ -171,7 +180,8 @@ class JeepneyTransport:
         """Return the PipeWire file descriptor for the session; the caller owns it."""
         from jeepney import DBusAddress, new_method_call
         address = DBusAddress(_PATH, bus_name=_PORTAL, interface="org.freedesktop.portal.ScreenCast")
-        reply = self._conn.send_and_get_reply(new_method_call(address, "OpenPipeWireRemote", "oa{sv}", (session_handle, {})))
+        reply = _answer(self._conn.send_and_get_reply(
+            new_method_call(address, "OpenPipeWireRemote", "oa{sv}", (session_handle, {}))))
         fd = reply.body[0]
         return fd.to_raw_fd() if hasattr(fd, "to_raw_fd") else fd
 

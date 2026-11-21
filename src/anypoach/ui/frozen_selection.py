@@ -32,8 +32,8 @@ def frame_rect(start: tuple[float, float], end: tuple[float, float], *, widget_s
 class FrozenSelection(QWidget):
     """Shows one captured frame stretched over the whole window and lets the user drag an area on it.
 
-    Emits `selected` with a `Rect` in frame pixels when a drag of at least 2 pixels ends, or `cancelled` on
-    Escape. A shorter drag is ignored.
+    Emits `selected` with a `Rect` in frame pixels when a drag of at least 2 pixels ends, or `cancelled` when it
+    closes without a selection (Escape included). A shorter drag is ignored.
 
     Args:
         frame: The frame to show; its pixel size is the coordinate space of `selected`.
@@ -51,6 +51,7 @@ class FrozenSelection(QWidget):
         self.setAccessibleName("Area selection. Drag to choose the area to record, Escape to cancel.")
         self._anchor: QPoint | None = None
         self._current: QPoint | None = None
+        self._done = False  # a selection was made or cancellation was already reported
 
     def _drag_rect(self) -> QRect:
         return QRect(self._anchor, self._current).normalized() if self._anchor and self._current else QRect()
@@ -88,11 +89,18 @@ class FrozenSelection(QWidget):
         self.update()
         if area.width < 2 or area.height < 2:
             return
+        self._done = True
         self.close()
         self.selected.emit(area)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        """Close the widget and emit `cancelled` when Escape is pressed."""
+        """Close the widget when Escape is pressed; closing reports the cancellation."""
         if event.key() == Qt.Key.Key_Escape:
             self.close()
+
+    def closeEvent(self, event) -> None:
+        """Emit `cancelled` once when the widget closes without a selection (Escape, Alt+F4, the shell)."""
+        if not self._done:
+            self._done = True
             self.cancelled.emit()
+        super().closeEvent(event)

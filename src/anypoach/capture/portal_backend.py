@@ -83,7 +83,9 @@ class PortalBackend:
             OSError: If packages are missing, the portal fails, or no frame arrives.
         """
         if self.active:
-            return self._stream.latest()
+            if not self._stream.ended:
+                return self._stream.latest()
+            self.close()  # the compositor ended the share: release it and ask again instead of reusing the dead stream
         problems = self._problems()
         if problems:
             raise OSError(" ".join(problems))

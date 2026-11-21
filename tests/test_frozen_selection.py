@@ -69,3 +69,29 @@ def test_escape_cancels(app):
 
 def test_the_widget_has_an_accessible_name(app):
     assert "Drag" in FrozenSelection(frame(20, 10)).accessibleName()
+
+
+def test_closing_the_widget_without_a_selection_cancels(app):
+    widget = FrozenSelection(frame(20, 10))
+    seen = []
+    widget.cancelled.connect(lambda: seen.append(1))
+    widget.close()
+    assert seen == [1]
+
+
+def test_escape_cancels_exactly_once(app):
+    widget = FrozenSelection(frame(20, 10))
+    seen = []
+    widget.cancelled.connect(lambda: seen.append(1))
+    QTest.keyClick(widget, Qt.Key.Key_Escape)
+    assert seen == [1]
+
+
+def test_a_finished_selection_does_not_also_cancel(app):
+    widget = FrozenSelection(frame(100, 50))
+    widget.resize(100, 50)
+    seen = []
+    widget.cancelled.connect(lambda: seen.append(1))
+    QTest.mousePress(widget, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
+    QTest.mouseRelease(widget, Qt.MouseButton.LeftButton, pos=QPoint(60, 30))
+    assert seen == []

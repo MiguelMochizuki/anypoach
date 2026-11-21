@@ -3,7 +3,15 @@ import os
 import subprocess
 import threading
 
-from jeepney import DBusAddress, HeaderFields, MessageType, message_bus, new_method_return, new_signal
+from jeepney import (
+    DBusAddress,
+    HeaderFields,
+    MessageType,
+    message_bus,
+    new_error,
+    new_method_return,
+    new_signal,
+)
 from jeepney.io.blocking import Proxy, open_dbus_connection
 
 NAME = "org.freedesktop.portal.Desktop"
@@ -19,12 +27,14 @@ class FakePortal:
         emit_before_reply: Send each `Response` signal before the method reply, to catch a client that
             subscribes too late.
         closed_sessions: Handles of the sessions the client closed.
+        error_name: When set, every method call is answered with this DBus error.
     """
     def __init__(self) -> None:
         self.daemon = subprocess.Popen(["dbus-daemon", "--session", "--print-address", "--nofork"],
                                        stdout=subprocess.PIPE, text=True)
         self.address = self.daemon.stdout.readline().strip()
         self.start_code, self.emit_before_reply, self.closed_sessions = 0, False, []
+        self.error_name = None
         self._stop, self._ready = threading.Event(), threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -53,6 +63,9 @@ class FakePortal:
     def _handle(self, conn, message) -> None:
         fields = message.header.fields
         member, sender = fields[HeaderFields.member], fields[HeaderFields.sender]
+        if self.error_name:
+            conn.send(new_error(message, self.error_name))
+            return
         if member == "OpenPipeWireRemote":
             conn.send(new_method_return(message, "h", (os.open(os.devnull, os.O_RDONLY),)))
         elif member == "Close":

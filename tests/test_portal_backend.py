@@ -139,3 +139,13 @@ def test_no_problems_when_everything_is_present(monkeypatch):
     monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/x")
     run = lambda *args, **kwargs: types.SimpleNamespace(returncode=0)
     assert portal_problems(which=lambda n: "/bin/" + n, run=run) == []
+
+
+def test_a_preview_after_the_stream_ended_starts_a_new_session():
+    backend, rig = started()
+    rig.stream.end()
+    old_stream, old_client = rig.stream, rig.client
+    rig.stream, rig.client = FakeStream(), FakeClient(cancel=False)
+    assert backend.preview().pixels.shape == (80, 100, 4) and backend.active
+    assert old_stream.closed == 1 and old_client.closed == 1
+    assert backend.grab(Rect(0, 0, 10, 10)).pixels.shape == (10, 10, 4)

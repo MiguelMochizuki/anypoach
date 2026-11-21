@@ -165,3 +165,22 @@ def test_ready_to_record_needs_an_area_and_no_running_recording(tmp_path):
     controller.start()
     assert not controller.ready_to_record
     controller.stop()
+
+
+def test_stop_sharing_during_a_recording_still_closes_the_portal(preview_controller):
+    preview_controller.preview()
+    preview_controller.choose_region(Rect(10, 10, 160, 90))
+    preview_controller.start()
+    time.sleep(0.3)
+    preview_controller.backend.error = OSError("The screen sharing stopped.")  # the compositor ended the share
+    time.sleep(0.3)
+    assert preview_controller.stop() is None and "stopped" in preview_controller.message
+    assert preview_controller.backend.closed == 1
+
+
+def test_a_failed_first_grab_closes_the_portal_so_the_next_choice_starts_fresh(preview_controller):
+    preview_controller.preview()
+    preview_controller.choose_region(Rect(0, 0, 50, 50))
+    preview_controller.backend.error = OSError("The screen sharing stopped.")
+    preview_controller.start()
+    assert preview_controller.backend.closed == 1

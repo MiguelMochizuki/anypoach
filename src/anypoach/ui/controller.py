@@ -154,6 +154,8 @@ class Controller:
             recorder.start(self._region)
         except OSError as error:
             self.message = f"Could not start recording: {error}"
+            if self.supports_preview:
+                self.close()  # a dead share must not be reused by the next choice
             return
         self._recorder, self.state, self.message, self.result = recorder, "recording", "", None
 
@@ -170,9 +172,11 @@ class Controller:
             return None
         self._recorder, self.state = None, "idle"
         try:
-            recording = recorder.stop()
-            if self.supports_preview:
-                self.close()  # the session is over: stop sharing now, the next recording asks again
+            try:
+                recording = recorder.stop()
+            finally:
+                if self.supports_preview:
+                    self.close()  # the session is over, even if it ended on its own: the next recording asks again
             result = inspect_recording(recording.path, output_dir=self._work / "frames")
         except PermissionError:
             self.message = "AnyPoach cannot capture the screen. Check the screen recording permission and try again."
