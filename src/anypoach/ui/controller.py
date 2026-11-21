@@ -17,6 +17,7 @@ from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.store import share
 from anypoach.capture.backend import CaptureBackend, Frame
 from anypoach.capture.recorder import Recorder
+from anypoach.capture.windows import WindowInfo, WindowLister
 from anypoach.pointer.recorder import PointerTraceRecorder
 from anypoach.pointer.trace import PointerSource, Rect
 
@@ -104,12 +105,14 @@ class Controller:
         work_dir: Folder for recordings and keyframes.
         cache: Brief cache directory; the per-OS default when omitted.
         store: Where the Chrome companion's sessions arrive, or None when it is not in use.
+        windows: Lists the windows that can be recorded by their bounds, or None where there is no way to.
         screen_access: Says whether the OS lets the app record the screen (True, False, or None when unknown),
             or None when the platform has no such permission.
     """
     def __init__(self, backend: CaptureBackend, pointer_source: PointerSource | None, work_dir: Path, *,
                  cache: Path | None = None, store: EvidenceStore | None = None,
-                 screen_access: Callable[[], bool | None] | None = None) -> None:
+                 screen_access: Callable[[], bool | None] | None = None, windows: WindowLister | None = None) -> None:
+        self._windows = windows
         self._backend, self._source, self._work, self._cache = backend, pointer_source, Path(work_dir), cache
         self._screen_access = screen_access
         self._store = store
@@ -140,8 +143,11 @@ class Controller:
         """Whether the backend needs a preview frame to choose the area (the Wayland portal does)."""
         return hasattr(self._backend, "preview")
 
-    def preview(self) -> Frame | None:
+    def preview(self, window: bool = False) -> Frame | None:
         """Open the backend's session and return its first frame, so the user can pick an area on it.
+
+        Args:
+            window: Ask for a window instead of a monitor where the backend offers that choice.
 
         Returns:
             The frame, or None with `message` set when the backend has no preview, the user cancelled the
@@ -150,7 +156,7 @@ class Controller:
         if not self.supports_preview:
             return None
         try:
-            frame = self._backend.preview()  # type: ignore[attr-defined]
+            frame = self._backend.preview(window=True) if window else self._backend.preview()  # type: ignore[attr-defined]
         except PermissionError as error:
             self.message = str(error) or "Screen sharing was not allowed."
             return None
@@ -159,6 +165,16 @@ class Controller:
             return None
         self.message = ""
         return frame
+
+    def windows(self) -> list[WindowInfo]:
+        """The windows that can be chosen, topmost first; empty with `message` set when the system cannot list them."""
+        try:
+            found = self._windows.windows() if self._windows is not None else []
+        except OSError:
+            found = []
+        if not found:
+            self.message = "No windows can be listed here. Choose an area instead."
+        return found
 
     def close(self) -> None:
         """Release the backend's session (the portal's sharing indicator goes away) and forget the area."""

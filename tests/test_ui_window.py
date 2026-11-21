@@ -15,6 +15,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QPushButton, QSystemTrayIcon
 
 from anypoach.capture.backend import Frame
+from anypoach.capture.windows import WindowInfo
 from anypoach.pointer.trace import Rect
 from anypoach.ui.app import MainWindow, hide_from_capture, recording_icon
 from anypoach.ui.frozen_selection import FrozenSelection
@@ -28,7 +29,10 @@ class FakeController:
 
     def __init__(self):
         self.state, self.message, self.calls = "idle", "", []
-        self.palette, self.result = [], None
+        self.palette, self.result, self.listed = [], None, []
+
+    def windows(self):
+        return self.listed
 
     def close(self):
         self.calls.append("close")
@@ -66,7 +70,7 @@ def test_every_button_has_an_accessible_name_and_state_follows_the_controller(ap
     controller = FakeController()
     window = MainWindow(controller)
     buttons = window.findChildren(QPushButton)
-    assert len(buttons) == 8 and all(b.accessibleName() for b in buttons)
+    assert len(buttons) == 9 and all(b.accessibleName() for b in buttons)
     assert (window.stop_button.isEnabled(), window.copy_button.isEnabled()) == (False, False)
     window.record_button.click()
     QTest.qWait(300)
@@ -124,7 +128,8 @@ class PreviewController(FakeController):
         super().__init__()
         self.failure, self.closed = failure, 0
 
-    def preview(self):
+    def preview(self, window=False):
+        self.calls.append(("preview", window))
         if self.failure:
             self.message = self.failure
             return None
@@ -409,7 +414,7 @@ def test_a_failed_preview_keeps_full_screen_unselected(app):
     controller = PreviewController("Screen sharing was cancelled.")
     window = MainWindow(controller)
     window.full_screen.click()
-    assert not controller.calls and "cancelled" in window.status.text()
+    assert not [c for c in controller.calls if c[0] == "choose"] and "cancelled" in window.status.text()
 
 
 def test_the_tray_menu_records_the_full_screen_and_swaps_menus_while_recording(app, monkeypatch):
@@ -428,3 +433,28 @@ def test_the_tray_menu_records_the_full_screen_and_swaps_menus_while_recording(a
 def test_without_a_tray_there_is_no_tray_object(app, monkeypatch):
     monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", lambda: False)
     assert MainWindow(FakeController())._tray is None
+
+
+def test_window_on_a_preview_backend_asks_for_a_window_and_takes_the_whole_stream(app):
+    controller = PreviewController()
+    window = MainWindow(controller)
+    window.window_button.click()
+    assert ("preview", True) in controller.calls and controller.calls[-1] == ("choose", Rect(0, 0, 20, 10), None)
+
+
+def test_window_lists_the_windows_but_not_anypoach_and_selects_the_picked_bounds(app, monkeypatch):
+    controller = FakeController()
+    controller.listed = [WindowInfo("AnyPoach", Rect(0, 0, 300, 200)), WindowInfo("Editor", Rect(50, 60, 800, 600))]
+    seen = {}
+    monkeypatch.setattr("anypoach.ui.app.QInputDialog.getItem",
+                        lambda parent, title, label, items, *a: seen.update(items=items) or ("Editor", True))
+    window = MainWindow(controller)
+    window.window_button.click()
+    assert seen["items"] == ["Editor"] and controller.calls[-1][:2] == ("choose", Rect(50, 60, 800, 600))
+
+
+def test_window_with_nothing_to_list_leaves_the_selection_alone(app):
+    controller = FakeController()
+    window = MainWindow(controller)
+    window.window_button.click()
+    assert not [c for c in controller.calls if c[0] == "choose"]

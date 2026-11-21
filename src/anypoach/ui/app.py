@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -27,6 +28,7 @@ from anypoach.bridge.control import BridgeController, extension_dir
 from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.paths import cache_dir
 from anypoach.capture.default import default_backend
+from anypoach.capture.windows import default_windows
 from anypoach.macos import macos_screen_access
 from anypoach.pointer import default_source
 from anypoach.pointer.trace import Rect
@@ -98,6 +100,7 @@ class MainWindow(QMainWindow):
         self._limit.timeout.connect(self._stop)
         self.area, self.record_button = self._button("Choose area", self._choose), self._button("Record", self._record)
         self.full_screen = self._button("Full screen", self._choose_full_screen)
+        self.window_button = self._button("Window", self._choose_window)
         self.screenshot = self._button("Screenshot", self._screenshot)
         self.import_button = self._button("Import…", self._import)
         self.settings_button = self._button("Settings…", self._settings)
@@ -109,7 +112,7 @@ class MainWindow(QMainWindow):
         self.frames.setIconSize(QSize(160, 100))
         self.frames.setAccessibleName("Keyframes")
         buttons = QHBoxLayout()
-        for button in (self.area, self.full_screen, self.screenshot, self.import_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
+        for button in (self.area, self.full_screen, self.window_button, self.screenshot, self.import_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
             buttons.addWidget(button)
         body = QVBoxLayout()
         body.addLayout(buttons)
@@ -206,6 +209,7 @@ class MainWindow(QMainWindow):
         state = self.controller.state
         self.area.setEnabled(state != "recording")
         self.full_screen.setEnabled(state != "recording")
+        self.window_button.setEnabled(state != "recording")
         self.screenshot.setEnabled(state != "recording" and self.controller.ready_to_record)
         self.import_button.setEnabled(state != "recording")
         self.record_button.setEnabled(state != "recording")
@@ -250,6 +254,29 @@ class MainWindow(QMainWindow):
         self._device_scale, geometry = screen.devicePixelRatio(), screen.geometry()
         self._chosen(Rect(*physical_rect((0, 0), (geometry.width(), geometry.height()),
                                          origin=(geometry.x(), geometry.y()), dpr=self._device_scale)))
+
+    def _choose_window(self) -> None:
+        """Record one window: the portal's own picker on Wayland, otherwise a list of the windows on screen."""
+        if self.controller.supports_preview:
+            frame = self.controller.preview(window=True)
+            if frame is None:
+                self._refresh()
+                return
+            self._device_scale = None
+            height, width = frame.pixels.shape[:2]
+            self._chosen(Rect(0, 0, width, height))
+            return
+        windows = [w for w in self.controller.windows() if not w.title.startswith("AnyPoach")]
+        if not windows:
+            self._refresh()
+            return
+        title, accepted = QInputDialog.getItem(self, "Choose a window", "Window:", [w.title for w in windows], 0, False)
+        if not accepted:
+            return
+        chosen = next(w for w in windows if w.title == title)
+        screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
+        self._device_scale = screen.devicePixelRatio()
+        self._chosen(chosen.rect)
 
     def _selection_cancelled(self) -> None:
         self.controller.close()  # ends the portal session so the compositor stops showing that it is sharing
@@ -405,7 +432,7 @@ def main() -> int:
     bridge.start()
     screen_access = macos_screen_access() if sys.platform == "darwin" else None
     controller = Controller(default_backend(), default_source(), Path(work), cache=cache_dir(), store=store,
-                            screen_access=screen_access)
+                            screen_access=screen_access, windows=default_windows())
     window = MainWindow(controller, bridge)
     window.show()
     return app.exec()

@@ -16,7 +16,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 
 | Área | Poach | AnyPoach hoje |
 | --- | --- | --- |
-| Captura | área, janela por prévia, tela cheia, screenshot, importar vídeo ou imagem | área, tela cheia, screenshot e importar vídeo ou imagem (v0.6.0) |
+| Captura | área, janela por prévia, tela cheia, screenshot, importar vídeo ou imagem | área, tela cheia, janela (v0.9.0; sem macOS), screenshot e importar vídeo ou imagem (v0.6.0) |
 | Controle | atalho que liga e desliga, ícone na barra de menu, sombra na área, janelas próprias fora do vídeo | botões na janela; janelas próprias fora do vídeo |
 | Editor | comentários presos à timeline, paleta ajustável, instruções gerais | comentários, timeline, play e instruções gerais (v0.3.0); paleta ajustável (v0.8.0) |
 | Entrega | "Continue com Codex/Claude Code" abre o app e copia o prompt | só copia o prompt |
@@ -46,7 +46,8 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.4.0 | Bandeja permanente com menu (mostrar, gravar tela cheia, sair; parar durante a gravação) | publicada (pré-release) |
 | v0.4.1+ | Modo janela, atalho global (conflita com a promessa de não usar hooks globais; só com o portal GlobalShortcuts), onboarding, paleta ajustável | não começou |
 | v0.5.0 | `anypoach-setup` (comandos do Claude Code, do Codex e JSON) e instalação por `uv tool install` sem clonar | publicada (pré-release) |
-| v0.8.0 | Paleta ajustável (trocar, tirar, acrescentar e restaurar cores; o brief leva a versão editada) | pronta; checagem manual pendente |
+| v0.9.0 | Modo janela: lista de janelas no X11 e no Windows, seletor de janelas do portal no Wayland (sem prévia por miniatura e sem seguir a janela; macOS fica de fora) | pronta; checagem manual pendente |
+| v0.8.0 | Paleta ajustável (trocar, tirar, acrescentar e restaurar cores; o brief leva a versão editada) | publicada (pré-release) |
 | v0.7.0 | Janela de configurações: armazenamento e limpeza, comandos do Claude Code e do Codex, verificação de atualização sob demanda (decisão de produto: única exceção à promessa de não usar rede) | publicada (pré-release) |
 | v0.6.0 | Alcance do Poach de 2026-11-21: `pageRect` (âncora em coordenadas do documento depois de rolar a página), screenshot da área e importação de vídeo ou imagem | pronta; checagem manual pendente |
 | v0.9.0+ | Resto do Poach, nesta ordem: modo janela por prévia, favoritos e exportação, onboarding, atalho global opcional (desligado por padrão, exceção à promessa de não usar hooks), Snatch font, instalador sem `uv`, `.mcpb` | não começou |
