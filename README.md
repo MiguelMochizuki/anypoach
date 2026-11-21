@@ -26,7 +26,7 @@ AnyPoach captures a screen area, samples the pointer (position and button state 
 
 ### Status and limitations
 
-Early (v0.2.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. Not done: comment editor, global shortcut, macOS pointer sampling, a Chrome Web Store listing for the companion extension. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
+Early (v0.2.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. On macOS the pointer comes from CoreGraphics, Retina regions are converted between points and pixels, and recording is refused with a message until Screen Recording is allowed; all of that is covered by tests with fakes and a smoke test on the macOS CI runner, and no person has run it on a Mac yet (see `docs/superpowers/macos-spike.md` once it exists). Not done: comment editor, global shortcut, a Chrome Web Store listing for the companion extension. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
 
 ### Why not just use Poach?
 
@@ -49,6 +49,8 @@ Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 uv sync --extra ui    # PySide6 for the window, mss for screen capture
 uv run anypoach       # choose an area, record, stop, copy the prompt
 ```
+
+On macOS the first recording triggers the system Screen Recording prompt; allow AnyPoach (or the terminal that runs it) in System Settings > Privacy & Security > Screen Recording, then quit and reopen it.
 
 On a Wayland session the screen comes through the desktop portal, which asks you to confirm each recording, and needs GStreamer with its PipeWire plugin (on Debian and Ubuntu: `sudo apt install gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-pipewire`). AnyPoach tells you what is missing.
 
@@ -111,7 +113,7 @@ anypoach/
 ### Key modules
 
 - `analysis`: `VideoSource` decodes with PyAV and seeks by presentation time; `motion`, `palette`, and `keyframes` are numpy code; `inspect` ties them into an `InspectionResult`.
-- `capture` and `pointer`: a `CaptureBackend` grabs BGRA frames (`MssBackend` on X11 and Windows; `PortalBackend` on Wayland, through the desktop portal and a `gst-launch-1.0` subprocess reading PipeWire), `Recorder` encodes H.264 with real frame times and draws the cursor and click ring, and `PointerTraceRecorder` polls a Windows or X11 source at 120 Hz (at most 5,000 events). Wayland and macOS have no pointer source, so their trace is marked unavailable.
+- `capture` and `pointer`: a `CaptureBackend` grabs BGRA frames (`MssBackend` on X11 and Windows; `PortalBackend` on Wayland, through the desktop portal and a `gst-launch-1.0` subprocess reading PipeWire), `Recorder` encodes H.264 with real frame times and draws the cursor and click ring, and `PointerTraceRecorder` polls a Windows, macOS (CoreGraphics through `anypoach.macos`) or X11 source at 120 Hz (at most 5,000 events). Wayland has no pointer source, so its trace is marked unavailable.
 - `brief`: writes `active-brief.json` plus one archive per share into the per-OS cache directory, and cleans up temporary media.
 - `bridge`: a loopback HTTP server (`127.0.0.1:47832`) that accepts a pairing-code-protected evidence session from the Chrome extension, validates it strictly, and keeps it in memory for 180 s so the brief can include it.
 - `mcp`: the `anypoach-mcp` server and its presence files.
