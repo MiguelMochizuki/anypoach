@@ -1,3 +1,4 @@
+"""Frame difference and easing estimation."""
 import numpy as np
 import pytest
 

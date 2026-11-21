@@ -1,3 +1,4 @@
+"""Shared fixtures: the synthetic clips used across the suites."""
 import pytest
 
 from tests.fixtures import build_all

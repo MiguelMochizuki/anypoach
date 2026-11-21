@@ -1,3 +1,4 @@
+"""Video decoding by presentation time: seeking, held frames, and PNG output."""
 import numpy as np
 import pytest
 
@@ -6,7 +7,7 @@ from anypoach.analysis.source import VideoSource, seek_for_moment
 PNG = bytes([137, 80, 78, 71, 13, 10, 26, 10])
 
 
-def test_seek_for_moment_matches_ts():
+def test_seek_for_moment_aims_between_the_shown_frame_and_its_predecessor():
     times = [0.0, 1.0, 2.0, 3.0]
     assert seek_for_moment(times, 0.5) == 0          # fewer than two frames shown so far
     assert seek_for_moment(times, 1.5) == 0.5        # midpoint of the last two PTS <= t

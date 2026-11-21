@@ -1,3 +1,4 @@
+"""Pointer trace types: the bounded buffer and the JSON stored in briefs."""
 from anypoach.pointer.trace import PointerTrace, PointerTraceBuffer, PointerTraceEvent, Rect
 
 

@@ -1,3 +1,4 @@
+"""Keyframe selection from per-sample motion."""
 from anypoach.analysis.keyframes import choose_keyframes
 
 
@@ -15,5 +16,5 @@ def test_start_coinciding_with_peak_drops_the_peak():
     assert choose_keyframes([0.01, 0.5, 0.4], 4) == [("start", 1), ("settled", 3)]
 
 
-def test_peak_coinciding_with_settled_drops_both_like_the_ts_core():
+def test_peak_coinciding_with_settled_drops_both():
     assert choose_keyframes([0.5], 2) == [("start", 0)]

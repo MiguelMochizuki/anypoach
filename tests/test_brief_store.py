@@ -1,3 +1,4 @@
+"""Brief storage: writing, reading, archiving, expiry, permissions, and storage cleanup."""
 import json
 import os
 import re

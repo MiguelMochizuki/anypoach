@@ -1,3 +1,4 @@
+"""Video and image analysis against the golden files, including the 30 s limit and recordings."""
 import json
 import math
 import subprocess
@@ -68,7 +69,7 @@ def assert_matches_golden(result, name, lossy_source=None):
             assert diff <= 1.0, f"{theirs['imagePath']} differs by {diff}"
         else:
             # A 30 s clip is re-encoded lossily by two different encoders; require our frame to be
-            # no further from the original recording than the oracle's frame is (plus slack).
+            # no further from the original recording than the golden frame is (plus slack).
             original = frame_at(lossy_source, ours["timeMs"] / 1000)
             assert np.abs(got_px - original).mean() <= np.abs(gold_px - original).mean() + 0.5
 

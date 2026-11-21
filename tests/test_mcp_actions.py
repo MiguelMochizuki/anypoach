@@ -1,3 +1,4 @@
+"""Click and drag candidates derived from a pointer trace."""
 from anypoach.mcp.actions import summarize_pointer_actions
 
 

@@ -1,3 +1,4 @@
+"""Palette extraction: ordering, rounding, and size limits."""
 import numpy as np
 
 from anypoach.analysis.palette import extract_palette

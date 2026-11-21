@@ -1,3 +1,4 @@
+"""The window's flow without Qt: recording, errors as messages, prompt text, and area conversion."""
 import time
 
 import numpy as np

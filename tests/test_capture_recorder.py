@@ -1,3 +1,4 @@
+"""The recorder and capture backend: frame times, sizes, frame rate, cursor drawing, and failures."""
 import itertools
 from types import SimpleNamespace
 from typing import ClassVar

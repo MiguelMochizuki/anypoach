@@ -1,3 +1,4 @@
+"""The synthetic clips themselves: that they exist and look as the other suites expect."""
 import json
 import subprocess
 

@@ -1,3 +1,4 @@
+"""The Qt window and the area overlay, run offscreen."""
 import os
 import sys
 

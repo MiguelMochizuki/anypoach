@@ -1,3 +1,4 @@
+"""The pointer recorder: events, normalization, truncation, loop timing, and source selection."""
 import threading
 
 import pytest
