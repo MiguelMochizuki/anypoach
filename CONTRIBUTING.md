@@ -43,13 +43,15 @@ Window tests run with `QT_QPA_PLATFORM=offscreen`. To connect an assistant to yo
 
 ## Data handling
 
-No network, telemetry, or audio. Only pointer position and button state are sampled, by polling, with no global hooks. Briefs and archives live in the per-OS cache directory (`~/Library/Caches/AnyPoach` on macOS, `~/.cache/AnyPoach` on Linux, `%LOCALAPPDATA%\AnyPoach\Cache` on Windows; `ANYPOACH_CACHE_DIR` overrides it for tests) and expire after 24 hours. On POSIX they use `0700` and `0600`. On Windows the same files get an ACL limited to the current user through `icacls`; that path has no local test and relies on CI. The Windows pointer source needs a per-monitor DPI-aware process, or coordinates arrive scaled. On Wayland there is no global pointer position, so the trace reports `available: false`.
+No network, telemetry, or audio. Only pointer position and button state are sampled, by polling, with no global hooks. Briefs and archives live in the per-OS cache directory (`~/Library/Caches/AnyPoach` on macOS, `~/.cache/AnyPoach` on Linux, `%LOCALAPPDATA%\AnyPoach\Cache` on Windows; `ANYPOACH_CACHE_DIR` overrides it for tests) and expire after 24 hours. On POSIX they use `0700` and `0600`. On Windows the same files get an ACL limited to the current user through `icacls`; that path has no local test and relies on CI. The Windows pointer source needs a per-monitor DPI-aware process, or coordinates arrive scaled. On Wayland there is no global pointer position, so the trace reports `available: false`. The Chrome companion adds a loopback listener (`127.0.0.1:47832`, only while the window is open) and keeps the evidence it receives in memory for 180 s; it is covered by the same rules: no network beyond loopback, nothing retained after the brief expires.
 
 ## Manual checks
 
 Before relying on a change to capture or the window, check by hand on Windows and on Linux X11: the AnyPoach window does not appear in the video (on Windows it is excluded with `SetWindowDisplayAffinity`; elsewhere it is hidden while recording and a tray menu stops the recording, with a 30 s limit), the selection overlay is not recorded, the cursor and click ring are drawn where the pointer was, and the brief shows up in the OS cache directory. `tools/bench.py` and `tools/jitter.py` print the timings recorded in `docs/superpowers/baseline.md`.
 
 On a Wayland session (GNOME is the tested one), also check: choosing an area shows the portal dialog and then a frozen frame of the screen where you drag the area, and Escape or declining the dialog leaves no sharing indicator behind; a 10 s recording of a moving area produces keyframes and a brief that an MCP client can read; pressing "Stop sharing" in the shell mid-recording ends with a message instead of a hang; and `pgrep gst-launch` shows nothing after stopping or closing the app. The window is minimized while recording, because GNOME has no tray, so restore it from the dock to stop. `tools/portal_spike.py` reproduces the raw portal flow. On any platform, read the brief back and check that `evidence.capture` has the real recording size and that `anypoach_read_moment` with a `crop` returns that rectangle at native size; `deviceScale` is video pixels per CSS pixel on Windows and X11 (check it on a capture wider than 1920 px) and `null` on Wayland.
+
+For the Chrome companion, check by hand with a real Chrome: load the unpacked `src/anypoach/chrome_extension` folder (the window's **Open the extension folder** button opens it), paste the pairing code, pick a component whose hover changes size or color, record it, press Stop in AnyPoach, then press **Finish and send** in the popup. Copy the prompt, read the brief back, and check that `evidence.browserEvidence` holds the states and animations with a sensible `videoOffsetMs`, and that `anypoach_read_moment` near that time lists `rect` and the style keys. A wrong code in the popup must say to pair again, and a second AnyPoach window on the same port must show `error:` with the port in the Chrome section instead of failing to start. The automated pieces are `tests/test_chrome_extension.py`: the manifest and wheel checks always run, the service-worker flow needs `node`, and the capture script runs in headless Chrome when a `google-chrome`, `chromium`, or `chrome` binary is on the `PATH` (both skip otherwise). `tools/make_extension_icon.py` rebuilds the icon from two image paths and needs `ffmpeg`.
 
 ## Documentation Conventions
 
@@ -85,7 +87,7 @@ def physical_rect(start: tuple[float, float], end: tuple[float, float], *, origi
 ## Repository map
 
 ```text
-src/anypoach/   analysis, brief storage, MCP server, pointer trace, capture, window
+src/anypoach/   analysis, brief storage, MCP server, pointer trace, capture, window, Chrome bridge and extension
 tests/          unit, end-to-end, and window tests, plus golden files
 tools/          benchmark and jitter measurement scripts
 docs/           design, plan, and measured baseline (docs/superpowers)

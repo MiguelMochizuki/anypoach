@@ -6,6 +6,7 @@
 - `src/anypoach/brief` writes and reads shared briefs and cleans up temporary media.
 - `src/anypoach/mcp` is the stdio MCP server (`anypoach-mcp`).
 - `src/anypoach/capture` and `src/anypoach/pointer` record a screen area and sample the pointer.
+- `src/anypoach/bridge` is the loopback server and pairing for the Chrome companion; `src/anypoach/chrome_extension` is the extension it talks to.
 - `src/anypoach/ui` is the PySide6 window; `ui/controller.py` holds the Qt-free flow it delegates to.
 
 ## Working rules
@@ -13,6 +14,7 @@
 - Read the relevant module and its tests before changing behavior.
 - Treat recordings, screenshots, and keyframes as private local data. Do not add network transmission, analytics, or persistent retention without an explicit product decision.
 - MCP stdout is the protocol channel. Never print to stdout in `anypoach.mcp` or anything it imports; use stderr.
+- The Chrome bridge listens on `127.0.0.1` only, only while the window is open, and holds evidence in memory for a few minutes. That evidence is private local data like a recording: never log it, persist it outside a brief, or widen the listener beyond loopback.
 - Poll the pointer for position and button state only. No global input hooks, no keyboard capture.
 - Keep the window operable by keyboard and give every control an accessible name.
 - Update `README.md` and `CONTRIBUTING.md` when commands, capabilities, permissions, or data handling change.

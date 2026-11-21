@@ -22,7 +22,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 | Entrega | "Continue com Codex/Claude Code" abre o app e copia o prompt | só copia o prompt |
 | Conector MCP | instalador do Codex e extensão `.mcpb` | comando manual no README |
 | Extras | favoritos `.poach`, "Snatch font", limpeza de armazenamento, atualização, onboarding | nenhum |
-| Chrome | extensão com estilos computados, eventos e tempos de animação | não existe |
+| Chrome | extensão com estilos computados, eventos e tempos de animação | feita na v0.2a (extensão própria, porta 47832, sem loja) |
 | Distribuição | `.zip` pronto | instalação por `uv` |
 | Ponteiro | macOS | Windows e X11 (macOS e Wayland sem trace) |
 
@@ -36,7 +36,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 
 1. **Pacote de fidelidade:** tamanho real e escala da captura no brief e nas legendas das imagens; trechos de movimento múltiplos.
 2. **Fase 2b:** editor com comentários, atalho global e bandeja, onboarding, modo janela.
-3. **Extensão do Chrome:** reaproveitar a extensão, ligada ao servidor local na porta 47831.
+3. **Extensão do Chrome (feita na v0.2a):** extensão própria adaptada da do Poach, ligada ao servidor local na porta 47832; falta a loja do Chrome.
 4. **Importar vídeo ou imagem, screenshot, limpeza de armazenamento.**
 5. **Distribuição e conectores:** PyInstaller, `.mcpb`, comando do Codex.
 6. **macOS:** ponteiro por `CGEventSource` e aviso de permissão de gravação de tela. Favoritos e font matcher por último; o font matcher depende de OCR e CoreText do Mac.

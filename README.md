@@ -26,7 +26,7 @@ AnyPoach captures a screen area, samples the pointer (position and button state 
 
 ### Status and limitations
 
-Early (v0.1.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. Not done: comment editor, global shortcut, macOS pointer sampling. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
+Early (v0.1.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. Not done: comment editor, global shortcut, macOS pointer sampling, a Chrome Web Store listing for the companion extension. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
 
 ### Why not just use Poach?
 
@@ -38,6 +38,7 @@ AnyPoach started as a fork of Poach, a charming Mac menu-bar app. It is lovely, 
 - One process decodes the video. On the same small test clips the analysis takes 0.06 s and 0.17 s, against 3.76 s and 33.5 s for the one-`ffmpeg`-per-sample approach ([measurements](docs/superpowers/baseline.md)).
 - Private by construction: no network, telemetry, audio, global input hooks, or keyboard capture; files are owner-only.
 - Four MCP tools that any assistant able to launch a stdio command can use.
+- A Chrome companion extension that sends the real CSS sizes, computed styles, and animation timing of the component you are recording, so the assistant stops guessing them from pixels.
 - Honest about size: images are reduced to 1280 px, so every one is captioned with its real size, and `crop` returns a detail at native scale.
 
 ## Quick Start
@@ -73,6 +74,8 @@ anypoach/
 │   └── anypoach/      # the package
 │       ├── analysis/  # decode video, motion, palette, keyframes
 │       ├── brief/     # shared briefs and temp-media cleanup
+│       ├── bridge/    # loopback server and pairing for the Chrome companion
+│       ├── chrome_extension/  # the unpacked extension (manifest, scripts, popup)
 │       ├── capture/   # screen grabbing, portal capture, recording, cursor overlay
 │       ├── mcp/       # the stdio MCP server
 │       ├── pointer/   # pointer polling and trace
@@ -110,6 +113,7 @@ anypoach/
 - `analysis`: `VideoSource` decodes with PyAV and seeks by presentation time; `motion`, `palette`, and `keyframes` are numpy code; `inspect` ties them into an `InspectionResult`.
 - `capture` and `pointer`: a `CaptureBackend` grabs BGRA frames (`MssBackend` on X11 and Windows; `PortalBackend` on Wayland, through the desktop portal and a `gst-launch-1.0` subprocess reading PipeWire), `Recorder` encodes H.264 with real frame times and draws the cursor and click ring, and `PointerTraceRecorder` polls a Windows or X11 source at 120 Hz (at most 5,000 events). Wayland and macOS have no pointer source, so their trace is marked unavailable.
 - `brief`: writes `active-brief.json` plus one archive per share into the per-OS cache directory, and cleans up temporary media.
+- `bridge`: a loopback HTTP server (`127.0.0.1:47832`) that accepts a pairing-code-protected evidence session from the Chrome extension, validates it strictly, and keeps it in memory for 180 s so the brief can include it.
 - `mcp`: the `anypoach-mcp` server and its presence files.
 - `ui`: `Controller` runs the flow without Qt; `app.py`, `selection.py`, and `frozen_selection.py` (a frozen screen frame to pick an area on Wayland) are the PySide6 window and the area overlays.
 
@@ -141,6 +145,17 @@ Python 3.11 or newer, managed with `uv`; `hatchling` builds the package.
 
 `uv run anypoach` opens the window: choose an area, record (up to 30 s), stop, look at the keyframes, and copy the prompt. Enter activates the focused button. Outside Windows the window hides while recording and a tray menu stops it.
 
+### Chrome companion
+
+For a web interface, the page knows what the video cannot: exact CSS sizes, font, radius, colors, and the timing and easing of each animation. The companion extension collects them from the component you pick.
+
+1. In the window, press **Open the extension folder**. In Chrome (Edge and Brave work the same way) open `chrome://extensions`, turn on Developer mode, and choose **Load unpacked** on that folder.
+2. Press **Copy pairing code** in the window, open the extension popup, and paste the code once.
+3. On your page, press **Choose a component** in the popup and pick it. Then record in AnyPoach as usual, do the interaction, and press **Finish and send** in the popup (before or after stopping in AnyPoach; a session is kept for 180 s).
+4. Copy the prompt. The brief now carries `evidence.browserEvidence`, and `anypoach_read_moment` lists the nearby states with `rect`, sizes, colors, radius, opacity, transform, shadow, and the animations with duration, delay, easing, and keyframe offsets, plus the page's `devicePixelRatio` and viewport.
+
+What stays local: the server listens on `127.0.0.1` only, while the window is open, rejects any other `Host` or a page `Origin`, and requires the pairing code on every request; **Create a new pairing code** revokes the old one. The extension asks for `activeTab`, `scripting`, `storage`, and `http://127.0.0.1/*`, reads text and computed styles of the picked component only, and nothing goes anywhere but your machine. Not yet: there is no Chrome Web Store listing, so you load the folder yourself.
+
 ### Connect an assistant
 
 ```sh
@@ -164,14 +179,14 @@ Briefs live in `~/Library/Caches/AnyPoach` (macOS), `~/.cache/AnyPoach` (Linux),
 
 ```sh
 uv sync --group dev --extra ui
-uv run pytest                    # needs the ffmpeg CLI to synthesize test clips
+uv run pytest                    # needs the ffmpeg CLI to synthesize test clips; Node and Chrome tests skip when missing
 uv run pytest -m live            # real capture; needs an X11 or Windows desktop
 uv run ruff check src tests tools
 ```
 
 ## Key Outputs & Reports
 
-A recording produces a few keyframe PNGs and a brief, a JSON file with the analysis, the pointer trace, your notes, and an instruction for the assistant. The brief is read back through `anypoach_read_brief`; the PNGs through the same tool and `anypoach_read_moment`. The brief records the real size of the capture in `evidence.capture` (`widthPx`, `heightPx`, `deviceScale`) and every image the MCP returns is captioned with its size, because keyframes are reduced to 1280 px (a 1854x962 recording arrives as 1280x664). `deviceScale` is the number of video pixels per CSS pixel (the screen scale, adjusted when the recorder shrinks a capture past 1920 px) on Windows and X11, and `null` where it is unknown, such as Wayland or imported media; the prompt tells the assistant to ask instead of guessing. The repository ships no sample output.
+A recording produces a few keyframe PNGs and a brief, a JSON file with the analysis, the pointer trace, your notes, and an instruction for the assistant. The brief is read back through `anypoach_read_brief`; the PNGs through the same tool and `anypoach_read_moment`. The brief records the real size of the capture in `evidence.capture` (`widthPx`, `heightPx`, `deviceScale`) and every image the MCP returns is captioned with its size, because keyframes are reduced to 1280 px (a 1854x962 recording arrives as 1280x664). `deviceScale` is the number of video pixels per CSS pixel (the screen scale, adjusted when the recorder shrinks a capture past 1920 px) on Windows and X11, and `null` where it is unknown, such as Wayland or imported media; the prompt tells the assistant to ask instead of guessing. With the Chrome companion, the brief also holds `evidence.browserEvidence`: up to 48 states and 16 animations of the picked component, aligned to the video through `videoOffsetMs`. The repository ships no sample output.
 
 ## Documentation Conventions
 
