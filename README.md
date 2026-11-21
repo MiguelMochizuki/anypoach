@@ -26,7 +26,7 @@ AnyPoach captures a screen area, samples the pointer (position and button state 
 
 ### Status and limitations
 
-Early (v0.14.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. On macOS the pointer comes from CoreGraphics, Retina regions are converted between points and pixels, and recording is refused with a message until Screen Recording is allowed; all of that is covered by tests with fakes and a smoke test on the macOS CI runner, and no person has run it on a Mac yet (see `docs/superpowers/macos-spike.md` once it exists). Not done: global shortcut, a Chrome Web Store listing for the companion extension. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
+Early (v0.15.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. On macOS the pointer comes from CoreGraphics, Retina regions are converted between points and pixels, and recording is refused with a message until Screen Recording is allowed; all of that is covered by tests with fakes and a smoke test on the macOS CI runner, and no person has run it on a Mac yet (see `docs/superpowers/macos-spike.md` once it exists). Not done: global shortcut, a Chrome Web Store listing for the companion extension. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
 
 ### Why not just use Poach?
 
@@ -43,7 +43,9 @@ AnyPoach started as a fork of Poach, a charming Mac menu-bar app. It is lovely, 
 
 ## Quick Start
 
-Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
+**Without Python or `uv`:** download the zip for your system (`AnyPoach-<version>-linux|windows|macos.zip`) from the [latest release](https://github.com/MiguelMochizuki/anypoach/releases), unzip it, and run `anypoach` (the window), `anypoach-setup claude` (prints the connect command) and `anypoach-mcp` (the server) from the folder; check the download against `SHA256SUMS.txt`. The builds are unsigned: on macOS, right-click `anypoach` > Open the first time (or `xattr -dr com.apple.quarantine AnyPoach`), on Windows choose More info > Run anyway in SmartScreen. Linux on Wayland still needs GStreamer with its PipeWire plugin.
+
+**From source:** requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 
 ```sh
 uv sync --extra ui    # PySide6 for the window, mss for screen capture
