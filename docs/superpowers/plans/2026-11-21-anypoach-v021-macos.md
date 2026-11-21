@@ -59,7 +59,7 @@ Assumptions to confirm or correct:
 - A1: `mss` reports monitors in points, and `grab` of a box in points returns an image in pixels (width = box width x scale).
 - A2: `CGEventGetLocation(CGEventCreate(NULL))` returns points, global, top-left origin (primary display at 0,0; a display left of it has a negative x).
 - A3: `CGEventSourceButtonState(0, button)` with button 0 left, 1 right, 2 center reflects the physical state with no permission prompt.
-- A4: `CGDisplayBounds` (points) and `CGDisplayPixelsWide` give the scale per display; `CGGetActiveDisplayList` lists them.
+- A4: `CGDisplayBounds` (points) and `CGDisplayModeGetPixelWidth(CGDisplayCopyDisplayMode(id))` (real pixels; `CGDisplayPixelsWide` reports points on HiDPI modes, so it is not used) give the scale per display; `CGGetActiveDisplayList` lists them.
 - A5: with Screen Recording denied, `mss.grab` returns a frame without error, and `CGPreflightScreenCaptureAccess()` returns false.
 
 - [ ] **Step 1: Write `tools/macos_spike.py`**
@@ -95,7 +95,7 @@ git commit -m "docs(macos): measure display scale, pointer space and the permiss
 **Interfaces:**
 - Produces:
   - `class Display(NamedTuple)`: `id: int`, `bounds: Rect` (points, top-left origin), `scale: float`.
-  - `class CoreGraphics`: `__init__(self, lib: Any = None)` (loads `ApplicationServices` when `lib` is None; raises `OSError` when it cannot), `displays(self) -> list[Display]`, `pointer(self) -> tuple[float, float]` (points), `button_down(self, button: Button) -> bool`, `screen_recording_allowed(self) -> bool | None` (None when the symbol is missing), `request_screen_recording(self) -> bool | None`.
+  - `class CoreGraphics`: `__init__(self, lib: Any = None, cf: Any = None)` (loads `ApplicationServices` and `CoreFoundation` when `lib` and `cf` are None; raises `OSError` when it cannot; `cf` holds `CFRelease`), `displays(self) -> list[Display]`, `pointer(self) -> tuple[float, float]` (points), `button_down(self, button: Button) -> bool`, `screen_recording_allowed(self) -> bool | None` (None when the symbol is missing), `request_screen_recording(self) -> bool | None`.
   - `Button` and `Rect` are the existing types from `anypoach.pointer.trace`.
 
 - [ ] **Step 1: Write the failing tests in `tests/test_macos_cg.py`** with a `FakeLib` whose attributes are small function objects accepting `.restype` and `.argtypes` assignment. Tests: `test_displays_scale_is_pixels_over_points` (one display 1512x982 points, 3024x1964 pixels gives `scale == 2.0`; another 1920x1080 for 1920x1080 gives `1.0`), `test_displays_keep_a_negative_origin`, `test_button_down_maps_left_right_other_to_0_1_2`, `test_pointer_returns_points`, `test_screen_recording_allowed_is_none_when_the_symbol_is_missing`, `test_a_missing_library_is_an_oserror` (patch `ctypes.util.find_library` to return None).
@@ -107,7 +107,7 @@ Expected: FAIL with `ModuleNotFoundError: anypoach.macos`.
 
 - [ ] **Step 3: Implement the interfaces above in `src/anypoach/macos.py`**
 
-Declare the C types once (`CGPoint`, `CGSize`, `CGRect` as `ctypes.Structure`, `CGFloat` as `c_double`) and set `restype`/`argtypes` for `CGEventCreate`, `CGEventGetLocation`, `CFRelease`, `CGEventSourceButtonState`, `CGGetActiveDisplayList`, `CGDisplayBounds`, `CGDisplayPixelsWide`, `CGPreflightScreenCaptureAccess`, `CGRequestScreenCaptureAccess`. `pointer()` must `CFRelease` the event it creates. Symbols that may not exist on every macOS (`CGPreflightScreenCaptureAccess`, `CGRequestScreenCaptureAccess`) are looked up with `getattr` and give None when absent.
+Declare the C types once (`CGPoint`, `CGSize`, `CGRect` as `ctypes.Structure`, `CGFloat` as `c_double`) and set `restype`/`argtypes` for `CGEventCreate`, `CGEventGetLocation`, `CFRelease`, `CGEventSourceButtonState`, `CGGetActiveDisplayList`, `CGDisplayBounds`, `CGDisplayCopyDisplayMode`, `CGDisplayModeGetPixelWidth`, `CGDisplayModeRelease`, `CGPreflightScreenCaptureAccess`, `CGRequestScreenCaptureAccess`. `pointer()` must `CFRelease` the event it creates. Symbols that may not exist on every macOS (`CGPreflightScreenCaptureAccess`, `CGRequestScreenCaptureAccess`) are looked up with `getattr` and give None when absent.
 
 - [ ] **Step 4: Add a darwin-only smoke test** `test_real_displays_have_a_positive_scale` marked `skipif(sys.platform != "darwin")`: `CoreGraphics().displays()` is non-empty and every scale is at least 1.0. It runs on the `macos-latest` job.
 
