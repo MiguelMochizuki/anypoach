@@ -30,6 +30,7 @@ from anypoach.brief.paths import cache_dir
 from anypoach.capture.default import default_backend
 from anypoach.capture.windows import default_windows
 from anypoach.macos import macos_screen_access
+from anypoach.onboarding import mark_done, needs_onboarding
 from anypoach.pointer import default_source
 from anypoach.pointer.trace import Rect
 from anypoach.tempdirs import make_temp_dir
@@ -37,6 +38,7 @@ from anypoach.tempdirs import make_temp_dir
 from .controller import Controller, physical_rect
 from .favorites import FavoritesDialog
 from .frozen_selection import FrozenSelection
+from .onboarding import OnboardingDialog
 from .palette import PaletteEditor
 from .review import ReviewPanel
 from .selection import SelectionOverlay
@@ -388,8 +390,13 @@ class MainWindow(QMainWindow):
     def _favorites(self) -> None:
         FavoritesDialog(self.controller, parent=self).exec()
 
+    def show_tour(self) -> None:
+        """Show the welcome tour; closing it, however, counts as having seen it."""
+        OnboardingDialog(self._bridge, parent=self).exec()
+        mark_done()
+
     def _settings(self) -> None:
-        SettingsDialog(self._open_media, parent=self).exec()
+        SettingsDialog(self._open_media, on_tour=self.show_tour, parent=self).exec()
 
     def _import(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Import a video or image", "",
@@ -447,6 +454,8 @@ def main() -> int:
                             screen_access=screen_access, windows=default_windows())
     window = MainWindow(controller, bridge)
     window.show()
+    if needs_onboarding():
+        window.show_tour()
     return app.exec()
 
 

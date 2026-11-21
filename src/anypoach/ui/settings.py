@@ -32,10 +32,12 @@ class SettingsDialog(QDialog):
         temp: Folder holding temporary media (the system one when omitted); a parameter for tests.
         cache: Brief cache directory (the default one when omitted); a parameter for tests.
         check: The update check; a parameter for tests.
+        on_tour: Shows the welcome tour; the button is left out when None.
         parent: The owning window.
     """
     def __init__(self, open_paths: Callable[[], list[str]], *, temp: Path | None = None, cache: Path | None = None,
-                 check: Callable[[], str] = check_for_update, parent=None) -> None:
+                 check: Callable[[], str] = check_for_update, on_tour: Callable[[], None] | None = None,
+                 parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("AnyPoach settings")
         self._open_paths, self._temp, self._cache, self._check = open_paths, temp, cache, check
@@ -52,7 +54,8 @@ class SettingsDialog(QDialog):
         for widget in (self.storage_label, self.clear_button, QLabel("Connect an assistant:"),
                        *(self._button(f"Copy {title} setup", lambda _=False, c=client: self.copy_setup(c))
                          for client, title in (("claude", "Claude Code"), ("codex", "Codex"), ("json", "JSON"))),
-                       self.update_label, self.update_button):
+                       self.update_label, self.update_button,
+                       *([self._button("Welcome tour…", lambda _=False: on_tour())] if on_tour else [])):
             layout.addWidget(widget)
         self.refresh()
 
