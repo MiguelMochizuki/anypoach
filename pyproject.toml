@@ -1,6 +1,6 @@
 [project]
 name = "anypoach"
-version = "0.4.0"
+version = "0.5.0"
 description = "AnyPoach: record a UI interaction on any OS and hand it to a coding assistant over MCP."
 requires-python = ">=3.11"
 license = "Apache-2.0"
@@ -12,6 +12,7 @@ ui = ["PySide6", "mss", "jeepney>=0.9; sys_platform == 'linux'"]
 [project.scripts]
 anypoach-mcp = "anypoach.mcp.server:main"
 anypoach = "anypoach.ui.app:main"
+anypoach-setup = "anypoach.setup:main"
 
 [dependency-groups]
 dev = ["pytest", "ruff"]
