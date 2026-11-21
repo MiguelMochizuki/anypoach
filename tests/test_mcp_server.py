@@ -1,78 +1,35 @@
-"""Drive the Python MCP server (and, when built, the TS one) with a real stdio client and compare behavior."""
+"""Drive the MCP server with a real stdio client."""
 import asyncio
 import json
 import os
-import re
-import shutil
 import subprocess
 import sys
 import time
-import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-ROOT = Path(__file__).resolve().parents[1]
-TS_SERVER = ROOT / "packages/mcp-server/dist/index.js"
 PNG = bytes([137, 80, 78, 71, 13, 10, 26, 10])
 
 
 def sp(server, home):
-    cache = home / "Library/Caches/Poach"  # the TS server derives this from HOME
+    cache = home / "Library/Caches/AnyPoach"
     env = {**os.environ, "HOME": str(home), "ANYPOACH_CACHE_DIR": str(cache)}
-    if server == "ts":
-        return StdioServerParameters(command="node", args=[str(TS_SERVER)], env=env)
     return StdioServerParameters(command=sys.executable, args=["-m", "anypoach.mcp.server"], env=env)
 
 
-@pytest.fixture(params=["python", "ts"])
-def server(request):
-    if request.param == "ts" and not (TS_SERVER.exists() and shutil.which("node")):
-        pytest.skip("TS server is not built")
-    return request.param
-
-
-def to_ts(name):
-    return re.sub(r"\banypoach_", "poach_", name)
-
-
-def from_ts(text):
-    """The original TS server still says `poach_*` and `Poach`; the tests are written in AnyPoach terms."""
-    return re.sub(r"\bPoach\b", "AnyPoach", re.sub(r"\bpoach_", "anypoach_", text))
-
-
-class TsClient:
-    """Translates names going to the original server and texts coming back, so one scenario checks both."""
-
-    def __init__(self, session):
-        self._session = session
-
-    async def call_tool(self, name, arguments=None, **kwargs):
-        result = await self._session.call_tool(to_ts(name), arguments, **kwargs)
-        for block in result.content:
-            if block.type == "text":
-                block.text = from_ts(block.text)
-        return result
-
-    async def list_tools(self):
-        listing = await self._session.list_tools()
-        for tool in listing.tools:
-            tool.name, tool.description = from_ts(tool.name), from_ts(tool.description or "")
-            tool.title = from_ts(tool.title) if tool.title else tool.title
-        return listing
-
-    def __getattr__(self, name):
-        return getattr(self._session, name)
+@pytest.fixture
+def server():
+    return "python"
 
 
 @asynccontextmanager
 async def connect(server, home):
     async with stdio_client(sp(server, home)) as (read, write), ClientSession(read, write) as session:
         await session.initialize()
-        yield TsClient(session) if server == "ts" else session
+        yield session
 
 
 def structured(result):
@@ -110,7 +67,7 @@ def event(t, kind, x, y, inside=True):
 
 @pytest.fixture
 def home(tmp_path):
-    (tmp_path / "Library/Caches/Poach").mkdir(parents=True)
+    (tmp_path / "Library/Caches/AnyPoach").mkdir(parents=True)
     return tmp_path
 
 
@@ -136,7 +93,7 @@ def base_brief(home):
 
 
 def write_active(home, brief):
-    (home / "Library/Caches/Poach/active-brief.json").write_text(json.dumps(brief))
+    (home / "Library/Caches/AnyPoach/active-brief.json").write_text(json.dumps(brief))
 
 
 def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home):
@@ -220,13 +177,13 @@ def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home)
             write_active(home, {**brief, "sharedAt": brief["sharedAt"] - 86401})
             expired = await client.call_tool("anypoach_read_brief", {})
             assert is_error(expired) and "expired" in texts(expired)[0]
-            assert (home / "Library/Caches/Poach/active-brief.json").exists()
+            assert (home / "Library/Caches/AnyPoach/active-brief.json").exists()
 
     asyncio.run(scenario())
 
 
 def test_archived_briefs_remain_readable_by_id(server, home):
-    cache = home / "Library/Caches/Poach"
+    cache = home / "Library/Caches/AnyPoach"
     archive = cache / "briefs"
     archive.mkdir()
     make_video(home / "older.mp4", "red")
@@ -274,7 +231,7 @@ def test_archived_briefs_remain_readable_by_id(server, home):
 
 
 def test_connection_status_follows_initialized_clients(server, home):
-    directory = home / "Library/Caches/Poach/connections"
+    directory = home / "Library/Caches/AnyPoach/connections"
 
     async def active(count):
         for _ in range(150):
@@ -303,24 +260,11 @@ def test_stdout_carries_only_protocol_messages(server, home):
     requests = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
         "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}},
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
-        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": to_ts("anypoach_read_brief") if server == "ts" else "anypoach_read_brief", "arguments": {}}}]
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "anypoach_read_brief", "arguments": {}}}]
     out, _ = process.communicate("".join(json.dumps(r) + "\n" for r in requests), timeout=20)
     lines = [l for l in out.splitlines() if l.strip()]
     assert lines and all(json.loads(l)["jsonrpc"] == "2.0" for l in lines)
 
-
-def test_tools_match_the_ts_server_names_descriptions_and_inputs(home):
-    if not (TS_SERVER.exists() and shutil.which("node")):
-        pytest.skip("TS server is not built")
-
-    async def listing(which):
-        async with connect(which, home) as client:
-            tools = (await client.list_tools()).tools
-            return {t.name: (t.title, t.description, set(t.input_schema["properties"] if hasattr(t, "input_schema") else t.inputSchema["properties"]),
-                             set((t.input_schema if hasattr(t, "input_schema") else t.inputSchema).get("required", []))) for t in tools}
-
-    assert asyncio.run(listing("python")) == asyncio.run(listing("ts"))
-    assert uuid.UUID("827fb563-c2a2-4bf6-91a1-846528d715e9")
 
 
 def test_inspect_tools_return_results_and_report_errors(clips, home):

@@ -60,7 +60,7 @@ def test_moves_are_only_recorded_inside_the_capture_without_buttons():
 
 def test_button_edges_outside_the_capture_are_flagged_not_dropped():
     trace = run(Rect(0, 0, 100, 100), at(150, 50, "left"), at(160, 50, "left"), at(160, 50))
-    # Like the Swift recorder, the first sample also reports a drag because there is no previous point.
+    # The first sample also reports a drag because there is no previous point.
     assert kinds(trace) == [("down", "left", 0, 1.0, 0.5, False), ("drag", "left", 0, 1.0, 0.5, False),
                             ("drag", "left", 10, 1.0, 0.5, False), ("up", "left", 20, 1.0, 0.5, False)]
 

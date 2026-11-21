@@ -20,7 +20,7 @@ def test_record_share_and_read_through_mcp(clips, tmp_path):
     trace = recorder.stop().to_json()
 
     result = dataclasses.replace(inspect_recording(clips["motion"], output_dir=tmp_path / "frames"), pointer_trace=trace)
-    cache = tmp_path / "home/Library/Caches/Poach"
+    cache = tmp_path / "home/Library/Caches/AnyPoach"
     brief_id = share(result, "Ease the box out.", [{"timeMs": 500, "text": "The box settles here."}], cache=cache)
 
     async def scenario():
