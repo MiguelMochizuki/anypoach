@@ -38,6 +38,7 @@ from anypoach.tempdirs import make_temp_dir
 
 from .controller import Controller, physical_rect
 from .favorites import FavoritesDialog
+from .fontmatch import FontMatchDialog
 from .frozen_selection import FrozenSelection
 from .onboarding import OnboardingDialog
 from .palette import PaletteEditor
@@ -112,6 +113,7 @@ class MainWindow(QMainWindow):
         self.screenshot = self._button("Screenshot", self._screenshot)
         self.import_button = self._button("Import…", self._import)
         self.save_favorite_button = self._button("Save as favorite…", self._save_favorite)
+        self.font_button = self._button("Match font…", self._match_font)
         self.favorites_button = self._button("Favorites…", self._favorites)
         self.settings_button = self._button("Settings…", self._settings)
         self.stop_button, self.copy_button = self._button("Stop", self._stop), self._button("Copy prompt for assistant", self._copy)
@@ -122,7 +124,7 @@ class MainWindow(QMainWindow):
         self.frames.setIconSize(QSize(160, 100))
         self.frames.setAccessibleName("Keyframes")
         buttons = QHBoxLayout()
-        for button in (self.area, self.full_screen, self.window_button, self.screenshot, self.import_button, self.save_favorite_button, self.favorites_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
+        for button in (self.area, self.full_screen, self.window_button, self.screenshot, self.import_button, self.font_button, self.save_favorite_button, self.favorites_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
             buttons.addWidget(button)
         body = QVBoxLayout()
         body.addLayout(buttons)
@@ -226,6 +228,8 @@ class MainWindow(QMainWindow):
         self.stop_button.setEnabled(state == "recording")
         self.copy_button.setEnabled(state == "ready")
         self.save_favorite_button.setEnabled(state == "ready")
+        result = self.controller.result
+        self.font_button.setEnabled(state == "ready" and result is not None and result.media_type == "image")
         if self.controller.message:
             self.status.setText(self.controller.message)
 
@@ -421,6 +425,11 @@ class MainWindow(QMainWindow):
         name, accepted = QInputDialog.getText(self, "Save as favorite", "Name:")
         if accepted:
             self.status.setText("Saved as a favorite." if self.controller.save_favorite(name) else self.controller.message)
+
+    def _match_font(self) -> None:
+        result = self.controller.result
+        if result is not None and result.keyframes:
+            FontMatchDialog(self.controller, result.keyframes[0].image_path, parent=self).exec()
 
     def _favorites(self) -> None:
         FavoritesDialog(self.controller, parent=self).exec()
