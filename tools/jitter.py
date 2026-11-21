@@ -14,7 +14,9 @@ stamps: list[float] = []
 
 
 class Source:
+    """A pointer source that only records when it was read, to time the polling loop and nothing else."""
     def sample(self):
+        """Record the read time and return a fixed, idle pointer sample."""
         stamps.append(time.perf_counter())
         return PointerSample(1, 1, frozenset())
 
