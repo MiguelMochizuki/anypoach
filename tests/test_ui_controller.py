@@ -4,6 +4,7 @@ import time
 import numpy as np
 import pytest
 
+from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.store import read_brief
 from anypoach.capture.backend import Frame, Screen
 from anypoach.pointer.trace import Rect
@@ -225,3 +226,68 @@ def test_device_scale_counts_video_pixels_when_the_recorder_downsizes(tmp_path):
     result = controller.stop()
     assert result.capture.width_px == 1920
     assert result.capture.device_scale == pytest.approx(1.6)  # video pixels per CSS pixel, not the screen's 2.0
+
+
+def chrome_session(started, duration=1500):
+    from tests.test_bridge_evidence import session
+    return session(startedAtEpochMs=started, durationMs=duration)
+
+
+def make_with_store(tmp_path, clock=time.time):
+    store = EvidenceStore(clock)
+    return Controller(LiveBackend(), None, tmp_path / "work", cache=tmp_path / "cache", store=store), store
+
+
+def test_a_matching_chrome_session_is_attached_to_the_brief(tmp_path):
+    controller, store = make_with_store(tmp_path)
+    before = int(time.time() * 1000)
+    record(controller)
+    store.put(chrome_session(before - 200), final=True)
+    controller.copy_handoff()
+    attached = read_brief(cache=tmp_path / "cache")["evidence"]["browserEvidence"]
+    assert -400 < attached["videoOffsetMs"] < -150 and attached["origin"] == "https://example.com"
+
+
+def test_chrome_finishing_after_stop_still_attaches(tmp_path):
+    controller, store = make_with_store(tmp_path)
+    before = int(time.time() * 1000)
+    record(controller)
+    assert controller.browser_status == "waiting"
+    store.put(chrome_session(before), final=True)
+    assert controller.browser_status == "attached"
+    controller.copy_handoff()
+    assert "browserEvidence" in read_brief(cache=tmp_path / "cache")["evidence"]
+
+
+def test_a_session_from_before_the_recording_is_not_attached(tmp_path):
+    controller, store = make_with_store(tmp_path)
+    store.put(chrome_session(int(time.time() * 1000) - 60_000), final=True)
+    record(controller)
+    controller.copy_handoff()
+    assert "browserEvidence" not in read_brief(cache=tmp_path / "cache")["evidence"]
+
+
+def test_a_stale_session_is_not_attached(tmp_path):
+    now = [1000.0]
+    controller, store = make_with_store(tmp_path, clock=lambda: now[0])
+    before = int(time.time() * 1000)
+    record(controller)
+    store.put(chrome_session(before), final=True)
+    now[0] += 181
+    controller.copy_handoff()
+    assert "browserEvidence" not in read_brief(cache=tmp_path / "cache")["evidence"]
+
+
+def test_browser_status_follows_the_store(tmp_path):
+    assert make(tmp_path).browser_status == "off"
+    controller, store = make_with_store(tmp_path)
+    assert controller.browser_status == "waiting"
+    before = int(time.time() * 1000)
+    controller.choose_region(Rect(10, 10, 160, 90))
+    controller.start()
+    store.put(chrome_session(before), final=False)
+    assert controller.browser_status == "receiving"
+    time.sleep(0.3)
+    controller.stop()
+    store.put(chrome_session(before), final=True)
+    assert controller.browser_status == "attached"
