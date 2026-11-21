@@ -2,7 +2,7 @@
 
 ## Project shape
 
-- `src/anypoach/analysis` decodes video and images in one process (PyAV, numpy): keyframes, palette, motion timing.
+- `src/anypoach/analysis` decodes video and images in one process (PyAV, numpy): keyframes, palette, motion timing, motion segments, and the editor's frame proxy (in memory only).
 - `src/anypoach/brief` writes and reads shared briefs and cleans up temporary media.
 - `src/anypoach/mcp` is the stdio MCP server (`anypoach-mcp`).
 - `src/anypoach/capture` and `src/anypoach/pointer` record a screen area and sample the pointer.

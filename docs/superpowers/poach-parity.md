@@ -18,7 +18,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 | --- | --- | --- |
 | Captura | área, janela por prévia, tela cheia, screenshot, importar vídeo ou imagem | só área |
 | Controle | atalho que liga e desliga, ícone na barra de menu, sombra na área, janelas próprias fora do vídeo | botões na janela; janelas próprias fora do vídeo |
-| Editor | comentários presos à timeline, paleta ajustável, instruções gerais | nada |
+| Editor | comentários presos à timeline, paleta ajustável, instruções gerais | comentários, timeline, play e instruções gerais (v0.3.0); falta a paleta ajustável |
 | Entrega | "Continue com Codex/Claude Code" abre o app e copia o prompt | só copia o prompt |
 | Conector MCP | instalador do Codex e extensão `.mcpb` | comando manual no README |
 | Extras | favoritos `.poach`, "Snatch font", limpeza de armazenamento, atualização, onboarding | nenhum |
@@ -41,7 +41,9 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.1.0 | Tamanho e escala da captura no brief e nas legendas; captura no Wayland | publicada (pré-release) |
 | v0.2.0 | Extensão do Chrome (PR #3) e inspetor de página: cartão ao passar o mouse e medidas dos componentes filhos | pronta, falta a verificação manual no Chrome |
 | v0.2.1 | macOS: ponteiro por `CGEventSource` e aviso de permissão de gravação de tela | plano próprio, não começou |
-| v0.3.0 | Trechos de movimento (várias interações por gravação) e fase 2b: editor com comentários, atalho global e bandeja, onboarding, modo janela | não começou |
+| v0.3.0 | Trechos de movimento (várias interações por gravação) e editor com comentários, instruções gerais e timeline | em andamento (PR #16; spec e plano `2026-11-21-anypoach-v030-segments-and-editor`); falta rodar as checagens manuais |
+| v0.4.0 | Resto da 2b: tela cheia, modo janela, atalho global e bandeja, onboarding, paleta ajustável | não começou |
+| v0.5.0 | Instalador sem `uv`, `.mcpb` e comando do Codex, verificação de atualização | não começou |
 | Depois, sem data | Importar vídeo ou imagem, screenshot, limpeza de armazenamento; painel lateral do Chrome e lista na janela (opções B e C do inspetor); PyInstaller, `.mcpb` e comando do Codex; favoritos e font matcher (o matcher depende de OCR e CoreText do Mac) | ideias |
 
 O Poach resolve tudo isso apenas para quem tem um Mac, o que continua sendo um recorte de público impressionante.
