@@ -23,3 +23,17 @@ def test_no_lister_without_an_x_display_or_libx11(monkeypatch):
 def test_x11_lists_without_failing_and_every_window_is_big_enough_and_titled():
     for window in X11Windows().windows():
         assert window.title and window.rect.width >= MIN_SIZE and window.rect.height >= MIN_SIZE
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="needs CoreGraphics")
+def test_macos_lists_real_windows_without_failing():
+    from anypoach.capture.windows import MacWindows
+    for window in MacWindows().windows():  # a headless runner may have none; any it has must be well formed
+        assert window.title and window.rect.width >= MIN_SIZE and window.rect.height >= MIN_SIZE
+
+
+def test_the_default_lister_on_a_mac_is_the_mac_one_or_none_without_the_libraries(monkeypatch):
+    from anypoach.capture import windows
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(windows, "MacWindows", lambda: (_ for _ in ()).throw(OSError("no CoreGraphics")))
+    assert windows.default_windows() is None
