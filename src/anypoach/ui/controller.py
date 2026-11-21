@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -76,6 +77,8 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
             "same briefId and timeMs; pass crop and maxSize to read a detail at native scale.")
 
 
+MAX_PALETTE = 12
+_HEX = re.compile(r"#[0-9a-fA-F]{6}")
 MAX_COMMENT_CHARS = 500
 MAX_COMMENTS = 50
 
@@ -117,6 +120,7 @@ class Controller:
         self.context = ""
         self.annotations: list[dict[str, Any]] = []
         self.result: InspectionResult | None = None
+        self._palette: list[str] | None = None  # the user's edit of result.palette
         self._region: Rect | None = None
         self._device_scale: float | None = None
         self._recorder: Recorder | None = None
@@ -198,6 +202,39 @@ class Controller:
         """The comments pinned to moments of the recording, earliest first (a copy)."""
         return [dict(note) for note in self.annotations]
 
+    @property
+    def palette(self) -> list[str]:
+        """The colors the brief will carry: the analyzed palette, as edited, or empty before a result exists."""
+        if self._palette is not None:
+            return list(self._palette)
+        return list(self.result.palette) if self.result else []
+
+    def set_palette(self, colors: list[str]) -> bool:
+        """Replace the palette that goes into the brief.
+
+        Args:
+            colors: One to 12 `#rrggbb` colors; case is normalized and repeats are dropped.
+
+        Returns:
+            False, with `message` saying why, when there is no result yet or a color is malformed or none is left.
+        """
+        if self.result is None:
+            self.message = "Record or import something first."
+            return False
+        if not all(isinstance(c, str) and _HEX.fullmatch(c) for c in colors):
+            self.message = "Colors must look like #1a2b3c."
+            return False
+        cleaned = list(dict.fromkeys(c.lower() for c in colors))[:MAX_PALETTE]
+        if not cleaned:
+            self.message = "The palette needs at least one color."
+            return False
+        self._palette, self.message = cleaned, ""
+        return True
+
+    def reset_palette(self) -> None:
+        """Go back to the analyzed palette."""
+        self._palette = None
+
     def add_comment(self, time_ms: int, text: str) -> bool:
         """Pin a comment to a moment of the recording.
 
@@ -258,6 +295,7 @@ class Controller:
                 self.close()  # a dead share must not be reused by the next choice
             return
         self._recorder, self.state, self.message, self.result = recorder, "recording", "", None
+        self._palette = None
         self.annotations = []  # the moments belonged to the previous video; the general instructions stay
         self._epoch_range, self._started_ms = None, int(time.time() * 1000)
 
@@ -352,7 +390,7 @@ class Controller:
     def _ready(self, result: InspectionResult, scale: float | None) -> InspectionResult:
         capture = dataclasses.replace(result.capture, device_scale=scale) if result.capture else None
         self.result = dataclasses.replace(result, capture=capture)
-        self.annotations, self._epoch_range = [], None
+        self.annotations, self._epoch_range, self._palette = [], None, None
         self.state, self.message = "ready", ""
         return self.result
 
@@ -361,7 +399,8 @@ class Controller:
         if self.result is None:
             self.message = "Record something first."
             return ""
-        result, matched = self.result, (self._store.latest_for(self._epoch_range) if self._store and self._epoch_range else None)
+        result = dataclasses.replace(self.result, palette=self.palette)
+        matched = (self._store.latest_for(self._epoch_range) if self._store and self._epoch_range else None)
         if matched is not None:
             result = dataclasses.replace(result, browser_evidence=matched)
         try:

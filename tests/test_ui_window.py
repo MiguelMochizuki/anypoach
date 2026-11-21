@@ -28,6 +28,7 @@ class FakeController:
 
     def __init__(self):
         self.state, self.message, self.calls = "idle", "", []
+        self.palette, self.result = [], None
 
     def close(self):
         self.calls.append("close")

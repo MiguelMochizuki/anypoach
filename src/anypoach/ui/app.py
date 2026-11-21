@@ -34,6 +34,7 @@ from anypoach.tempdirs import make_temp_dir
 
 from .controller import Controller, physical_rect
 from .frozen_selection import FrozenSelection
+from .palette import PaletteEditor
 from .review import ReviewPanel
 from .selection import SelectionOverlay
 from .settings import SettingsDialog
@@ -114,6 +115,8 @@ class MainWindow(QMainWindow):
         body.addLayout(buttons)
         body.addWidget(self.status)
         body.addWidget(self.frames)
+        self.palette_editor = PaletteEditor(controller)
+        body.addWidget(self.palette_editor)
         self._body, self.review = body, None
         if bridge is not None:
             body.addWidget(self._chrome_group(bridge))
@@ -363,6 +366,7 @@ class MainWindow(QMainWindow):
                 self.frames.addItem(QListWidgetItem(QIcon(key.image_path), f"{key.kind} · {key.time_ms} ms"))
             self.status.setText(text)
             self._show_review(result)
+        self.palette_editor.refresh()
         self._refresh()
 
     def _show_review(self, result) -> None:

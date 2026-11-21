@@ -1,6 +1,6 @@
 [project]
 name = "anypoach"
-version = "0.7.0"
+version = "0.8.0"
 description = "AnyPoach: record a UI interaction on any OS and hand it to a coding assistant over MCP."
 requires-python = ">=3.11"
 license = "Apache-2.0"
