@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt, QTimer, QUrl
-from PySide6.QtGui import QDesktopServices, QIcon, QKeyEvent
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeyEvent, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QGroupBox,
@@ -26,6 +26,7 @@ from anypoach.bridge.control import BridgeController, extension_dir
 from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.paths import cache_dir
 from anypoach.capture.default import default_backend
+from anypoach.macos import macos_screen_access
 from anypoach.pointer import default_source
 from anypoach.tempdirs import make_temp_dir
 
@@ -36,6 +37,23 @@ from .selection import SelectionOverlay
 
 MAX_RECORDING_MS = 30_000  # the analysis only reads the first 30 s
 LEAVE_SCREEN_MS = 500  # time for the compositor to take the window off the screen before capture starts
+
+
+def recording_icon() -> QIcon:
+    """The tray icon while recording: the theme's `media-record`, or a red dot where the theme has none (macOS,
+    Windows), because a blank menu-bar item leaves no visible way to stop the recording."""
+    icon = QIcon.fromTheme("media-record")
+    if not icon.isNull():
+        return icon
+    pixmap = QPixmap(44, 44)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setBrush(QColor("#e5322d"))
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.drawEllipse(6, 6, 32, 32)
+    painter.end()
+    return QIcon(pixmap)
 
 
 def hide_from_capture(window: QWidget) -> bool:
@@ -219,6 +237,9 @@ class MainWindow(QMainWindow):
             self.controller.start()  # only sets the reason (no area chosen, already recording); nothing to hide
             self._refresh()
             return
+        if not self.controller.check_screen_access():  # before the window hides: nothing to bring back
+            self._refresh()
+            return
         self._close_review()  # stops decoding the previous recording before a new one starts
         self.record_button.setEnabled(False)
         self._leave_the_screen()  # first, so the window is not in the first frames of the video
@@ -246,7 +267,7 @@ class MainWindow(QMainWindow):
         if not QSystemTrayIcon.isSystemTrayAvailable():  # e.g. GNOME: minimize, and restore the window to stop
             self.showMinimized()
             return
-        tray = QSystemTrayIcon(QIcon.fromTheme("media-record"), self)
+        tray = QSystemTrayIcon(recording_icon(), self)
         menu = QMenu()
         menu.addAction("Stop recording", self._stop)
         tray.setContextMenu(menu)
@@ -302,7 +323,9 @@ def main() -> int:
     store = EvidenceStore()
     bridge = BridgeController(store, cache=cache_dir())
     bridge.start()
-    controller = Controller(default_backend(), default_source(), Path(work), cache=cache_dir(), store=store)
+    screen_access = macos_screen_access() if sys.platform == "darwin" else None
+    controller = Controller(default_backend(), default_source(), Path(work), cache=cache_dir(), store=store,
+                            screen_access=screen_access)
     window = MainWindow(controller, bridge)
     window.show()
     return app.exec()
