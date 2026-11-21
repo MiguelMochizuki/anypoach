@@ -83,6 +83,7 @@ def test_extra_page_numbers_are_kept_when_well_typed_and_ignored_otherwise():
     session(events=[session()["events"][0]] * 97), session(states=[]), session(states=[state()] * 49),
     session(animations=[animation()] * 17), session(animations=[animation(keyframes=9)]),
     session(states=[{**state(), "rect": [0, 0, 1]}]),
+    session(states=[{**state(), "pageRect": [0, 0, 1]}]),
     session(states=[{**state(), "indicators": [{"target": TARGET, "rect": [0, 0, 1, 1], "value": "1"}] * 5}]),
     session(events=[{**session()["events"][0], "point": [1, 2, 3]}]),
     session(events=[{**session()["events"][0], "atMs": 1501}]), session(states=[state(at=1501)]),

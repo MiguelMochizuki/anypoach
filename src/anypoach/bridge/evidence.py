@@ -44,6 +44,7 @@ class _Indicator(_Model):
 class _State(_Model):
     atMs: int = Field(ge=0)
     rect: list[float] = Field(min_length=4, max_length=4)
+    pageRect: list[float] | None = Field(default=None, min_length=4, max_length=4)
     styles: dict[str, str]
     text: str = Field(max_length=480)
     indicators: list[_Indicator] = Field(default_factory=list, max_length=4)

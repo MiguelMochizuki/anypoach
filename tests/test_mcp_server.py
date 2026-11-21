@@ -160,7 +160,7 @@ def test_moment_reports_the_pages_own_sizes_and_animation_timing(server, home):
     brief = base_brief(home)
     brief["evidence"]["browserEvidence"] = {"videoOffsetMs": 0, "devicePixelRatio": 2, "viewport": {"width": 1280, "height": 720},
         "events": [],
-        "states": [{"atMs": 1000, "text": "Go", "rect": [10, 20, 240.5, 48], "styles": {
+        "states": [{"atMs": 1000, "text": "Go", "rect": [10, 20, 240.5, 48], "pageRect": [10, 520, 240.5, 48], "styles": {
             "fontSize": "16px", "width": "240.5px", "height": "48px", "borderRadius": "12px", "opacity": "1",
             "transform": "none", "color": "rgb(0, 0, 0)", "backgroundColor": "rgb(35, 120, 255)", "boxShadow": "none",
             "padding": "dropped"}}],
@@ -179,7 +179,7 @@ def test_moment_reports_the_pages_own_sizes_and_animation_timing(server, home):
             header, items = chrome_line(text)
             assert "devicePixelRatio 2" in header and "1280x720" in header
             state = next(i for i in items if i.get("text") == "Go")
-            assert state["rect"] == [10, 20, 240.5, 48]
+            assert state["rect"] == [10, 20, 240.5, 48] and state["pageRect"] == [10, 520, 240.5, 48]
             assert state["styles"]["width"] == "240.5px" and state["styles"]["borderRadius"] == "12px"
             assert state["styles"]["backgroundColor"] == "rgb(35, 120, 255)" and "padding" not in state["styles"]
             animation = next(i for i in items if "easing" in i)
