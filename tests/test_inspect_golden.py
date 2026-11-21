@@ -124,3 +124,25 @@ def test_drag_release_frames_stop_before_the_next_drag(clips):
     assert [f.time_ms for f in cut.frames] == [920, 1150, 1499]
     assert read_drag_release_frames(clips["motion"], 1999.5, None).frames == []
     assert all(f.png[:8] == PNG for f in full.frames)
+
+
+def png_size(path):
+    data = Path(path).read_bytes()
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
+def test_video_result_carries_the_native_size(clips, tmp_path):
+    result = inspect_video(clips["wide"], output_dir=tmp_path)
+    assert result.to_json()["capture"] == {"widthPx": 1600, "heightPx": 900, "deviceScale": None, "imageMaxSize": 1280}
+    assert png_size(result.keyframes[0].image_path) == (1280, 720)
+
+
+def test_image_result_carries_the_native_size(clips, tmp_path):
+    result = inspect_image(clips["image"], output_dir=tmp_path)
+    assert result.to_json()["capture"] == {"widthPx": 160, "heightPx": 90, "deviceScale": None, "imageMaxSize": 1280}
+
+
+def test_small_video_is_not_reduced(clips, tmp_path):
+    result = inspect_video(clips["motion"], output_dir=tmp_path)
+    assert (result.capture.width_px, result.capture.height_px) == (160, 90)
+    assert png_size(result.keyframes[0].image_path) == (160, 90)

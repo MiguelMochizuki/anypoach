@@ -8,7 +8,7 @@ from typing import Any, Literal
 from anypoach.analysis.inspect import inspect_recording
 from anypoach.analysis.types import InspectionResult
 from anypoach.brief.store import share
-from anypoach.capture.backend import CaptureBackend
+from anypoach.capture.backend import CaptureBackend, Frame
 from anypoach.capture.recorder import Recorder
 from anypoach.pointer.recorder import PointerTraceRecorder
 from anypoach.pointer.trace import PointerSource, Rect
@@ -58,8 +58,11 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
     return (f"{_LOOKUP.format(id=brief_id)} Use its images, pointer trace, and timestamped notes. {_pointer_guidance(trace)} "
             "Match pointer coordinates and timestamps to the frames to identify targets. For a drag, inspect the frames "
             "after release and include visible changes through the end of the response. Use the video and notes to "
-            "describe visible results, and ask if behavior is ambiguous. Recreate the recorded interaction in this "
-            "project. For video details, call anypoach_read_moment with the same briefId and timeMs.")
+            "describe visible results, and ask if behavior is ambiguous. Images may be reduced from the capture: read the "
+            "caption before measuring, and use evidence.capture for the native size. Divide native pixels by "
+            "evidence.capture.deviceScale to get CSS pixels; when deviceScale is null the scale is unknown, so ask. "
+            "Recreate the recorded interaction in this project. For video details, call anypoach_read_moment with the "
+            "same briefId and timeMs; pass crop and maxSize to read a detail at native scale.")
 
 
 class Controller:
@@ -89,10 +92,64 @@ class Controller:
         self.annotations: list[dict[str, Any]] = []
         self.result: InspectionResult | None = None
         self._region: Rect | None = None
+        self._device_scale: float | None = None
         self._recorder: Recorder | None = None
 
-    def choose_region(self, region: Rect) -> None:
-        """Remember the area to record. Anything smaller than 2 px in either direction is refused with a message."""
+    @property
+    def backend(self) -> CaptureBackend:
+        """The capture backend in use."""
+        return self._backend
+
+    @property
+    def ready_to_record(self) -> bool:
+        """Whether `start()` would begin a recording: an area is chosen and nothing is recording."""
+        return self._region is not None and self.state != "recording"
+
+    @property
+    def supports_preview(self) -> bool:
+        """Whether the backend needs a preview frame to choose the area (the Wayland portal does)."""
+        return hasattr(self._backend, "preview")
+
+    def preview(self) -> Frame | None:
+        """Open the backend's session and return its first frame, so the user can pick an area on it.
+
+        Returns:
+            The frame, or None with `message` set when the backend has no preview, the user cancelled the
+            portal dialog, or sharing could not start.
+        """
+        if not self.supports_preview:
+            return None
+        try:
+            frame = self._backend.preview()  # type: ignore[attr-defined]
+        except PermissionError as error:
+            self.message = str(error) or "Screen sharing was not allowed."
+            return None
+        except OSError as error:
+            self.message = f"Could not start screen sharing: {error}"
+            return None
+        self.message = ""
+        return frame
+
+    def close(self) -> None:
+        """Release the backend's session (the portal's sharing indicator goes away) and forget the area."""
+        self._region, self._device_scale = None, None
+        closer = getattr(self._backend, "close", None)
+        if closer is not None:
+            closer()
+
+    @property
+    def device_scale(self) -> float | None:
+        """Scale factor of the screen the area was chosen on, or None when it is not known."""
+        return self._device_scale
+
+    def choose_region(self, region: Rect, device_scale: float | None = None) -> None:
+        """Remember the area to record. Anything smaller than 2 px in either direction is refused with a message.
+
+        Args:
+            region: The area in physical pixels.
+            device_scale: Scale factor of its screen, or None when unknown (it is then written as null, never 1.0).
+        """
+        self._device_scale = device_scale
         self._region = Rect(*region) if region.width >= 2 and region.height >= 2 else None
         self.message = "" if self._region else "Choose an area to record."
 
@@ -107,9 +164,13 @@ class Controller:
         pointer = PointerTraceRecorder(self._region, self._source)
         recorder = Recorder(self._backend, pointer, self._work)
         try:
+            if self.supports_preview:  # the recorder grabs on a thread: probe now so a dead stream fails fast
+                self._backend.grab(self._region)
             recorder.start(self._region)
         except OSError as error:
             self.message = f"Could not start recording: {error}"
+            if self.supports_preview:
+                self.close()  # a dead share must not be reused by the next choice
             return
         self._recorder, self.state, self.message, self.result = recorder, "recording", "", None
 
@@ -125,8 +186,13 @@ class Controller:
             self.message = "There is no recording to stop."
             return None
         self._recorder, self.state = None, "idle"
+        scale, region = self._device_scale, self._region  # close() below forgets both
         try:
-            recording = recorder.stop()
+            try:
+                recording = recorder.stop()
+            finally:
+                if self.supports_preview:
+                    self.close()  # the session is over, even if it ended on its own: the next recording asks again
             result = inspect_recording(recording.path, output_dir=self._work / "frames")
         except PermissionError:
             self.message = "AnyPoach cannot capture the screen. Check the screen recording permission and try again."
@@ -134,7 +200,13 @@ class Controller:
         except (ValueError, OSError) as error:
             self.message = f"Could not finish the recording: {error}"
             return None
-        self.result = dataclasses.replace(result, pointer_trace=recording.trace.to_json())
+        capture = result.capture
+        if capture and scale is not None and region:
+            # The recorder shrinks anything over 1920 px, so the screen scale becomes video pixels per CSS pixel.
+            capture = dataclasses.replace(capture, device_scale=scale * capture.width_px / region.width)
+        elif capture:
+            capture = dataclasses.replace(capture, device_scale=scale)
+        self.result = dataclasses.replace(result, pointer_trace=recording.trace.to_json(), capture=capture)
         self.state, self.message = "ready", ""
         return self.result
 

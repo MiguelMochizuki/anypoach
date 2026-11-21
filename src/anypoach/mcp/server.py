@@ -6,6 +6,7 @@ import atexit
 import base64
 import json
 import os
+import struct
 import sys
 import uuid
 from pathlib import Path
@@ -16,6 +17,7 @@ from mcp_types import CallToolResult, ImageContent, NotificationParams, TextCont
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ..analysis.inspect import inspect_image, inspect_video, read_drag_release_frames, read_video_moment
+from ..analysis.source import IMAGE_MAX_SIZE
 from ..brief.paths import cache_dir
 from ..brief.store import read_brief
 from .actions import Num, event_json, parse_trace, summarize_pointer_actions
@@ -114,7 +116,54 @@ def _brief_json(brief: Brief, raw: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _keyframe(frame: dict[str, Any]) -> list[Any]:
+class Crop(BaseModel):
+    """A rectangle of the native frame, in pixels from its top left."""
+    model_config = ConfigDict(strict=True, extra="forbid")
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    width: int = Field(ge=1)
+    height: int = Field(ge=1)
+
+
+def ensure_png_fits(png: bytes) -> None:
+    """Raise `ValueError` when `png` is over the 5 MB image limit, suggesting how to shrink it."""
+    if len(png) > FIVE_MB:
+        raise ValueError("Reference image exceeds the 5 MB limit; use a smaller crop or maxSize")
+
+
+def size_note(png: bytes, capture: Any, crop: Crop | None = None) -> str:
+    """Say how big a PNG is next to the capture it came from, e.g. `1280x664, reduced from 1854x962 (x0.69)`.
+
+    Args:
+        png: The image about to be returned.
+        capture: The brief's `evidence.capture`, or anything else when the brief predates it.
+        crop: The rectangle the image was cut from, when it is a crop.
+
+    Returns:
+        The note, or an empty string when the brief carries no usable native size.
+    """
+    try:
+        native_w, native_h = capture["widthPx"], capture["heightPx"]
+        width, height = struct.unpack(">II", png[16:24])
+    except (KeyError, TypeError, struct.error):
+        return ""
+    if not all(isinstance(n, int) and n > 0 for n in (native_w, native_h)):
+        return ""
+    if crop is not None:
+        origin = f"crop {crop.x},{crop.y} {crop.width}x{crop.height} of {native_w}x{native_h}"
+        if (width, height) == (crop.width, crop.height):
+            return f"{origin}, native size"
+        return f"{origin}, reduced to {width}x{height} (x{width / crop.width:.2f})"
+    if (width, height) == (native_w, native_h):
+        return f"{width}x{height}, native size"
+    return f"{width}x{height}, reduced from {native_w}x{native_h} (x{width / native_w:.2f})"
+
+
+def _noted(note: str) -> str:
+    return f" ({note})" if note else ""
+
+
+def _keyframe(frame: dict[str, Any], capture: Any = None) -> list[Any]:
     try:
         path = Path(frame["imagePath"])
         if not path.is_file() or path.stat().st_size > FIVE_MB:
@@ -122,7 +171,7 @@ def _keyframe(frame: dict[str, Any]) -> list[Any]:
         data = path.read_bytes()
         if data[:8] != PNG_SIGNATURE:
             raise ValueError("Keyframe is not a PNG")
-        return [text(f"{frame['kind']} at {frame['timeMs']} ms"), image(data)]
+        return [text(f"{frame['kind']} at {frame['timeMs']} ms{_noted(size_note(data, capture))}"), image(data)]
     except Exception:  # noqa: BLE001
         return [text(f"The {frame.get('kind')} keyframe is unavailable. Ask the user to capture and share again; do not infer its visual contents.")]
 
@@ -139,7 +188,7 @@ def _num(value: float) -> str:
     return str(int(value)) if float(value).is_integer() else str(value)
 
 
-async def _drag_release_content(source_path: str, actions: list[dict[str, Any]]) -> list[Any]:
+async def _drag_release_content(source_path: str, actions: list[dict[str, Any]], capture: Any = None) -> list[Any]:
     content: list[Any] = []
     drags = [a for a in actions if a["kind"] == "drag"]
     releases = [a for a in drags if a["releaseWithinCapture"]]
@@ -163,7 +212,8 @@ async def _drag_release_content(source_path: str, actions: list[dict[str, Any]])
                     continue
                 offset = frame.time_ms - release_ms
                 phase = "Before drag release" if offset < 0 else "After drag release" if offset > 0 else "At drag release"
-                content += [text(f"{phase}: {_num(frame.time_ms)} ms ({_num(abs(offset))} ms from release)"), image(frame.png)]
+                content += [text(f"{phase}: {_num(frame.time_ms)} ms ({_num(abs(offset))} ms from release){_noted(size_note(frame.png, capture))}"),
+                            image(frame.png)]
         except Exception:  # noqa: BLE001
             content.append(text(f"The drag release candidate is at {_num(release_ms)} ms, but its surrounding frames are unavailable. Inspect the original clip before inferring the result."))
     return content
@@ -190,10 +240,10 @@ async def anypoach_read_brief(briefId: uuid.UUID | None = None,
             if len(frames) > 3:
                 raise ValueError("Too many keyframes")
             for frame in frames:
-                content += _keyframe(frame.model_dump())
+                content += _keyframe(frame.model_dump(), brief.evidence.get("capture"))
             source = brief.evidence.get("sourcePath")
             if brief.evidence.get("mediaType") == "video" and isinstance(source, str) and source:
-                content += await _drag_release_content(source, actions["actions"])
+                content += await _drag_release_content(source, actions["actions"], brief.evidence.get("capture"))
         return CallToolResult(content=content, structured_content=response)
     except Exception as error:  # noqa: BLE001
         return failure(f"No readable shared brief. Choose Copy handoff for chat in AnyPoach. {error}")
@@ -259,12 +309,16 @@ def _browser_near(raw: Any, time_ms: float) -> list[dict[str, Any]]:
 
 @tool("anypoach_read_moment")
 async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, description="Timestamp in milliseconds, before the recording ends")],
-                            briefId: uuid.UUID | None = None) -> CallToolResult:
+                            briefId: uuid.UUID | None = None,
+                            maxSize: Annotated[int, Field(ge=16, le=8192, description="Longest side of the returned image in pixels; never enlarges. Default 1280")] = IMAGE_MAX_SIZE,
+                            crop: Annotated[Crop | None, Field(description="Rectangle of the native frame to return, in pixels from the top left, cut out before any reduction")] = None) -> CallToolResult:
     """Return one PNG frame of a brief's recording at `timeMs`, with any note pinned near that moment.
 
     Args:
         timeMs: Milliseconds into the recording, 0 to 30000 and before its end.
         briefId: Brief to read; the latest when omitted.
+        maxSize: Longest side of the image in pixels (16 to 8192); the frame is never enlarged.
+        crop: Rectangle in native pixels to return instead of the whole frame; combine with maxSize.
     """
     try:
         raw = read_brief(str(briefId) if briefId else None)
@@ -273,9 +327,9 @@ async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, de
             raise ValueError("This shared brief does not include a video recording.")
         if not evidence["sourcePath"]:
             raise ValueError("This brief keeps reference frames without the original recording. Use anypoach_read_brief to see its saved frames.")
-        png = await asyncio.to_thread(read_video_moment, evidence["sourcePath"], timeMs)
-        if len(png) > FIVE_MB:
-            raise ValueError("Reference image exceeds the 5 MB limit")
+        png = await asyncio.to_thread(read_video_moment, evidence["sourcePath"], timeMs, max_size=maxSize,
+                                      crop=(crop.x, crop.y, crop.width, crop.height) if crop else None)
+        ensure_png_fits(png)
         try:
             notes = [n.model_dump() for n in (_Note.model_validate(n) for n in evidence["annotations"])]
         except (KeyError, TypeError, ValidationError):
@@ -300,7 +354,7 @@ async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, de
                    if trace and trace.available is not False else "No native pointer trace was included with this media.")
         browser = _browser_near(evidence.get("browserEvidence"), timeMs)
         lines = [
-            f"Shared recording at {_num(timeMs)} ms. Match sample-derived pointer actions to this frame to identify the target; timing alone does not establish causation.",
+            f"Shared recording at {_num(timeMs)} ms{_noted(size_note(png, evidence.get('capture'), crop))}. Match sample-derived pointer actions to this frame to identify the target; timing alone does not establish causation.",
             summary,
             *(["Trace reached its event limit; later actions may be incomplete."] if trace and trace.truncated else []),
             *([f"Nearby user notes: {dumps(near_notes)}"] if near_notes else []),

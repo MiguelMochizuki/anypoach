@@ -7,7 +7,7 @@ license = "Apache-2.0"
 dependencies = ["av", "numpy", "mcp", "platformdirs"]
 
 [project.optional-dependencies]
-ui = ["PySide6", "mss"]
+ui = ["PySide6", "mss", "jeepney>=0.9; sys_platform == 'linux'"]
 
 [project.scripts]
 anypoach-mcp = "anypoach.mcp.server:main"

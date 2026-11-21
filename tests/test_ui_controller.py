@@ -99,3 +99,129 @@ def test_prompt_guidance_follows_the_pointer_evidence():
 ])
 def test_selection_is_converted_to_physical_pixels(drag, dpr, origin, expected):
     assert physical_rect(*drag, origin=origin, dpr=dpr) == expected
+
+
+class PreviewBackend(LiveBackend):
+    """A portal-like backend: a preview frame first, and a session that must be closed."""
+
+    def __init__(self):
+        super().__init__()
+        self.closed, self.failure = 0, None
+
+    def preview(self):
+        if self.failure:
+            raise self.failure
+        return Frame(np.zeros((120, 200, 4), np.uint8), time.perf_counter())
+
+    def close(self):
+        self.closed += 1
+
+
+@pytest.fixture
+def preview_controller(tmp_path):
+    return make(tmp_path, backend=PreviewBackend())
+
+
+def test_controller_without_a_preview_backend_does_not_support_it(tmp_path):
+    controller = make(tmp_path)
+    assert not controller.supports_preview and controller.preview() is None
+
+
+def test_a_cancelled_portal_dialog_becomes_a_message(preview_controller):
+    preview_controller.backend.failure = PermissionError("Screen sharing was cancelled.")
+    assert preview_controller.preview() is None and "cancelled" in preview_controller.message
+
+
+def test_stop_closes_the_portal_and_forgets_the_region(preview_controller):
+    assert preview_controller.preview() is not None
+    record(preview_controller)
+    assert preview_controller.backend.closed == 1
+    preview_controller.start()
+    assert "Choose an area" in preview_controller.message
+
+
+def test_a_stream_that_ended_before_recording_is_a_message(preview_controller):
+    preview_controller.preview()
+    preview_controller.choose_region(Rect(0, 0, 50, 50))
+    preview_controller.backend.error = OSError("The screen sharing stopped.")
+    preview_controller.start()
+    assert preview_controller.state == "idle" and "stopped" in preview_controller.message
+
+
+def test_close_releases_the_backend_and_the_region(preview_controller):
+    preview_controller.preview()
+    preview_controller.choose_region(Rect(0, 0, 50, 50))
+    preview_controller.close()
+    assert preview_controller.backend.closed == 1
+    preview_controller.start()
+    assert "Choose an area" in preview_controller.message
+
+
+def test_ready_to_record_needs_an_area_and_no_running_recording(tmp_path):
+    controller = make(tmp_path)
+    assert not controller.ready_to_record
+    controller.choose_region(Rect(10, 10, 160, 90))
+    assert controller.ready_to_record
+    controller.start()
+    assert not controller.ready_to_record
+    controller.stop()
+
+
+def test_stop_sharing_during_a_recording_still_closes_the_portal(preview_controller):
+    preview_controller.preview()
+    preview_controller.choose_region(Rect(10, 10, 160, 90))
+    preview_controller.start()
+    time.sleep(0.3)
+    preview_controller.backend.error = OSError("The screen sharing stopped.")  # the compositor ended the share
+    time.sleep(0.3)
+    assert preview_controller.stop() is None and "stopped" in preview_controller.message
+    assert preview_controller.backend.closed == 1
+
+
+def test_a_failed_first_grab_closes_the_portal_so_the_next_choice_starts_fresh(preview_controller):
+    preview_controller.preview()
+    preview_controller.choose_region(Rect(0, 0, 50, 50))
+    preview_controller.backend.error = OSError("The screen sharing stopped.")
+    preview_controller.start()
+    assert preview_controller.backend.closed == 1
+
+
+def test_device_scale_reaches_the_shared_brief(tmp_path):
+    controller = make(tmp_path)
+    controller.choose_region(Rect(10, 10, 160, 90), device_scale=2.0)
+    controller.start()
+    time.sleep(0.5)
+    result = controller.stop()
+    assert result.capture.device_scale == 2.0
+    controller.copy_handoff()
+    capture = read_brief(cache=tmp_path / "cache")["evidence"]["capture"]
+    assert capture["deviceScale"] == 2.0 and capture["widthPx"] == result.capture.width_px
+
+
+def test_device_scale_is_null_when_not_given(tmp_path):
+    controller = make(tmp_path)
+    assert record(controller).capture.device_scale is None
+
+
+def test_choosing_again_resets_the_scale(tmp_path):
+    controller = make(tmp_path)
+    controller.choose_region(Rect(0, 0, 50, 50), device_scale=2.0)
+    assert controller.device_scale == 2.0
+    controller.choose_region(Rect(0, 0, 50, 50))
+    assert controller.device_scale is None
+
+
+def test_handoff_prompt_explains_size_and_scale():
+    prompt = handoff_prompt("ID", None)
+    assert "evidence.capture" in prompt and "deviceScale" in prompt and "reduced" in prompt
+    assert "ask" in prompt.split("deviceScale")[-1]
+
+
+def test_device_scale_counts_video_pixels_when_the_recorder_downsizes(tmp_path):
+    controller = make(tmp_path)
+    controller.choose_region(Rect(0, 0, 2400, 1200), device_scale=2.0)  # 1200x600 CSS px, recorded at 1920 px wide
+    controller.start()
+    time.sleep(0.4)
+    result = controller.stop()
+    assert result.capture.width_px == 1920
+    assert result.capture.device_scale == pytest.approx(1.6)  # video pixels per CSS pixel, not the screen's 2.0

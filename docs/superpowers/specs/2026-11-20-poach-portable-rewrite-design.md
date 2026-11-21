@@ -66,7 +66,7 @@ Critério de pronto da fase 1: em Windows e em Linux X11, gravar 10 s de uma ár
 
 ## Fases seguintes
 
-Fase 2: editor com comentários e timeline, tela cheia, atalho global, modo janela, onboarding. Fase 3: Wayland via portal e macOS no código novo. Fase 4: extras, na ordem acima. Swift e TS são removidos só depois do macOS equivalente.
+Fase 2: editor com comentários e timeline, tela cheia, atalho global, modo janela, onboarding e Wayland (captura via `xdg-desktop-portal` ScreenCast e PipeWire, num `PortalBackend` ao lado do `MssBackend`, com seleção de área e trace de ponteiro adaptados ao portal). Fase 3: macOS no código novo. Fase 4: extras, na ordem acima. O código Swift e TS original já foi removido do repositório.
 
 ## Riscos
 
