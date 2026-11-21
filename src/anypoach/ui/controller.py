@@ -58,8 +58,11 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
     return (f"{_LOOKUP.format(id=brief_id)} Use its images, pointer trace, and timestamped notes. {_pointer_guidance(trace)} "
             "Match pointer coordinates and timestamps to the frames to identify targets. For a drag, inspect the frames "
             "after release and include visible changes through the end of the response. Use the video and notes to "
-            "describe visible results, and ask if behavior is ambiguous. Recreate the recorded interaction in this "
-            "project. For video details, call anypoach_read_moment with the same briefId and timeMs.")
+            "describe visible results, and ask if behavior is ambiguous. Images may be reduced from the capture: read the "
+            "caption before measuring, and use evidence.capture for the native size. Divide native pixels by "
+            "evidence.capture.deviceScale to get CSS pixels; when deviceScale is null the scale is unknown, so ask. "
+            "Recreate the recorded interaction in this project. For video details, call anypoach_read_moment with the "
+            "same briefId and timeMs; pass crop and maxSize to read a detail at native scale.")
 
 
 class Controller:

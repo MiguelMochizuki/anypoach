@@ -209,3 +209,9 @@ def test_choosing_again_resets_the_scale(tmp_path):
     assert controller.device_scale == 2.0
     controller.choose_region(Rect(0, 0, 50, 50))
     assert controller.device_scale is None
+
+
+def test_handoff_prompt_explains_size_and_scale():
+    prompt = handoff_prompt("ID", None)
+    assert "evidence.capture" in prompt and "deviceScale" in prompt and "reduced" in prompt
+    assert "ask" in prompt.split("deviceScale")[-1]
