@@ -26,7 +26,7 @@ AnyPoach captures a screen area, samples the pointer (position and button state 
 
 ### Status and limitations
 
-Early. Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. Not done: comment editor, global shortcut, macOS pointer sampling. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
+Early (v0.1.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. Not done: comment editor, global shortcut, macOS pointer sampling. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
 
 ### Why not just use Poach?
 
@@ -34,10 +34,11 @@ AnyPoach started as a fork of Poach, a charming Mac menu-bar app. It is lovely, 
 
 ## Highlights
 
-- Windows, Linux, and macOS from one Python code base (X11 and Windows first; see the status above).
+- Windows, Linux (X11 and Wayland), and macOS from one Python code base (see the status above for what has been run where).
 - One process decodes the video. On the same small test clips the analysis takes 0.06 s and 0.17 s, against 3.76 s and 33.5 s for the one-`ffmpeg`-per-sample approach ([measurements](docs/superpowers/baseline.md)).
 - Private by construction: no network, telemetry, audio, global input hooks, or keyboard capture; files are owner-only.
 - Four MCP tools that any assistant able to launch a stdio command can use.
+- Honest about size: images are reduced to 1280 px, so every one is captioned with its real size, and `crop` returns a detail at native scale.
 
 ## Quick Start
 
@@ -65,16 +66,19 @@ anypoach/
 │   └── superpowers/   # design, plan, measured baseline
 │       ├── plans/
 │       ├── specs/
-│       └── baseline.md
+│       ├── baseline.md
+│       ├── poach-parity.md
+│       └── wayland-spike.md
 ├── src/               # source code
 │   └── anypoach/      # the package
 │       ├── analysis/  # decode video, motion, palette, keyframes
 │       ├── brief/     # shared briefs and temp-media cleanup
-│       ├── capture/   # screen grabbing, recording, cursor overlay
+│       ├── capture/   # screen grabbing, portal capture, recording, cursor overlay
 │       ├── mcp/       # the stdio MCP server
 │       ├── pointer/   # pointer polling and trace
-│       ├── ui/        # window and area overlay
-│       └── … +2 more
+│       ├── ui/        # window and area selection
+│       ├── __init__.py
+│       └── … +1 more
 ├── tests/             # test suite
 │   ├── golden/        # expected results for the synthetic clips
 │   │   ├── image-start.png
@@ -83,27 +87,31 @@ anypoach/
 │   │   ├── motion-settled.png
 │   │   ├── motion-start.png
 │   │   ├── motion.json
-│   │   └── … +10 more
+│   │   ├── overrun-peak.png
+│   │   └── … +9 more
 │   ├── __init__.py
 │   ├── conftest.py
 │   ├── fixtures.py
+│   ├── portal_fake.py
 │   ├── test_brief_store.py
 │   ├── test_capture_recorder.py
-│   └── … +13 more
-├── tools/             # benchmark and jitter scripts
+│   └── … +19 more
+├── tools/             # benchmark, jitter and portal spike scripts
 │   ├── bench.py
-│   └── jitter.py
+│   ├── jitter.py
+│   └── portal_spike.py
 ├── .gitignore
-└── … +8 more
+├── AGENTS.md
+└── … +7 more
 ```
 
 ### Key modules
 
 - `analysis`: `VideoSource` decodes with PyAV and seeks by presentation time; `motion`, `palette`, and `keyframes` are numpy code; `inspect` ties them into an `InspectionResult`.
-- `capture` and `pointer`: `MssBackend` grabs frames, `Recorder` encodes H.264 with real frame times and draws the cursor and click ring, and `PointerTraceRecorder` polls a Windows or X11 source at 120 Hz (at most 5,000 events).
+- `capture` and `pointer`: a `CaptureBackend` grabs BGRA frames (`MssBackend` on X11 and Windows; `PortalBackend` on Wayland, through the desktop portal and a `gst-launch-1.0` subprocess reading PipeWire), `Recorder` encodes H.264 with real frame times and draws the cursor and click ring, and `PointerTraceRecorder` polls a Windows or X11 source at 120 Hz (at most 5,000 events). Wayland and macOS have no pointer source, so their trace is marked unavailable.
 - `brief`: writes `active-brief.json` plus one archive per share into the per-OS cache directory, and cleans up temporary media.
 - `mcp`: the `anypoach-mcp` server and its presence files.
-- `ui`: `Controller` runs the flow without Qt; `app.py` and `selection.py` are the PySide6 window and the area overlay.
+- `ui`: `Controller` runs the flow without Qt; `app.py`, `selection.py`, and `frozen_selection.py` (a frozen screen frame to pick an area on Wayland) are the PySide6 window and the area overlays.
 
 ## Main Tools & Stack
 
@@ -120,6 +128,7 @@ Python 3.11 or newer, managed with `uv`; `hatchling` builds the package.
 | `mcp` | The stdio MCP server |
 | `platformdirs` | The per-OS cache directory |
 | `PySide6`, `mss` (extra `ui`) | The window and screen capture |
+| `jeepney` (Linux only) | Talking to the desktop portal over DBus on Wayland |
 | `pytest`, `ruff` (group `dev`) | Tests and lint |
 
 ### CI
