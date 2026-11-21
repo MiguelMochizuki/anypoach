@@ -36,6 +36,7 @@ from .controller import Controller, physical_rect
 from .frozen_selection import FrozenSelection
 from .review import ReviewPanel
 from .selection import SelectionOverlay
+from .settings import SettingsDialog
 
 MAX_RECORDING_MS = 30_000  # the analysis only reads the first 30 s
 LEAVE_SCREEN_MS = 500  # time for the compositor to take the window off the screen before capture starts
@@ -98,6 +99,7 @@ class MainWindow(QMainWindow):
         self.full_screen = self._button("Full screen", self._choose_full_screen)
         self.screenshot = self._button("Screenshot", self._screenshot)
         self.import_button = self._button("Import…", self._import)
+        self.settings_button = self._button("Settings…", self._settings)
         self.stop_button, self.copy_button = self._button("Stop", self._stop), self._button("Copy prompt for assistant", self._copy)
         self.status = QLabel("Choose an area, then record.")
         self.status.setAccessibleName("Status")
@@ -106,7 +108,7 @@ class MainWindow(QMainWindow):
         self.frames.setIconSize(QSize(160, 100))
         self.frames.setAccessibleName("Keyframes")
         buttons = QHBoxLayout()
-        for button in (self.area, self.full_screen, self.screenshot, self.import_button, self.record_button, self.stop_button, self.copy_button):
+        for button in (self.area, self.full_screen, self.screenshot, self.import_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
             buttons.addWidget(button)
         body = QVBoxLayout()
         body.addLayout(buttons)
@@ -339,6 +341,13 @@ class MainWindow(QMainWindow):
 
     def _screenshot(self) -> None:
         self._show_result(self.controller.screenshot(), "Screenshot taken. Copy the prompt and paste it to your assistant.")
+
+    def _open_media(self) -> list[str]:
+        result = self.controller.result
+        return [] if result is None else [p for p in (result.source_path, *(k.image_path for k in result.keyframes)) if p]
+
+    def _settings(self) -> None:
+        SettingsDialog(self._open_media, parent=self).exec()
 
     def _import(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Import a video or image", "",
