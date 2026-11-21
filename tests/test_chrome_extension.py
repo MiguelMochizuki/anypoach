@@ -202,3 +202,17 @@ def test_one_card_exists_while_choosing_and_none_after(tmp_path):
     assert out["shown"] == 1 and out["after"] == 0
     assert out["closed"] is True, "the page must not be able to reach into the card"
     assert out["insideViewport"] is True
+
+
+@needs_chrome
+def test_nothing_typed_into_an_editable_area_is_measured(tmp_path):
+    payload = run_capture_page(tmp_path, "components_page.html", "#editable")
+    assert payload["components"] == [] and payload["evidence"]["components"] == [] and payload["evidence"]["componentsAtEnd"] == []
+    assert "typed" not in json.dumps(payload), "text typed by the user must never reach the evidence"
+
+
+@needs_chrome
+def test_modern_css_colors_are_shown_as_colors_not_as_transparent(tmp_path):
+    modern = run_capture_page(tmp_path, "inspector_page.html")["models"]["modern"]
+    colors = {c["label"]: c["hex"] for c in modern["colors"]}
+    assert re.fullmatch(r"#[0-9A-F]{6}", colors["Text"]) and re.fullmatch(r"#[0-9A-F]{6}", colors["Background"]), colors

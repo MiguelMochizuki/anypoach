@@ -71,7 +71,7 @@
 
   // The visible descendants of the chosen component, with sizes relative to it, as a list that keeps document order.
   function measureComponents(root) {
-    if (!root.isConnected) return [];
+    if (!root.isConnected || root.closest(excludedText)) return [];  // nothing inside an editable area or a form field
     const [rootX, rootY, rootWidth, rootHeight] = rect(root);
     const found = [];
     const visit = (parent, depth) => {
@@ -105,13 +105,26 @@
   const cardWidth = 260;
   const number = value => String(round(value));
 
-  function toHex(color) {
+  let colorContext;
+
+  // Red, green, blue and alpha of any computed CSS color; rgb() is read directly, other syntaxes (oklch, color-mix...) through a canvas.
+  function channels(color) {
     const match = /^rgba?\(([^)]+)\)$/.exec(color);
     const parts = match?.[1].split(/[\s,/]+/).filter(Boolean).map(Number);
-    if (!parts || parts.length < 3 || parts.some(Number.isNaN)) return null;
-    const alpha = parts.length > 3 ? parts[3] : 1;
+    if (parts && parts.length >= 3 && !parts.some(Number.isNaN)) return [parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1];
+    colorContext ??= Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d", { willReadFrequently: true });
+    colorContext.clearRect(0, 0, 1, 1);
+    colorContext.fillStyle = "#000";
+    colorContext.fillStyle = color;
+    colorContext.fillRect(0, 0, 1, 1);
+    const [red, green, blue, alpha] = colorContext.getImageData(0, 0, 1, 1).data;
+    return [red, green, blue, alpha / 255];
+  }
+
+  function toHex(color) {
+    const [red, green, blue, alpha] = channels(color);
     if (alpha <= 0) return null;
-    const hex = parts.slice(0, 3).map(part => Math.round(part).toString(16).padStart(2, "0")).join("");
+    const hex = [red, green, blue].map(part => Math.round(part).toString(16).padStart(2, "0")).join("");
     return ("#" + hex + (alpha < 1 ? Math.round(alpha * 255).toString(16).padStart(2, "0") : "")).toUpperCase();
   }
 

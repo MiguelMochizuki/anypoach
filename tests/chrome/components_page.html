@@ -25,6 +25,13 @@
 <script src="capture.js"></script>
 <script>
   const root = document.getElementById("root");
+  if (location.hash === "#editable") {  // the chosen element sits inside a contenteditable: whatever is typed there is private
+    const editable = document.createElement("div");
+    editable.setAttribute("contenteditable", "true");
+    root.replaceWith(editable);
+    editable.append(root);
+    root.innerHTML = "<p>typed words</p><div><span>more typed words</span></div>";
+  }
   if (location.hash === "#many") {
     root.replaceChildren();
     let parent = root;
