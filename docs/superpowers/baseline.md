@@ -27,3 +27,8 @@ Contra o original (3,76 s e 33,5 s, porque ele abre um `ffmpeg` novo a cada amos
 ## Captura com MssBackend (Task 8), Linux/XWayland
 
 Medição neste desktop (sessão Wayland, então o `mss` lê o XWayland e a imagem sai preta; vale como ordem de grandeza do custo, não da captura real). `grab` de 1280x720 sozinho: ~250 quadros/s. Gravação de 3 s com `Recorder` (H.264 `libx264` `veryfast`, crf 20, 30 fps): 91 quadros, ~80% de um núcleo. O custo vem da conversão BGRA→yuv420p e do `libx264`; se for alto demais em máquinas fracas, os caminhos são `preset ultrafast`, reduzir a resolução de saída ou codificação por hardware. **Pendência P2:** medir no Windows (quadros/s e CPU) antes de decidir se entra um `DxcamBackend`.
+
+## Wayland portal (GNOME, 1920x1080, 2026-11-21)
+
+`gst-launch-1.0 pipewiresrc` reading the ScreenCast portal stream for 10 s: 142 frames, 14 fps on a mostly still
+screen (the compositor sends frames on change), 7% of one core. Details in `wayland-spike.md`.
