@@ -5,12 +5,18 @@ import json
 import shlex
 import shutil
 import sys
+from pathlib import Path
 
 CLIENTS = ("claude", "codex", "json")
 
 
 def launcher() -> list[str]:
-    """The command that starts the MCP server: the installed `anypoach-mcp` script, else this interpreter."""
+    """The command that starts the MCP server: the `anypoach-mcp` program next to this one when packaged, else the
+    installed `anypoach-mcp` script, else this interpreter."""
+    if getattr(sys, "frozen", False):
+        sibling = Path(sys.executable).with_name("anypoach-mcp" + Path(sys.executable).suffix)
+        if sibling.is_file():
+            return [str(sibling)]
     script = shutil.which("anypoach-mcp")
     return [script] if script else [sys.executable, "-m", "anypoach.mcp.server"]
 
