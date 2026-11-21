@@ -13,6 +13,7 @@ from ..tempdirs import make_temp_dir
 from .keyframes import choose_keyframes
 from .motion import MotionTiming, approximate_timing, pixel_difference
 from .palette import extract_palette
+from .segments import find_segments
 from .source import (
     IMAGE_MAX_SIZE,
     MAX_VIDEO_BYTES,
@@ -22,9 +23,11 @@ from .source import (
     scaled_rgb,
     seek_for_moment,
 )
-from .types import CaptureInfo, DragFrame, DragFrames, InspectionResult, Keyframe
+from .types import CaptureInfo, DragFrame, DragFrames, InspectionResult, Keyframe, MotionSegment
 
 MAX_DURATION_SECONDS = 30
+MAX_SEGMENTS = 12
+SEGMENTS_WITH_IMAGES = 4
 DEFAULT_SAMPLE_WIDTH = 96
 DEFAULT_SAMPLES_PER_SECOND = 12
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp")
@@ -98,15 +101,49 @@ def inspect_video(path: str | Path, *, output_dir: str | Path | None = None, sam
             image = out / f"{base}-{kind}-{times_ms[index]}ms.png"
             image.write_bytes(source.png_at(seeks[index]))
             keyframes.append(Keyframe(kind, times_ms[index], str(image), 0 if index == 0 else deltas[index - 1]))
-        motion_start = times_ms[keys[0][1]]
+        duration_ms, timing = _timing_for(times_ms, deltas, keys, duration)
         settled = next((index for kind, index in keys if kind == "settled"), None)
-        settled_ms = times_ms[settled] if settled is not None else _round(duration * 1000)
-        duration_ms = 0 if len(keys) == 1 else max(0, settled_ms - motion_start)
-        timing = approximate_timing(times_ms, deltas, motion_start, duration_ms)
+        segments = _segments(source, seeks, times_ms, deltas, keyframes, timing, out, base)
         progress("palette")
         palette = extract_palette(frames[settled if settled is not None else count - 1], palette_size)
         return InspectionResult("video", str(source.path), duration_ms, keyframes, palette, timing,
-                                capture=CaptureInfo(*source.size, image_max_size=IMAGE_MAX_SIZE))
+                                capture=CaptureInfo(*source.size, image_max_size=IMAGE_MAX_SIZE), segments=segments)
+
+
+def _timing_for(times_ms: list[int], deltas: list[float], keys, duration_s: float) -> tuple[int, MotionTiming]:
+    """Duration and easing of the movement that `keys` (from `choose_keyframes`) describe. `duration_s` is the
+    clip's length, used when the movement never settles."""
+    motion_start = times_ms[keys[0][1]]
+    settled = next((index for kind, index in keys if kind == "settled"), None)
+    settled_ms = times_ms[settled] if settled is not None else _round(duration_s * 1000)
+    duration_ms = 0 if len(keys) == 1 else max(0, settled_ms - motion_start)
+    return duration_ms, approximate_timing(times_ms, deltas, motion_start, duration_ms)
+
+
+def _segments(source, seeks, times_ms, deltas, top_keyframes, top_timing, out, base) -> list[MotionSegment]:
+    """Describe each interaction. The strongest segment reuses the whole-clip result untouched; the next three
+    get their own frames on disk; the others keep only their timing (frames are one `anypoach_read_moment` away)."""
+    spans = sorted(sorted(find_segments(deltas, times_ms), key=lambda s: s.strength, reverse=True)[:MAX_SEGMENTS],
+                   key=lambda s: s.start)
+    ranked = sorted(spans, key=lambda s: s.strength, reverse=True)
+    result = []
+    for number, span in enumerate(spans, 1):
+        rank = ranked.index(span)
+        local = [(kind, index + span.start) for kind, index in choose_keyframes(deltas[span.start:span.end],
+                                                                                span.end - span.start + 1)]
+        if rank == 0:
+            keyframes, timing = top_keyframes, top_timing
+        else:
+            _, timing = _timing_for(times_ms, deltas, local, times_ms[span.end] / 1000)
+            keyframes = []
+            if rank < SEGMENTS_WITH_IMAGES:
+                for kind, index in local:
+                    image = out / f"{base}-s{number}-{kind}-{times_ms[index]}ms.png"
+                    image.write_bytes(source.png_at(seeks[index]))
+                    keyframes.append(Keyframe(kind, times_ms[index], str(image), 0 if index == 0 else deltas[index - 1]))
+        result.append(MotionSegment(times_ms[local[0][1]], times_ms[span.peak], times_ms[span.end], span.strength,
+                                    timing, keyframes))
+    return result
 
 
 def inspect_recording(path: str | Path, **options) -> InspectionResult:

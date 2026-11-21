@@ -179,6 +179,41 @@ class VideoSource:
             raise ValueError(f"Could not decode frame at {round(seeks[order[cursor]] * 1000)} ms")
         return [out[i] for i in range(len(seeks))]
 
+    def stream_frames(self, seeks: Sequence[float], width: int, on_frame: Callable[[int, np.ndarray], None],
+                      stop: Callable[[], bool] | None = None) -> bool:
+        """Decode the frame shown at each seek, one pass, handing each to `on_frame` as soon as it is ready.
+
+        Unlike `frames_at` nothing is kept, so a long list of seeks costs no memory.
+
+        Args:
+            seeks: Times from `seek_for_moment`, in ascending order.
+            width: Output width in pixels; height keeps the aspect ratio and stays even.
+            on_frame: Called with the index into `seeks` and the RGB uint8 array, in order.
+            stop: Checked before every frame; when it returns True the pass ends early.
+
+        Returns:
+            True when every seek was delivered, False when `stop` ended the pass.
+
+        Raises:
+            ValueError: If a frame at or after a seek time cannot be decoded.
+        """
+        cursor = 0
+        self._container.seek(0)
+        for frame in self._container.decode(self._stream):
+            shown = float(frame.pts * self._stream.time_base) - self._start if frame.pts is not None else None
+            if shown is None:
+                continue
+            while cursor < len(seeks) and shown >= seeks[cursor] - 1e-6:
+                if stop is not None and stop():
+                    return False
+                on_frame(cursor, scaled_rgb(frame, width))
+                cursor += 1
+            if cursor == len(seeks):
+                return True
+        if cursor < len(seeks):
+            raise ValueError(f"Could not decode frame at {round(seeks[cursor] * 1000)} ms")
+        return True
+
     def frames_at(self, seeks: Sequence[float], width: int) -> list[np.ndarray]:
         """Decode the frame shown at each seek time, scaled for analysis.
 

@@ -86,6 +86,9 @@ def share(result: InspectionResult, context: str, annotations: list[dict[str, An
     evidence = result.to_json()
     for keyframe in evidence["keyframes"]:
         keyframe.pop("motion", None)  # the app's brief never carried it
+    for segment in evidence.get("segments", []):
+        for keyframe in segment["keyframes"]:
+            keyframe.pop("motion", None)
     evidence["annotations"] = annotations
     brief_id = str(uuid.uuid4()).upper()
     data = json.dumps({"briefId": brief_id, "version": 1, "sharedAt": time.time(), "context": context,

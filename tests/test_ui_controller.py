@@ -59,6 +59,12 @@ def test_empty_region_is_a_message_not_an_exception(tmp_path):
     assert controller.state == "idle" and "area" in controller.message.lower()
 
 
+def test_handoff_prompt_warns_about_several_interactions():
+    sentence = ("A recording may hold several interactions: each segment in evidence.segments has its own timing, "
+                "so never read one segment's timing as another's.")
+    assert sentence in handoff_prompt("ID", None)
+
+
 def test_denied_screen_recording_is_a_message_and_nothing_starts(tmp_path):
     controller = make(tmp_path, screen_access=lambda: False)
     controller.choose_region(Rect(10, 10, 160, 90))
@@ -319,3 +325,78 @@ def test_browser_status_follows_the_store(tmp_path):
     controller.stop()
     store.put(chrome_session(before), final=True)
     assert controller.browser_status == "attached"
+
+
+def test_a_comment_is_stored_sorted_and_shared_in_the_brief(tmp_path):
+    controller = make(tmp_path, pointer=Script(at(60, 50)))
+    result = record(controller)
+    assert result is not None
+    assert controller.add_comment(300, "second") and controller.add_comment(100, "first")
+    controller.context = "Ease it out."
+    controller.copy_handoff()
+    brief = read_brief(cache=tmp_path / "cache")
+    assert brief["evidence"]["annotations"] == [{"timeMs": 100, "text": "first"}, {"timeMs": 300, "text": "second"}]
+    assert brief["context"] == "Ease it out."
+
+
+def test_empty_and_whitespace_comments_are_refused_with_a_message(tmp_path):
+    controller = make(tmp_path)
+    assert not controller.add_comment(0, "") and not controller.add_comment(0, "  \n\t ")
+    assert "empty" in controller.message.lower() and controller.comments == []
+
+
+def test_comment_length_is_limited_to_500_characters_after_stripping(tmp_path):
+    controller = make(tmp_path)
+    assert controller.add_comment(0, "a" * 500) and controller.add_comment(1, "  " + "b" * 500 + "  ")
+    assert not controller.add_comment(2, "c" * 501) and "500" in controller.message
+    assert [len(c["text"]) for c in controller.comments] == [500, 500]
+
+
+def test_the_fifty_first_comment_is_refused(tmp_path):
+    controller = make(tmp_path)
+    assert all(controller.add_comment(i, f"note {i}") for i in range(50))
+    assert not controller.add_comment(99, "one too many") and "50" in controller.message and len(controller.comments) == 50
+
+
+def test_accents_and_emoji_survive_the_round_trip(tmp_path):
+    controller = make(tmp_path, pointer=Script(at(60, 50)))
+    record(controller)
+    assert controller.add_comment(120, "Transição suave ✨ — não pule")
+    controller.copy_handoff()
+    assert read_brief(cache=tmp_path / "cache")["evidence"]["annotations"][0]["text"] == "Transição suave ✨ — não pule"
+
+
+def test_removing_a_comment_by_index_and_an_out_of_range_index_is_ignored(tmp_path):
+    controller = make(tmp_path)
+    controller.add_comment(5, "keep")
+    controller.add_comment(1, "drop")
+    controller.remove_comment(0)
+    controller.remove_comment(9)
+    controller.remove_comment(-1)
+    assert controller.comments == [{"timeMs": 5, "text": "keep"}]
+
+
+def test_comments_is_a_copy(tmp_path):
+    controller = make(tmp_path)
+    controller.add_comment(5, "keep")
+    controller.comments.clear()
+    controller.comments[0:0] = [{"timeMs": 0, "text": "x"}]
+    assert controller.comments == [{"timeMs": 5, "text": "keep"}]
+
+
+def test_a_new_recording_clears_comments_but_keeps_the_instructions(tmp_path):
+    controller = make(tmp_path)
+    record(controller)
+    controller.add_comment(100, "old")
+    controller.context = "keep this"
+    controller.choose_region(Rect(10, 10, 160, 90))
+    controller.start()
+    assert controller.comments == [] and controller.context == "keep this"
+    controller.stop()
+
+
+def test_a_refused_start_keeps_the_comments(tmp_path):
+    controller = make(tmp_path)
+    controller.add_comment(100, "stay")
+    controller.start()  # no area chosen
+    assert controller.comments == [{"timeMs": 100, "text": "stay"}]

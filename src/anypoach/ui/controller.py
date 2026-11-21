@@ -58,7 +58,9 @@ def _pointer_guidance(trace: dict[str, Any] | None) -> str:
 
 def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
     """The prompt copied for an assistant to read a video brief."""
-    return (f"{_LOOKUP.format(id=brief_id)} Use its images, pointer trace, and timestamped notes. {_pointer_guidance(trace)} "
+    return (f"{_LOOKUP.format(id=brief_id)} Use its images, pointer trace, and timestamped notes. "
+            "A recording may hold several interactions: each segment in evidence.segments has its own timing, "
+            f"so never read one segment's timing as another's. {_pointer_guidance(trace)} "
             "Match pointer coordinates and timestamps to the frames to identify targets. For a drag, inspect the frames "
             "after release and include visible changes through the end of the response. Use the video and notes to "
             "describe visible results, and ask if behavior is ambiguous. Images may be reduced from the capture: read the "
@@ -70,6 +72,9 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
             "Recreate the recorded interaction in this project. For video details, call anypoach_read_moment with the "
             "same briefId and timeMs; pass crop and maxSize to read a detail at native scale.")
 
+
+MAX_COMMENT_CHARS = 500
+MAX_COMMENTS = 50
 
 SCREEN_RECORDING_MESSAGE = ("AnyPoach needs Screen Recording permission. Allow it in System Settings > Privacy & Security "
                             "> Screen Recording, then quit and reopen AnyPoach.")
@@ -185,6 +190,41 @@ class Controller:
         self._region = Rect(*region) if region.width >= 2 and region.height >= 2 else None
         self.message = "" if self._region else "Choose an area to record."
 
+    @property
+    def comments(self) -> list[dict[str, Any]]:
+        """The comments pinned to moments of the recording, earliest first (a copy)."""
+        return [dict(note) for note in self.annotations]
+
+    def add_comment(self, time_ms: int, text: str) -> bool:
+        """Pin a comment to a moment of the recording.
+
+        Args:
+            time_ms: The moment, in milliseconds from the start of the video.
+            text: The comment; surrounding whitespace is dropped.
+
+        Returns:
+            False, with `message` saying why, when the text is empty, over 500 characters, or the recording
+            already has 50 comments.
+        """
+        text = text.strip()
+        if not text:
+            self.message = "A comment cannot be empty."
+        elif len(text) > MAX_COMMENT_CHARS:
+            self.message = f"A comment can have at most {MAX_COMMENT_CHARS} characters."
+        elif len(self.annotations) >= MAX_COMMENTS:
+            self.message = f"A recording can have at most {MAX_COMMENTS} comments."
+        else:
+            self.annotations.append({"timeMs": int(time_ms), "text": text})
+            self.annotations.sort(key=lambda note: note["timeMs"])
+            self.message = ""
+            return True
+        return False
+
+    def remove_comment(self, index: int) -> None:
+        """Remove the comment at `index` of `comments`; an index outside the list is ignored."""
+        if 0 <= index < len(self.annotations):
+            del self.annotations[index]
+
     def check_screen_access(self) -> bool:
         """Whether recording may go ahead: False, with `message` explaining where to allow it, only when the OS
         says Screen Recording is denied. An unknown answer, or no checker, does not block."""
@@ -215,6 +255,7 @@ class Controller:
                 self.close()  # a dead share must not be reused by the next choice
             return
         self._recorder, self.state, self.message, self.result = recorder, "recording", "", None
+        self.annotations = []  # the moments belonged to the previous video; the general instructions stay
         self._epoch_range, self._started_ms = None, int(time.time() * 1000)
 
     def stop(self) -> InspectionResult | None:

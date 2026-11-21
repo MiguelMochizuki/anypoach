@@ -296,3 +296,91 @@ def test_closing_the_window_stops_the_bridge(app):
 def test_without_a_bridge_there_is_no_chrome_section(app):
     window = MainWindow(FakeController())
     assert not hasattr(window, "code_field")
+
+
+class ReviewController(FakeController):
+    """A controller whose stop returns a real analysis, with the comment methods the review panel uses."""
+
+    def __init__(self, result):
+        super().__init__()
+        self.result, self.context, self._comments = result, "", []
+
+    @property
+    def comments(self):
+        return list(self._comments)
+
+    def add_comment(self, time_ms, text):
+        self._comments.append({"timeMs": time_ms, "text": text})
+        return True
+
+    def remove_comment(self, index):
+        del self._comments[index]
+
+    def stop(self):
+        super().stop()
+        return self.result
+
+
+@pytest.fixture
+def endless(monkeypatch):
+    """Decoding that never finishes on its own, so a test can check that it is stopped."""
+    import time
+
+    from anypoach.analysis.proxy import FrameProxy
+
+    def build(path, *, cancel, on_frame=None, **_):
+        while not cancel.is_set():
+            time.sleep(0.01)
+        return FrameProxy(2000)
+
+    monkeypatch.setattr("anypoach.ui.review.build_proxy", build)
+
+
+@pytest.fixture(scope="module")
+def clip_result(clips, tmp_path_factory):
+    from anypoach.analysis.inspect import inspect_video
+    return inspect_video(clips["motion"], output_dir=tmp_path_factory.mktemp("window-frames"))
+
+
+def test_the_review_panel_appears_after_a_stop_with_a_result(app, clip_result, endless):
+    window = MainWindow(ReviewController(clip_result))
+    window.record_button.click()
+    QTest.qWait(200)
+    window.stop_button.click()
+    assert window.review is not None and window.review.isAncestorOf(window.review.timeline)
+    assert window.review.timeline.accessibleName() == "Timeline"
+    window.close()
+
+
+def test_starting_a_new_recording_stops_the_decoding_and_clears_the_panel(app, clip_result, endless):
+    window = MainWindow(ReviewController(clip_result))
+    window.record_button.click()
+    QTest.qWait(200)
+    window.stop_button.click()
+    worker = window.review._thread
+    assert worker.is_alive()
+    window.record_button.click()
+    assert window.review is None and not worker.is_alive()
+    window.close()
+
+
+def test_closing_the_window_stops_the_decoding(app, clip_result, endless):
+    window = MainWindow(ReviewController(clip_result))
+    window.record_button.click()
+    QTest.qWait(200)
+    window.stop_button.click()
+    worker = window.review._thread
+    window.close()
+    assert window.review is None and not worker.is_alive()
+
+
+def test_copying_the_prompt_works_while_the_frames_are_still_being_prepared(app, clip_result, endless):
+    controller = ReviewController(clip_result)
+    window = MainWindow(controller)
+    window.record_button.click()
+    QTest.qWait(200)
+    window.stop_button.click()
+    assert window.review is not None and not window.review.proxy.frames
+    window.copy_button.click()
+    assert controller.calls[-1] == "copy" and "copied" in window.status.text().lower()
+    window.close()
