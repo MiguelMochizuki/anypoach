@@ -197,15 +197,26 @@ def _probe_moment_source(path: str | Path) -> tuple[Path, float]:
         return source_path, source.duration_s * 1000
 
 
-def read_video_moment(path: str | Path, time_ms: float) -> bytes:
-    """A precise visual reference from a bounded local recording."""
+def read_video_moment(path: str | Path, time_ms: float, *, max_size: int = IMAGE_MAX_SIZE,
+                      crop: tuple[int, int, int, int] | None = None) -> bytes:
+    """A precise visual reference from a bounded local recording.
+
+    Args:
+        path: The recording.
+        time_ms: Moment in milliseconds, before the end of the clip.
+        max_size: Longest side of the PNG in pixels; never enlarges.
+        crop: Optional `(x, y, width, height)` in native pixels, cut out before any reduction.
+
+    Raises:
+        ValueError: If the timestamp, the file, or the crop is not valid.
+    """
     if not math.isfinite(time_ms) or time_ms < 0:
         raise ValueError("Timestamp must be a nonnegative number of milliseconds")
     source_path, duration_ms = _probe_moment_source(path)
     if time_ms >= duration_ms:
         raise ValueError("Timestamp must be before the end of the recording")
     with VideoSource(source_path) as source:
-        return source.png_at(source.seek_for_moment(time_ms / 1000))
+        return source.png_at(source.seek_for_moment(time_ms / 1000), max_size, crop)
 
 
 def read_drag_release_frames(path: str | Path, release_ms: float, next_drag_ms: float | None = None) -> DragFrames:

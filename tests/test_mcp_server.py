@@ -346,3 +346,56 @@ def test_read_moment_caption_states_the_scale(server, home):
             assert not is_error(moment), texts(moment)
             assert "96x64, reduced from 192x128 (x0.50)" in texts(moment)[0]
     asyncio.run(scenario())
+
+
+def make_wide(home):
+    video = home / "wide.mp4"
+    ffmpeg("-f", "lavfi", "-i", "testsrc2=size=1600x900:rate=5:d=1", "-c:v", "mpeg4", "-pix_fmt", "yuv420p", str(video))
+    brief = base_brief(home)
+    brief["evidence"]["sourcePath"] = str(video)
+    brief["evidence"]["capture"] = {"widthPx": 1600, "heightPx": 900, "deviceScale": None, "imageMaxSize": 1280}
+    write_active(home, brief)
+
+
+def png_size(content):
+    import base64
+    data = base64.b64decode(content.data)
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
+def test_read_moment_crop_and_max_size(server, home):
+    make_wide(home)
+
+    async def scenario():
+        async with connect(server, home) as client:
+            crop = await client.call_tool("anypoach_read_moment", {"timeMs": 0, "crop": {"x": 100, "y": 50, "width": 400, "height": 300}})
+            assert not is_error(crop), texts(crop)
+            assert png_size(images(crop)[0]) == (400, 300)
+            assert "crop 100,50 400x300 of 1600x900, native size" in texts(crop)[0]
+            small = await client.call_tool("anypoach_read_moment", {"timeMs": 0, "maxSize": 640})
+            assert png_size(images(small)[0]) == (640, 360)
+            assert "640x360, reduced from 1600x900 (x0.40)" in texts(small)[0]
+            default = await client.call_tool("anypoach_read_moment", {"timeMs": 0})
+            assert png_size(images(default)[0]) == (1280, 720)
+    asyncio.run(scenario())
+
+
+def test_read_moment_reports_a_bad_crop(server, home):
+    make_wide(home)
+
+    async def scenario():
+        async with connect(server, home) as client:
+            outside = await client.call_tool("anypoach_read_moment", {"timeMs": 0, "crop": {"x": 1500, "y": 0, "width": 200, "height": 100}})
+            assert is_error(outside) and "Crop must fit inside the 1600x900 frame" in texts(outside)[0]
+            tiny = await client.call_tool("anypoach_read_moment", {"timeMs": 0, "maxSize": 8})
+            assert is_error(tiny)
+    asyncio.run(scenario())
+
+
+def test_read_moment_refuses_an_oversized_result(home, monkeypatch):
+    from anypoach.mcp import server as mcp_server
+    make_wide(home)
+    monkeypatch.setenv("ANYPOACH_CACHE_DIR", str(home / "Library/Caches/AnyPoach"))
+    monkeypatch.setattr(mcp_server, "FIVE_MB", 1000)
+    result = asyncio.run(mcp_server.anypoach_read_moment(timeMs=0))
+    assert is_error(result) and "use a smaller crop or maxSize" in texts(result)[0]

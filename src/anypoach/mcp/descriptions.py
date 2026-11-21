@@ -15,6 +15,6 @@ TOOLS = {
     },
     "anypoach_read_moment": {
         "title": "Inspect a moment in the shared recording",
-        "description": "Read a PNG frame at a specific timestamp from the latest or a selected explicitly shared AnyPoach brief, with nearby sample-derived click/drag candidates and user notes. Shared briefs remain available by ID for 24 hours. Button transitions come from 120 Hz polling and brief actions may be missed or misclassified; incomplete presses are not treated as completed actions. Compare pointer coordinates with the frame to identify the target and visible result; do not infer causation from timing alone."
+        "description": "Read a PNG frame at a specific timestamp from the latest or a selected explicitly shared AnyPoach brief, with nearby sample-derived click/drag candidates and user notes. Shared briefs remain available by ID for 24 hours. Button transitions come from 120 Hz polling and brief actions may be missed or misclassified; incomplete presses are not treated as completed actions. Compare pointer coordinates with the frame to identify the target and visible result; do not infer causation from timing alone. Images are reduced to 1280 px by default and each is captioned with its real size and scale. Pass crop (native pixels, from the top left) and maxSize to read a detail at native scale."
     }
 }

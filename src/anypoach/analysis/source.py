@@ -47,6 +47,24 @@ def scaled_png(frame: av.VideoFrame, max_size: int) -> bytes:
     return encode_png(frame.reformat(width=w, height=h, format="rgb24", interpolation="BICUBIC").to_ndarray())
 
 
+def cropped_png(frame: av.VideoFrame, max_size: int, crop: tuple[int, int, int, int]) -> bytes:
+    """PNG of a rectangle of the native frame, reduced afterwards to fit `max_size` if it is larger.
+
+    Args:
+        frame: The decoded frame at its native size.
+        max_size: Longest allowed side of the result in pixels.
+        crop: `(x, y, width, height)` in native pixels.
+
+    Raises:
+        ValueError: If the rectangle is empty or reaches outside the frame.
+    """
+    x, y, width, height = crop
+    if x < 0 or y < 0 or width < 1 or height < 1 or x + width > frame.width or y + height > frame.height:
+        raise ValueError(f"Crop must fit inside the {frame.width}x{frame.height} frame")
+    rgb = frame.reformat(format="rgb24").to_ndarray()[y:y + height, x:x + width]
+    return scaled_png(av.VideoFrame.from_ndarray(np.ascontiguousarray(rgb), format="rgb24"), max_size)
+
+
 def read_still(path: str | Path) -> av.VideoFrame:
     """Decode the first frame of a still image file.
 
@@ -176,11 +194,16 @@ class VideoSource:
         """
         return self._collect(seeks, lambda frame: scaled_rgb(frame, width))
 
-    def png_at(self, seek: float, max_size: int = IMAGE_MAX_SIZE) -> bytes:
+    def png_at(self, seek: float, max_size: int = IMAGE_MAX_SIZE, crop: tuple[int, int, int, int] | None = None) -> bytes:
         """Decode the frame shown at `seek` and return it as PNG bytes.
 
         Args:
             seek: Time from `seek_for_moment`.
             max_size: Longest allowed side in pixels; smaller frames are never enlarged.
+            crop: Optional `(x, y, width, height)` in native pixels, cut out before any reduction.
+
+        Raises:
+            ValueError: If `crop` is empty or reaches outside the frame.
         """
-        return self._collect([seek], lambda frame: scaled_png(frame, max_size))[0]
+        convert = (lambda frame: scaled_png(frame, max_size)) if crop is None else (lambda frame: cropped_png(frame, max_size, crop))
+        return self._collect([seek], convert)[0]

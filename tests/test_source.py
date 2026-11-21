@@ -52,3 +52,35 @@ def test_source_closes_and_rejects_bad_input(clips, tmp_path):
 def test_size_is_the_native_frame_size(clips):
     with VideoSource(clips["wide"]) as source:
         assert source.size == (1600, 900)
+
+
+def native_rgb(source, seek):
+    return source._collect([seek], lambda frame: frame.to_ndarray(format="rgb24"))[0]
+
+
+def decode_png(data):
+    import io
+
+    import av
+    with av.open(io.BytesIO(data)) as container:
+        return next(container.decode(video=0)).to_ndarray(format="rgb24")
+
+
+def test_png_at_crops_native_pixels_before_reducing(clips):
+    with VideoSource(clips["wide"]) as source:
+        seek = source.seek_for_moment(0)
+        cropped = decode_png(source.png_at(seek, crop=(100, 50, 400, 300)))
+        assert cropped.shape == (300, 400, 3)
+        assert np.abs(cropped.astype(int) - native_rgb(source, seek)[50:350, 100:500].astype(int)).max() <= 1
+
+
+def test_png_at_reduces_a_crop_that_exceeds_max_size(clips):
+    with VideoSource(clips["wide"]) as source:
+        shape = decode_png(source.png_at(source.seek_for_moment(0), max_size=500, crop=(0, 0, 1000, 800))).shape
+        assert max(shape[:2]) == 500 and shape[:2] == (400, 500)
+
+
+@pytest.mark.parametrize("crop", [(1500, 0, 200, 100), (0, 0, 0, 10), (-1, 0, 10, 10), (0, 850, 10, 100)])
+def test_png_at_rejects_a_crop_outside_the_frame(clips, crop):
+    with VideoSource(clips["wide"]) as source, pytest.raises(ValueError, match="Crop must fit inside the 1600x900 frame"):
+        source.png_at(source.seek_for_moment(0), crop=crop)
