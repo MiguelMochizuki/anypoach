@@ -143,7 +143,7 @@ Any MCP client that launches a stdio command works the same way.
 | Tool | Purpose |
 | --- | --- |
 | `anypoach_read_brief` | Read the latest shared brief, or one by `briefId`: keyframes, palette, timing, pointer trace, notes. |
-| `anypoach_read_moment` | Read one frame of the shared recording at a timestamp, plus frames after drag releases. |
+| `anypoach_read_moment` | Read one frame of the shared recording at a timestamp. `crop` (native pixels from the top left) and `maxSize` return a detail at native scale. |
 | `anypoach_inspect` | Analyze a local `.mp4` or `.mov` file. |
 | `anypoach_inspect_image` | Analyze a local still image. |
 
@@ -162,7 +162,7 @@ uv run ruff check src tests tools
 
 ## Key Outputs & Reports
 
-A recording produces a few keyframe PNGs and a brief, a JSON file with the analysis, the pointer trace, your notes, and an instruction for the assistant. The brief is read back through `anypoach_read_brief`; the PNGs through the same tool and `anypoach_read_moment`. The repository ships no sample output.
+A recording produces a few keyframe PNGs and a brief, a JSON file with the analysis, the pointer trace, your notes, and an instruction for the assistant. The brief is read back through `anypoach_read_brief`; the PNGs through the same tool and `anypoach_read_moment`. The brief records the real size of the capture in `evidence.capture` (`widthPx`, `heightPx`, `deviceScale`) and every image the MCP returns is captioned with its size, because keyframes are reduced to 1280 px (a 1854x962 recording arrives as 1280x664). `deviceScale` is the screen scale on Windows and X11 and `null` where it is unknown, such as Wayland or imported media; the prompt tells the assistant to ask instead of guessing. The repository ships no sample output.
 
 ## Documentation Conventions
 

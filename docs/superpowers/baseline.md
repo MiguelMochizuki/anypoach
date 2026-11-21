@@ -20,6 +20,10 @@ Medido com `tools/bench.py` (PyAV 19.0.2, decodificação em um único processo,
 
 Contra o original (3,76 s e 33,5 s, porque ele abre um `ffmpeg` novo a cada amostra, como quem reabre a geladeira a cada garfada) a análise ficou cerca de 60x e 200x mais rápida nessas fixtures pequenas (96x64 e 160x90). Em gravações reais de até 1920 px o custo de decodificação domina; medir de novo com uma gravação real antes de fixar metas.
 
+## Clipe real de 1920x1080 (v0.1.0), mesma máquina
+
+`tools/bench.py DIR big.mov` com um clipe sintético `testsrc2` de 1920x1080, 30 fps, 30 s (24 MB, H.264): 6,63 s de parede, 8,19 s de CPU, pico de RSS de 104 MB (`inspect_recording`). O `cProfile` põe 6,37 s dos 6,61 s em `VideoSource._collect`, o laço de decodificação em libav (C); `reformat` soma 0,15 s e a codificação dos PNGs 0,05 s. O código Python nosso não é o gargalo. O custo vem de decodificar o clipe inteiro quatro vezes (uma passagem para as amostras e uma por keyframe, cada uma do início), então o ganho disponível está em decodificar menos vezes ou com threads do libav, não em outra linguagem. Medição ao vivo no Wayland (CPU do `gst-launch` e do Python durante uma gravação de 1920 px): pendente, precisa de uma gravação manual.
+
 ## Polling a 120 Hz (Task 7), Linux
 
 `tools/jitter.py` mede o laço de amostragem com uma fonte sintética (não a chamada do SO). 10 s no Linux: 1201 amostras para ~1200 esperadas (0 perdidas), intervalo médio 8,33 ms, p99 8,78 ms, máximo 8,88 ms. O laço agenda por tick a partir do início, então o atraso não acumula. No Windows o agendador padrão tem granularidade de ~15 ms; `Win32PointerSource` pede `timeBeginPeriod(1)` e a medição ainda precisa ser feita no CI/máquina Windows. Se o jitter ali for alto, é o gatilho para mover o laço para uma extensão nativa.
