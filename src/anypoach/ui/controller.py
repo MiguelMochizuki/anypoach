@@ -72,6 +72,10 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
             "same briefId and timeMs; pass crop and maxSize to read a detail at native scale.")
 
 
+MAX_COMMENT_CHARS = 500
+MAX_COMMENTS = 50
+
+
 class Controller:
     """Runs the record-analyze-share flow without any UI toolkit, so it can be tested and reused.
 
@@ -178,6 +182,41 @@ class Controller:
         self._region = Rect(*region) if region.width >= 2 and region.height >= 2 else None
         self.message = "" if self._region else "Choose an area to record."
 
+    @property
+    def comments(self) -> list[dict[str, Any]]:
+        """The comments pinned to moments of the recording, earliest first (a copy)."""
+        return [dict(note) for note in self.annotations]
+
+    def add_comment(self, time_ms: int, text: str) -> bool:
+        """Pin a comment to a moment of the recording.
+
+        Args:
+            time_ms: The moment, in milliseconds from the start of the video.
+            text: The comment; surrounding whitespace is dropped.
+
+        Returns:
+            False, with `message` saying why, when the text is empty, over 500 characters, or the recording
+            already has 50 comments.
+        """
+        text = text.strip()
+        if not text:
+            self.message = "A comment cannot be empty."
+        elif len(text) > MAX_COMMENT_CHARS:
+            self.message = f"A comment can have at most {MAX_COMMENT_CHARS} characters."
+        elif len(self.annotations) >= MAX_COMMENTS:
+            self.message = f"A recording can have at most {MAX_COMMENTS} comments."
+        else:
+            self.annotations.append({"timeMs": int(time_ms), "text": text})
+            self.annotations.sort(key=lambda note: note["timeMs"])
+            self.message = ""
+            return True
+        return False
+
+    def remove_comment(self, index: int) -> None:
+        """Remove the comment at `index` of `comments`; an index outside the list is ignored."""
+        if 0 <= index < len(self.annotations):
+            del self.annotations[index]
+
     def start(self) -> None:
         """Begin recording the chosen area. Refused with a message if no area is chosen, a recording is already running, or capture cannot start."""
         if self.state == "recording":
@@ -198,6 +237,7 @@ class Controller:
                 self.close()  # a dead share must not be reused by the next choice
             return
         self._recorder, self.state, self.message, self.result = recorder, "recording", "", None
+        self.annotations = []  # the moments belonged to the previous video; the general instructions stay
         self._epoch_range, self._started_ms = None, int(time.time() * 1000)
 
     def stop(self) -> InspectionResult | None:
