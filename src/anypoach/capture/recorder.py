@@ -25,6 +25,13 @@ TIME_BASE = Fraction(1, 1000)
 
 @dataclass(frozen=True)
 class Recording:
+    """A finished recording.
+
+    Attributes:
+        path: The `.mov` file.
+        trace: Pointer trace sampled while recording; `available` is False when no pointer source was given.
+        epoch_range_ms: Wall-clock start and end in Unix milliseconds, to line up with other evidence.
+    """
     path: Path
     trace: PointerTrace
     epoch_range_ms: tuple[int, int]
@@ -37,6 +44,20 @@ def output_size(width: float, height: float) -> tuple[int, int]:
 
 
 class Recorder:
+    """Records a screen region to H.264 with the real time of every frame.
+
+    Frames are never repeated or invented to fill gaps, so a stall shows up as a longer interval. The cursor and
+    a click ring are drawn from the pointer trace because screen grabs do not include them. Capture runs at
+    30 fps; the output is even-sized and at most 1920 px on its longest side.
+
+    Args:
+        backend: Source of pixels.
+        pointer: Pointer recorder to start and stop together with the capture, or None to record without one.
+        out_dir: Folder for the `.mov` file; created if missing.
+        clock: Monotonic clock for scheduling frames.
+        wall_clock: Wall clock for `Recording.epoch_range_ms`.
+        sleep: Function used to wait between frames.
+    """
     def __init__(self, backend: CaptureBackend, pointer: PointerTraceRecorder | None, out_dir: Path, *,
                  clock: Callable[[], float] = time.perf_counter, wall_clock: Callable[[], float] = time.time,
                  sleep: Callable[[float], None] = time.sleep) -> None:
@@ -49,6 +70,12 @@ class Recorder:
         self._region = Rect(0, 0, 0, 0)
 
     def start(self, region: Rect, *, spawn: bool = True) -> None:
+        """Open the output file and begin capturing `region` (global physical pixels).
+
+        Args:
+            region: Area to record.
+            spawn: Run the capture loop on a background thread. Pass False to drive it with `capture_once`.
+        """
         self._region = Rect(*region)
         self._size = output_size(region.width, region.height)
         self._ui_scale = max(1.0, max(region.width, region.height) / MAX_SIDE)  # keep the cursor's size after downscaling
@@ -70,6 +97,7 @@ class Recorder:
             self._thread.start()
 
     def request_stop(self) -> None:
+        """Ask the capture loop to end after the current frame. `stop()` waits for it and finishes the file."""
         self._stop.set()
 
     def run(self) -> None:
@@ -92,6 +120,7 @@ class Recorder:
             self._error = error
 
     def capture_once(self) -> None:
+        """Grab one frame, draw the cursor and click ring on it, and encode it with strictly increasing time."""
         frame = self._backend.grab(self._region)
         pixels = frame.pixels
         if self._pointer is not None and (latest := self._pointer.latest()) is not None:
@@ -114,6 +143,15 @@ class Recorder:
         self._container.mux(self._stream.encode(video))
 
     def stop(self) -> Recording:
+        """End the capture, finish the file, and stop the pointer recorder.
+
+        Returns:
+            The recording and its pointer trace.
+
+        Raises:
+            ValueError: If no frame was captured.
+            Exception: Whatever ended the capture thread early, such as `PermissionError` from the backend.
+        """
         self._stop.set()
         if self._thread is not None:
             self._thread.join()

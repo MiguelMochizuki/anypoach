@@ -17,12 +17,15 @@ class Win32PointerSource:
         self._winmm = ctypes.windll.winmm  # type: ignore[attr-defined]
 
     def open(self) -> None:
+        """Ask Windows for 1 ms timer resolution; the default (about 15 ms) cannot sustain 120 Hz. Pair with `close`."""
         self._winmm.timeBeginPeriod(1)  # default timer granularity (~15 ms) cannot reach 120 Hz
 
     def close(self) -> None:
+        """Release the 1 ms timer resolution requested by `open`."""
         self._winmm.timeEndPeriod(1)
 
     def sample(self) -> PointerSample:
+        """Read the cursor position and which of the left, right, and middle buttons are down (physical pixels)."""
         point = wintypes.POINT()
         self._user32.GetCursorPos(ctypes.byref(point))
         held = frozenset(name for name, code in _VK.items() if self._user32.GetAsyncKeyState(code) & 0x8000)

@@ -10,6 +10,11 @@ _BUTTON_MASKS = (("left", 1 << 8), ("other", 1 << 9), ("right", 1 << 10))  # But
 
 
 class X11PointerSource:
+    """Reads the pointer from an X11 display with `XQueryPointer`, by polling.
+
+    Raises:
+        OSError: On construction, if libX11 is missing or the display cannot be opened.
+    """
     def __init__(self) -> None:
         library = ctypes.util.find_library("X11")
         if library is None:
@@ -26,6 +31,7 @@ class X11PointerSource:
         self._root = self._x11.XDefaultRootWindow(self._display)
 
     def sample(self) -> PointerSample:
+        """Read the pointer position on the root window and which buttons are down; the middle button counts as `other`."""
         root, child = ctypes.c_ulong(), ctypes.c_ulong()
         root_x, root_y, win_x, win_y = (ctypes.c_int() for _ in range(4))
         mask = ctypes.c_uint()
@@ -36,6 +42,7 @@ class X11PointerSource:
         return PointerSample(root_x.value, root_y.value, held)  # type: ignore[arg-type]
 
     def close(self) -> None:
+        """Close the display connection. Safe to call more than once."""
         if self._display:
             self._x11.XCloseDisplay(ctypes.c_void_p(self._display))
             self._display = None

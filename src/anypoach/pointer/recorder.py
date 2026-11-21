@@ -22,6 +22,18 @@ _ORDER: tuple[Button, ...] = ("left", "right", "other")
 
 
 class PointerTraceRecorder:
+    """Polls a pointer source at 120 Hz and turns it into a bounded trace of moves, presses, releases, and drags.
+
+    Only position and button state are read. Positions are normalized to `bounds` (top-left origin, 0 to 1).
+    Moves are recorded only inside the bounds; button edges are always recorded and flagged when outside.
+
+    Args:
+        bounds: Capture area in global physical pixels.
+        source: Where samples come from, or None, which makes `start()` fail and the trace unavailable.
+        clock: Monotonic clock.
+        sleep: Function used to wait between samples.
+        interval_s: Time between samples.
+    """
     def __init__(self, bounds: Rect, source: PointerSource | None, *, clock: Callable[[], float] = time.perf_counter,
                  sleep: Callable[[float], None] = time.sleep, interval_s: float = SAMPLE_INTERVAL_MS / 1000) -> None:
         self.bounds = Rect(*bounds)
@@ -36,6 +48,14 @@ class PointerTraceRecorder:
         self._thread: threading.Thread | None = None
 
     def start(self, *, spawn: bool = True) -> bool:
+        """Open the source and begin sampling.
+
+        Args:
+            spawn: Sample on a background thread. Pass False to drive it with `poll`.
+
+        Returns:
+            False, without sampling, when there is no source or the bounds are empty.
+        """
         if self._source is None or self.bounds.width <= 0 or self.bounds.height <= 0:
             return False
         getattr(self._source, "open", lambda: None)()
@@ -47,6 +67,7 @@ class PointerTraceRecorder:
 
     @property
     def started(self) -> bool:
+        """Whether `start()` succeeded."""
         return self._started_at is not None
 
     def latest(self) -> tuple[PointerSample, float | None] | None:
@@ -54,9 +75,11 @@ class PointerTraceRecorder:
         return None if self._latest is None else (self._latest, self._last_down_at)
 
     def request_stop(self) -> None:
+        """Ask the sampling loop to end; `stop()` waits for it."""
         self._stop.set()
 
     def stop(self) -> PointerTrace:
+        """End sampling, close the source, and return the trace (`available` is False if sampling never started). Safe to call twice."""
         self.request_stop()
         if self._thread is not None:
             self._thread.join(timeout=1)
@@ -82,6 +105,7 @@ class PointerTraceRecorder:
                 self._sleep(delay)
 
     def poll(self) -> None:
+        """Take one sample and record the events it implies (press, release, move, or drag)."""
         assert self._source is not None and self._started_at is not None
         sample: PointerSample = self._source.sample()
         point = (sample.x, sample.y)
