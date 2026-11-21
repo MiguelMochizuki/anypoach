@@ -1,3 +1,4 @@
+// Adapted from the Poach Chrome extension (Apache-2.0) and changed for AnyPoach. See NOTICE.
 const base = "http://127.0.0.1:47832/v1";
 const queues = new Map();
 

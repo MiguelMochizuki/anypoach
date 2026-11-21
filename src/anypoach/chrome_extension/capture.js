@@ -1,3 +1,4 @@
+// Adapted from the Poach Chrome extension (Apache-2.0) and changed for AnyPoach. See NOTICE.
 (() => {
   if (globalThis.anypoachCaptureInstalled) return;
   globalThis.anypoachCaptureInstalled = true;

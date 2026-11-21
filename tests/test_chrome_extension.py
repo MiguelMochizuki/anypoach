@@ -36,11 +36,14 @@ def test_manifest_is_minimal_and_ours():
     assert (EXTENSION / "capture.js").is_file()
 
 
-def test_no_file_speaks_of_the_original_by_name():
+def test_adapted_files_carry_the_license_notice_and_nothing_else_names_the_original():
+    notice = "Adapted from the Poach Chrome extension (Apache-2.0) and changed for AnyPoach. See NOTICE."
     for path in extension_files():
-        if path.suffix in {".js", ".html", ".json", ".css"}:
-            assert not re.search(r"(?<![A-Za-z])Poach(?![A-Za-z])", path.read_text(encoding="utf-8")), path.name
-            assert "47831" not in path.read_text(encoding="utf-8")
+        if path.suffix in {".js", ".html", ".css"}:
+            text = path.read_text(encoding="utf-8")
+            assert notice in text.splitlines()[0] + (text.splitlines()[1] if path.suffix == ".html" else ""), path.name
+            assert not re.search(r"(?<![A-Za-z])Poach(?![A-Za-z])", text.replace(notice, "")), path.name
+            assert "47831" not in text
 
 
 def test_the_wheel_ships_the_extension(tmp_path):
