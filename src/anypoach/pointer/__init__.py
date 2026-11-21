@@ -8,7 +8,7 @@ from .trace import PointerSource
 
 
 def default_source() -> PointerSource | None:
-    """Windows and X11 sessions only. Wayland (no global pointer position) and macOS (not yet ported) give None,
+    """Windows and X11 sessions only. Wayland (no global pointer position) and macOS (no source yet) give None,
     which the recorder turns into a trace with `available: false`."""
     try:
         if sys.platform == "win32":

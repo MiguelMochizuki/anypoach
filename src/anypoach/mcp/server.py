@@ -42,7 +42,7 @@ def failure(message: str) -> CallToolResult:
 
 
 def clean(value: Any) -> Any:
-    """Print 900.0 as 900, like JavaScript."""
+    """Turn integral floats into ints, so 900.0 prints as 900."""
     if isinstance(value, float) and value.is_integer():
         return int(value)
     if isinstance(value, dict):
@@ -272,7 +272,7 @@ async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, de
         if not isinstance(evidence, dict) or evidence.get("mediaType") != "video" or not isinstance(evidence.get("sourcePath"), str):
             raise ValueError("This shared brief does not include a video recording.")
         if not evidence["sourcePath"]:
-            raise ValueError("This favorite keeps reference frames without the original recording. Use anypoach_read_brief to see its saved frames.")
+            raise ValueError("This brief keeps reference frames without the original recording. Use anypoach_read_brief to see its saved frames.")
         png = await asyncio.to_thread(read_video_moment, evidence["sourcePath"], timeMs)
         if len(png) > FIVE_MB:
             raise ValueError("Reference image exceeds the 5 MB limit")

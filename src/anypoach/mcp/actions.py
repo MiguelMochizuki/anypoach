@@ -7,7 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 Button = Literal["left", "right", "other"]
-Num = int | float  # keeps JSON integers as integers, like JavaScript numbers
+Num = int | float  # keeps JSON integers as integers (3 stays 3, not 3.0)
 
 
 class TraceEvent(BaseModel):
@@ -43,7 +43,7 @@ def parse_trace(value: Any) -> Trace | None:
 
 
 def event_json(event: TraceEvent) -> dict[str, Any]:
-    """Key order and omitted-when-absent fields like the JS server's parsed objects."""
+    """Dump an event with its stored key order, leaving out fields that are absent."""
     return event.model_dump(exclude_none=True)
 
 

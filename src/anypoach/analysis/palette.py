@@ -22,7 +22,7 @@ def extract_palette(frame: np.ndarray, size: float = 6) -> list[str]:
     keys = ((px[:, 0] >> 4) << 8) | ((px[:, 1] >> 4) << 4) | (px[:, 2] >> 4)
     unique, first, inverse, counts = np.unique(keys, return_index=True, return_inverse=True, return_counts=True)
     sums = np.stack([np.bincount(inverse, weights=px[:, c], minlength=len(unique)) for c in range(3)], axis=1)
-    # Highest count first; ties keep first-seen order, like a stable sort over a JS Map.
+    # Highest count first; ties keep the order in which the colors first appear.
     order = sorted(range(len(unique)), key=lambda i: (-counts[i], first[i]))[:size]
     out = []
     for i in order:

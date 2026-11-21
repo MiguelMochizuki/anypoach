@@ -24,7 +24,7 @@ Progress = Callable[[str], None]
 
 
 def _round(value: float) -> int:
-    return math.floor(value + 0.5)  # JS Math.round
+    return math.floor(value + 0.5)  # round half up; Python's round() rounds half to even
 
 
 def _clamp(value: float, low: int, high: int) -> int:
