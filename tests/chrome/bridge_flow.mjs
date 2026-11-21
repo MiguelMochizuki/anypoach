@@ -25,6 +25,8 @@ out.rightCode = await send({ anypoachBridge: "pair", code });
 out.storedAfterPairing = stored.pairingCode === code;
 out.capture = await send({ anypoachBridge: "capture", evidence: session, final: true });
 out.oversized = await send({ anypoachBridge: "capture", evidence: { ...session, padding: "x".repeat(300 * 1024) }, final: true });
+const bigList = Array.from({ length: 3000 }, (_, id) => ({ id, pad: "x".repeat(90) }));
+out.droppedComponentsAtEnd = await send({ anypoachBridge: "capture", evidence: { ...session, componentsAtEnd: bigList }, final: true });
 stored.pairingCode = "11111111-1111-4111-8111-111111111111";
 out.changedCode = await send({ anypoachBridge: "capture", evidence: session, final: true });
 out.foreignMessage = await new Promise(resolve => resolve(listener({ anypoachBridge: "capture", evidence: session }, { id: "someone-else" }, () => {})));

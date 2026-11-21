@@ -31,8 +31,13 @@ async function handle(message) {
   const { pairingCode } = await chrome.storage.local.get("pairingCode");
   if (!pairingCode) return { needsPairing: true, error: "Pair with AnyPoach first." };
   if (message.anypoachBridge === "ping") return send("/pair", pairingCode);
-  const body = JSON.stringify(message.evidence);
-  if (new Blob([body]).size > 256 * 1024) return { error: "This capture exceeds AnyPoach’s evidence limit." };
+  const tooBig = text => new Blob([text]).size > 256 * 1024;
+  let body = JSON.stringify(message.evidence);
+  if (tooBig(body) && message.evidence.componentsAtEnd) {  // the list measured at the end is the first thing to give up
+    const { componentsAtEnd, ...rest } = message.evidence;
+    body = JSON.stringify(rest);
+  }
+  if (tooBig(body)) return { error: "This capture exceeds AnyPoach’s evidence limit." };
   return send("/capture", pairingCode, {
     method: "POST",
     body,

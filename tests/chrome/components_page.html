@@ -1,0 +1,55 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>components test page</title>
+<style>body { margin: 0; font: 16px/20px Arial, sans-serif; } .card { display: inline-block; width: 180px; height: 100px; margin: 10px; }</style>
+<section id="root" style="width: 800px; margin: 30px 40px">
+  <h2 style="margin: 0; font: 600 24px/28px Arial">Title</h2>
+  <p style="margin: 0">Paragraph</p>
+  <div class="card"><b>Card A</b> <span>tag1</span> <span>tag2</span></div>
+  <div class="card"><b>Card B</b></div>
+  <div class="card"><b>Card C</b></div>
+  <input value="secret">
+  <div hidden>hidden text</div>
+  <div aria-hidden="true">aria text</div>
+  <div style="width: 0; height: 0">zero text</div>
+</section>
+<pre id="out"></pre>
+<script>
+  window.__messages = [];
+  let listener;
+  window.chrome = {
+    runtime: { id: "test", sendMessage: message => { window.__messages.push(message); return Promise.resolve({ ok: true }); },
+               onMessage: { addListener: fn => { listener = fn; } } },
+  };
+</script>
+<script src="capture.js"></script>
+<script>
+  const root = document.getElementById("root");
+  if (location.hash === "#many") {
+    root.replaceChildren();
+    let parent = root;
+    for (let depth = 1; depth <= 8; depth++) {  // a deep chain of big boxes, then 60 small boxes of growing size
+      const box = document.createElement("div");
+      box.style.cssText = `width: ${800 - depth * 10}px; height: ${300 - depth * 10}px`;
+      box.append(document.createTextNode("d" + depth));
+      parent.append(box);
+      parent = box;
+    }
+    for (let i = 0; i < 60; i++) {
+      const box = document.createElement("div");
+      box.style.cssText = `display: inline-block; width: ${10 + 3 * i}px; height: 20px`;
+      box.textContent = "n" + i;
+      root.append(box);
+    }
+  }
+  window.__anypoachTest.start(root);
+  let components;
+  setTimeout(() => {
+    if (location.hash === "#detached") root.remove();
+    components = window.__anypoachTest.measureComponents(root);
+  }, 300);
+  setTimeout(() => listener({ anypoach: "finish" }, { id: "test" }, reply => {
+    document.getElementById("out").textContent = JSON.stringify({ evidence: reply.evidence, components });
+    document.title = "done";
+  }), 800);
+</script>
