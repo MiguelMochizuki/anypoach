@@ -11,6 +11,13 @@ from .controller import physical_rect
 
 
 class SelectionOverlay(QWidget):
+    """Full-screen, translucent overlay for dragging the area to record.
+
+    Emits `selected` with a `Rect` in global physical pixels when the drag ends, or `cancelled` on Escape.
+
+    Args:
+        screen: The screen to cover.
+    """
     selected = Signal(object)  # Rect in global physical pixels
     cancelled = Signal()
 
@@ -26,6 +33,7 @@ class SelectionOverlay(QWidget):
         return QRect(self._anchor, self._current).normalized() if self._anchor and self._current else QRect()
 
     def paintEvent(self, _event) -> None:
+        """Dim the screen and cut out the area being dragged, outlined in white."""
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(0, 0, 0, 90))
         area = self._drag_rect()
@@ -37,13 +45,16 @@ class SelectionOverlay(QWidget):
             painter.drawRect(area)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Anchor the selection at the pressed point."""
         self._anchor = self._current = event.position().toPoint()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """Grow the selection to the pointer."""
         self._current = event.position().toPoint()
         self.update()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        """Finish the drag: close the overlay and emit `selected` with the area in physical pixels."""
         if self._anchor is None:
             return
         geometry = self._screen.geometry()
@@ -53,6 +64,7 @@ class SelectionOverlay(QWidget):
         self.selected.emit(Rect(*rect))
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Close the overlay and emit `cancelled` when Escape is pressed."""
         if event.key() == Qt.Key.Key_Escape:
             self.close()
             self.cancelled.emit()

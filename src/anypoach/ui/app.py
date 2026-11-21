@@ -42,6 +42,14 @@ def hide_from_capture(window: QWidget) -> bool:
 
 
 class MainWindow(QMainWindow):
+    """The AnyPoach window: choose an area, record, stop, see the keyframes, copy the assistant prompt.
+
+    It only presents state and forwards clicks; the flow itself lives in `Controller`. Enter activates the
+    focused button, and every control has an accessible name.
+
+    Args:
+        controller: The flow this window drives.
+    """
     def __init__(self, controller: Controller) -> None:
         super().__init__()
         self.controller = controller
@@ -76,7 +84,8 @@ class MainWindow(QMainWindow):
         button.clicked.connect(slot)
         return button
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:  # Enter activates the focused button; Tab moves between them
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Let Enter or Return click the focused button (Tab already moves between them); other keys behave as usual."""
         focus = self.focusWidget()
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and isinstance(focus, QPushButton):
             focus.click()
@@ -152,6 +161,7 @@ class MainWindow(QMainWindow):
 
 
 def main() -> int:
+    """Start the AnyPoach window and return the Qt exit code. This is the `anypoach` command."""
     app = QApplication(sys.argv)
     work = make_temp_dir()
     controller = Controller(MssBackend(), default_source(), Path(work), cache=cache_dir())

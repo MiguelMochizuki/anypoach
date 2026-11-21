@@ -11,6 +11,7 @@ Num = int | float  # keeps JSON integers as integers, like JavaScript numbers
 
 
 class TraceEvent(BaseModel):
+    """One pointer event as stored in a brief, validated strictly; unknown keys are ignored and `x`/`y` must be 0 to 1."""
     model_config = ConfigDict(strict=True, extra="ignore")
     timeMs: Num = Field(ge=0)
     kind: Literal["move", "down", "up", "drag"]
@@ -21,6 +22,7 @@ class TraceEvent(BaseModel):
 
 
 class Trace(BaseModel):
+    """A pointer trace as stored in a brief. Only `events` is required; counts and bounds are optional so older briefs still load."""
     model_config = ConfigDict(strict=True, extra="ignore")
     available: bool | None = None
     truncated: bool | None = None
@@ -33,6 +35,7 @@ class Trace(BaseModel):
 
 
 def parse_trace(value: Any) -> Trace | None:
+    """Return the validated trace, or None when `value` does not have the trace shape (the brief is then read without click or drag candidates)."""
     try:
         return Trace.model_validate(value)
     except ValidationError:

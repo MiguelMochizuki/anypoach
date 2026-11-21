@@ -19,8 +19,19 @@ _LOOKUP = "Use AnyPoach MCP to call anypoach_read_brief with briefId {id}. Verif
 
 
 def physical_rect(start: tuple[float, float], end: tuple[float, float], *, origin: tuple[float, float], dpr: float) -> Rect:
-    """Two dragged corners in a screen's logical coordinates -> global physical pixels, normalized so width/height >= 0.
-    Assumes one device pixel ratio per screen; `origin` is the screen's logical top-left in the global space."""
+    """Convert two dragged corners into a global rectangle in physical pixels.
+
+    Assumes one device pixel ratio per screen.
+
+    Args:
+        start: First corner, in the screen's logical coordinates.
+        end: Opposite corner, in the same coordinates.
+        origin: The screen's logical top-left in the global coordinate space.
+        dpr: Device pixel ratio of that screen.
+
+    Returns:
+        A rectangle whose width and height are never negative, whichever way the drag went.
+    """
     left, right = sorted((start[0], end[0]))
     top, bottom = sorted((start[1], end[1]))
     return Rect((origin[0] + left) * dpr, (origin[1] + top) * dpr, (right - left) * dpr, (bottom - top) * dpr)
@@ -52,6 +63,23 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
 
 
 class Controller:
+    """Runs the record-analyze-share flow without any UI toolkit, so it can be tested and reused.
+
+    Failures never raise: they set `message` for the window to show and leave `state` unchanged or back at idle.
+
+    Attributes:
+        state: `idle`, `recording`, or `ready` (a result is available to share).
+        message: Last problem or hint for the user; empty when all is well.
+        context: Free text for the assistant, included in the brief.
+        annotations: Notes pinned to timestamps, included in the brief.
+        result: Analysis of the latest recording, once `stop()` succeeds.
+
+    Args:
+        backend: Screen capture to use.
+        pointer_source: Where the pointer is read from, or None for no pointer trace.
+        work_dir: Folder for recordings and keyframes.
+        cache: Brief cache directory; the per-OS default when omitted.
+    """
     def __init__(self, backend: CaptureBackend, pointer_source: PointerSource | None, work_dir: Path, *,
                  cache: Path | None = None) -> None:
         self._backend, self._source, self._work, self._cache = backend, pointer_source, Path(work_dir), cache
@@ -64,10 +92,12 @@ class Controller:
         self._recorder: Recorder | None = None
 
     def choose_region(self, region: Rect) -> None:
+        """Remember the area to record. Anything smaller than 2 px in either direction is refused with a message."""
         self._region = Rect(*region) if region.width >= 2 and region.height >= 2 else None
         self.message = "" if self._region else "Choose an area to record."
 
     def start(self) -> None:
+        """Begin recording the chosen area. Refused with a message if no area is chosen, a recording is already running, or capture cannot start."""
         if self.state == "recording":
             self.message = "Already recording."
             return
@@ -84,6 +114,12 @@ class Controller:
         self._recorder, self.state, self.message, self.result = recorder, "recording", "", None
 
     def stop(self) -> InspectionResult | None:
+        """End the recording and analyze it.
+
+        Returns:
+            The analysis, or None with `message` set when nothing was recording, capture was denied (no screen
+            recording permission), or the clip could not be analyzed.
+        """
         recorder = self._recorder
         if self.state != "recording" or recorder is None:
             self.message = "There is no recording to stop."

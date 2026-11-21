@@ -27,14 +27,17 @@ server = MCPServer("anypoach", version="0.1.0")
 
 
 def text(value: str) -> TextContent:
+    """Wrap `value` as MCP text content."""
     return TextContent(type="text", text=value)
 
 
 def image(png: bytes) -> ImageContent:
+    """Wrap PNG bytes as MCP image content (base64)."""
     return ImageContent(type="image", data=base64.b64encode(png).decode(), mimeType="image/png")
 
 
 def failure(message: str) -> CallToolResult:
+    """Build a tool result that reports `message` as an error instead of raising."""
     return CallToolResult(content=[text(message)], is_error=True)
 
 
@@ -50,10 +53,12 @@ def clean(value: Any) -> Any:
 
 
 def dumps(value: Any, indent: int | None = None) -> str:
+    """Serialize to JSON the way the tools print it: integral floats without `.0`, non-ASCII kept, compact unless `indent` is set."""
     return json.dumps(clean(value), indent=indent, ensure_ascii=False, separators=(",", ":") if indent is None else None)
 
 
 def tool(name: str):
+    """Register an async function as the MCP tool `name`, taking its title and description from `descriptions.TOOLS`."""
     return server.tool(name=name, title=TOOLS[name]["title"], description=TOOLS[name]["description"])
 
 
@@ -69,16 +74,29 @@ async def _inspect(fn, path: str, output_directory: str | None, failure_prefix: 
 @tool("anypoach_inspect")
 async def anypoach_inspect(videoPath: Annotated[str, Field(min_length=1, description="Absolute path to a local .mp4 or .mov file")],
                         outputDirectory: Annotated[str | None, Field(description="Optional absolute directory for extracted keyframe PNG files")] = None) -> CallToolResult:
+    """Analyze a local video file and return keyframes, palette, and timing.
+
+    Args:
+        videoPath: Absolute path of a `.mp4` or `.mov` file.
+        outputDirectory: Absolute folder for the keyframe PNGs; a private temporary folder when omitted.
+    """
     return await _inspect(inspect_video, videoPath, outputDirectory, "AnyPoach could not inspect this video")
 
 
 @tool("anypoach_inspect_image")
 async def anypoach_inspect_image(imagePath: Annotated[str, Field(min_length=1, description="Absolute path to a local still image")],
                               outputDirectory: Annotated[str | None, Field(description="Optional absolute directory for the normalized PNG preview")] = None) -> CallToolResult:
+    """Analyze a local still image and return its palette and a normalized PNG preview.
+
+    Args:
+        imagePath: Absolute path of the image.
+        outputDirectory: Absolute folder for the preview PNG; a private temporary folder when omitted.
+    """
     return await _inspect(inspect_image, imagePath, outputDirectory, "AnyPoach could not inspect this image")
 
 
 class Brief(BaseModel):
+    """The parts of a stored brief the tools rely on; version 1 only, unknown keys ignored."""
     model_config = ConfigDict(strict=True, extra="ignore")
     version: int = Field(ge=1, le=1)
     briefId: uuid.UUID | None = Field(default=None, strict=False)
@@ -110,6 +128,7 @@ def _keyframe(frame: dict[str, Any]) -> list[Any]:
 
 
 class Frame(BaseModel):
+    """A keyframe entry of a brief's evidence: the PNG path, its kind, and its time."""
     model_config = ConfigDict(strict=True, extra="ignore")
     imagePath: str
     kind: str
@@ -153,6 +172,12 @@ async def _drag_release_content(source_path: str, actions: list[dict[str, Any]])
 @tool("anypoach_read_brief")
 async def anypoach_read_brief(briefId: uuid.UUID | None = None,
                            includeKeyframes: Annotated[bool, Field(description="Include the shared capture's PNG keyframes as images for visual inspection")] = True) -> CallToolResult:
+    """Return a shared brief with its keyframes and click/drag candidates, plus frames after recent drag releases.
+
+    Args:
+        briefId: Brief to read; the latest when omitted.
+        includeKeyframes: Attach the keyframe PNGs as images.
+    """
     try:
         raw = read_brief(str(briefId) if briefId else None)
         brief = Brief.model_validate(raw)
@@ -235,6 +260,12 @@ def _browser_near(raw: Any, time_ms: float) -> list[dict[str, Any]]:
 @tool("anypoach_read_moment")
 async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, description="Timestamp in milliseconds, before the recording ends")],
                             briefId: uuid.UUID | None = None) -> CallToolResult:
+    """Return one PNG frame of a brief's recording at `timeMs`, with any note pinned near that moment.
+
+    Args:
+        timeMs: Milliseconds into the recording, 0 to 30000 and before its end.
+        briefId: Brief to read; the latest when omitted.
+    """
     try:
         raw = read_brief(str(briefId) if briefId else None)
         evidence = raw.get("evidence")
@@ -316,6 +347,7 @@ async def _on_initialized(_context: Any, _params: NotificationParams) -> None:
     _refresh_presence()
 
     async def beat() -> None:
+        """Refresh the presence file every five seconds while a client stays connected."""
         while True:
             await asyncio.sleep(5)
             _refresh_presence()
@@ -324,6 +356,7 @@ async def _on_initialized(_context: Any, _params: NotificationParams) -> None:
 
 
 def main() -> None:
+    """Run the MCP server over stdio until the client disconnects, keeping the presence file up to date."""
     server._lowlevel_server.add_notification_handler("notifications/initialized", NotificationParams, _on_initialized)
     atexit.register(_disconnect)
     try:
