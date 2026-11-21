@@ -28,9 +28,10 @@ from anypoach.brief.paths import cache_dir
 from anypoach.capture.default import default_backend
 from anypoach.macos import macos_screen_access
 from anypoach.pointer import default_source
+from anypoach.pointer.trace import Rect
 from anypoach.tempdirs import make_temp_dir
 
-from .controller import Controller
+from .controller import Controller, physical_rect
 from .frozen_selection import FrozenSelection
 from .review import ReviewPanel
 from .selection import SelectionOverlay
@@ -85,6 +86,7 @@ class MainWindow(QMainWindow):
         self._limit = QTimer(self, singleShot=True, interval=MAX_RECORDING_MS)
         self._limit.timeout.connect(self._stop)
         self.area, self.record_button = self._button("Choose area", self._choose), self._button("Record", self._record)
+        self.full_screen = self._button("Full screen", self._choose_full_screen)
         self.stop_button, self.copy_button = self._button("Stop", self._stop), self._button("Copy prompt for assistant", self._copy)
         self.status = QLabel("Choose an area, then record.")
         self.status.setAccessibleName("Status")
@@ -93,7 +95,7 @@ class MainWindow(QMainWindow):
         self.frames.setIconSize(QSize(160, 100))
         self.frames.setAccessibleName("Keyframes")
         buttons = QHBoxLayout()
-        for button in (self.area, self.record_button, self.stop_button, self.copy_button):
+        for button in (self.area, self.full_screen, self.record_button, self.stop_button, self.copy_button):
             buttons.addWidget(button)
         body = QVBoxLayout()
         body.addLayout(buttons)
@@ -187,6 +189,7 @@ class MainWindow(QMainWindow):
     def _refresh(self) -> None:
         state = self.controller.state
         self.area.setEnabled(state != "recording")
+        self.full_screen.setEnabled(state != "recording")
         self.record_button.setEnabled(state != "recording")
         self.stop_button.setEnabled(state == "recording")
         self.copy_button.setEnabled(state == "ready")
@@ -213,6 +216,22 @@ class MainWindow(QMainWindow):
         self._overlay = overlay
         overlay.showFullScreen()
         overlay.setFocus()
+
+    def _choose_full_screen(self) -> None:
+        """Select the whole screen the window is on (on a portal session, the whole shared stream)."""
+        if self.controller.supports_preview:
+            frame = self.controller.preview()
+            if frame is None:
+                self._refresh()
+                return
+            self._device_scale = None
+            height, width = frame.pixels.shape[:2]
+            self._chosen(Rect(0, 0, width, height))
+            return
+        screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
+        self._device_scale, geometry = screen.devicePixelRatio(), screen.geometry()
+        self._chosen(Rect(*physical_rect((0, 0), (geometry.width(), geometry.height()),
+                                         origin=(geometry.x(), geometry.y()), dpr=self._device_scale)))
 
     def _selection_cancelled(self) -> None:
         self.controller.close()  # ends the portal session so the compositor stops showing that it is sharing
