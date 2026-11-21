@@ -25,6 +25,7 @@ from anypoach.ui.selection import SelectionOverlay
 class FakeController:
     supports_preview = False
     ready_to_record = True
+    region = None
     screen_access = True
 
     def __init__(self):
@@ -70,7 +71,7 @@ def test_every_button_has_an_accessible_name_and_state_follows_the_controller(ap
     controller = FakeController()
     window = MainWindow(controller)
     buttons = window.findChildren(QPushButton)
-    assert len(buttons) == 12 and all(b.accessibleName() for b in buttons)
+    assert len(buttons) == 14 and all(b.accessibleName() for b in buttons)
     assert (window.stop_button.isEnabled(), window.copy_button.isEnabled()) == (False, False)
     window.record_button.click()
     QTest.qWait(300)
@@ -458,3 +459,40 @@ def test_window_with_nothing_to_list_leaves_the_selection_alone(app):
     window = MainWindow(controller)
     window.window_button.click()
     assert not [c for c in controller.calls if c[0] == "choose"]
+
+
+def test_continue_with_copies_the_prompt_and_says_when_the_app_cannot_be_opened(app, monkeypatch):
+    opened = []
+    monkeypatch.setattr("anypoach.ui.app.QDesktopServices.openUrl", lambda url: opened.append(url.toString()) or bool(len(opened) - 1))
+    controller = FakeController()
+    controller.state = "ready"
+    window = MainWindow(controller)
+    window.claude_button.click()
+    assert opened == ["claude://"] and "could not be opened" in window.status.text()
+    window.codex_button.click()
+    assert opened[-1] == "codex://" and "Paste it into Codex" in window.status.text()
+    assert QApplication.clipboard().text() == "the prompt"
+
+
+def test_the_tray_menu_needs_an_area_before_recording_or_taking_a_screenshot(app, monkeypatch):
+    monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", lambda: True)
+    controller = FakeController()
+    controller.ready_to_record = False
+    window = MainWindow(controller)
+    window._record_from_tray()
+    window._screenshot_from_tray()
+    assert "start" not in controller.calls and "Choose an area" in window.status.text()
+    names = [a.text() for a in window._tray_idle_menu.actions()]
+    assert names[:3] == ["Show AnyPoach", "Choose area…", "Record the chosen area"] and "Screenshot of the chosen area" in names
+
+
+def test_the_outline_frames_the_area_from_outside(app):
+    from PySide6.QtCore import QRect
+
+    from anypoach.ui.outline import MARGIN, AreaOutline, outline_geometry
+    area = QRect(100, 80, 400, 300)
+    assert outline_geometry(area) == QRect(100 - MARGIN, 80 - MARGIN, 400 + 2 * MARGIN, 300 + 2 * MARGIN)
+    outline = AreaOutline(area)
+    assert outline.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+    assert outline.windowFlags() & Qt.WindowType.WindowTransparentForInput
+    outline.close()

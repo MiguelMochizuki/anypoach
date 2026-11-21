@@ -4,7 +4,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QRect, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeyEvent, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -41,12 +41,14 @@ from .favorites import FavoritesDialog
 from .fontmatch import FontMatchDialog
 from .frozen_selection import FrozenSelection
 from .onboarding import OnboardingDialog
+from .outline import AreaOutline
 from .palette import PaletteEditor
 from .review import ReviewPanel
 from .selection import SelectionOverlay
 from .settings import SettingsDialog
 
 MAX_RECORDING_MS = 30_000  # the analysis only reads the first 30 s
+ASSISTANT_URLS = {"Claude": "claude://", "Codex": "codex://"}  # the desktop apps' URL schemes; unverified, so a failure only says so
 LEAVE_SCREEN_MS = 500  # time for the compositor to take the window off the screen before capture starts
 
 
@@ -99,6 +101,7 @@ class MainWindow(QMainWindow):
     def __init__(self, controller: Controller, bridge: BridgeController | None = None, hotkey_factory=default_hotkey) -> None:
         super().__init__()
         self._hotkey_factory, self._hotkey = hotkey_factory, None
+        self._outline: AreaOutline | None = None
         self.hotkey_pressed.connect(self._toggle_recording)
         self.controller = controller
         self._bridge = bridge
@@ -113,6 +116,8 @@ class MainWindow(QMainWindow):
         self.screenshot = self._button("Screenshot", self._screenshot)
         self.import_button = self._button("Import…", self._import)
         self.save_favorite_button = self._button("Save as favorite…", self._save_favorite)
+        self.claude_button = self._button("Continue with Claude", lambda: self._continue_with("Claude", ASSISTANT_URLS["Claude"]))
+        self.codex_button = self._button("Continue with Codex", lambda: self._continue_with("Codex", ASSISTANT_URLS["Codex"]))
         self.font_button = self._button("Match font…", self._match_font)
         self.favorites_button = self._button("Favorites…", self._favorites)
         self.settings_button = self._button("Settings…", self._settings)
@@ -124,7 +129,7 @@ class MainWindow(QMainWindow):
         self.frames.setIconSize(QSize(160, 100))
         self.frames.setAccessibleName("Keyframes")
         buttons = QHBoxLayout()
-        for button in (self.area, self.full_screen, self.window_button, self.screenshot, self.import_button, self.font_button, self.save_favorite_button, self.favorites_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
+        for button in (self.area, self.full_screen, self.window_button, self.screenshot, self.import_button, self.font_button, self.claude_button, self.codex_button, self.save_favorite_button, self.favorites_button, self.settings_button, self.record_button, self.stop_button, self.copy_button):
             buttons.addWidget(button)
         body = QVBoxLayout()
         body.addLayout(buttons)
@@ -228,6 +233,8 @@ class MainWindow(QMainWindow):
         self.stop_button.setEnabled(state == "recording")
         self.copy_button.setEnabled(state == "ready")
         self.save_favorite_button.setEnabled(state == "ready")
+        self.claude_button.setEnabled(state == "ready")
+        self.codex_button.setEnabled(state == "ready")
         result = self.controller.result
         self.font_button.setEnabled(state == "ready" and result is not None and result.media_type == "image")
         if self.controller.message:
@@ -331,6 +338,7 @@ class MainWindow(QMainWindow):
         if self.controller.state == "recording":
             self.status.setText("Recording…")
             self._limit.start()
+            self._show_outline()
         else:
             self._return_to_screen()
         self._refresh()
@@ -344,6 +352,9 @@ class MainWindow(QMainWindow):
         tray.activated.connect(lambda reason: self.showNormal() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
         self._tray_idle_menu = QMenu()
         self._tray_idle_menu.addAction("Show AnyPoach", self.showNormal)
+        self._tray_idle_menu.addAction("Choose area…", self._choose)
+        self._tray_idle_menu.addAction("Record the chosen area", self._record_from_tray)
+        self._tray_idle_menu.addAction("Screenshot of the chosen area", self._screenshot_from_tray)
         self._tray_idle_menu.addAction("Record full screen", self._record_full_screen)
         self._tray_idle_menu.addAction("Quit", self.close)
         self._tray_recording_menu = QMenu()
@@ -387,6 +398,24 @@ class MainWindow(QMainWindow):
         else:
             self._record_full_screen()
 
+    def _need_area(self) -> bool:
+        """Show the window with the reason when no area is chosen; True when there is one."""
+        if self.controller.ready_to_record:
+            return True
+        self.controller.message = self.controller.message or "Choose an area first."
+        self.showNormal()
+        self._refresh()
+        return False
+
+    def _record_from_tray(self) -> None:
+        if self._need_area():
+            self._record()
+
+    def _screenshot_from_tray(self) -> None:
+        if self._need_area():
+            self.showNormal()
+            self._screenshot()
+
     def _record_full_screen(self) -> None:
         if self.controller.state == "recording":
             return
@@ -394,7 +423,24 @@ class MainWindow(QMainWindow):
         if self.controller.ready_to_record:
             self._record()
 
+    def _show_outline(self) -> None:
+        """Frame the recorded area where an overlay can be placed (not on a portal session)."""
+        region = self.controller.region
+        if region is None or self.controller.supports_preview:
+            return
+        screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
+        dpr = screen.devicePixelRatio()
+        self._outline = AreaOutline(QRect(round(region.x / dpr), round(region.y / dpr), round(region.width / dpr),
+                                          round(region.height / dpr)))
+        self._outline.show()
+
+    def _hide_outline(self) -> None:
+        if self._outline is not None:
+            self._outline.close()
+            self._outline = None
+
     def _return_to_screen(self) -> None:
+        self._hide_outline()
         self._tray_state(False)
         self.showNormal()
 
@@ -478,6 +524,18 @@ class MainWindow(QMainWindow):
             self._body.removeWidget(self.review)
             self.review.deleteLater()
             self.review = None
+
+    def _continue_with(self, name: str, url: str) -> None:
+        """Copy the prompt, then try to open the assistant's desktop app; the prompt stays on the clipboard either way."""
+        prompt = self.controller.copy_handoff()
+        if not prompt:
+            self._refresh()
+            return
+        QApplication.clipboard().setText(prompt)
+        opened = QDesktopServices.openUrl(QUrl(url))
+        self.status.setText(f"Prompt copied. Paste it into {name}." if opened else
+                            f"Prompt copied. {name} could not be opened from here; open it and paste.")
+        self._refresh()
 
     def _copy(self) -> None:
         prompt = self.controller.copy_handoff()
