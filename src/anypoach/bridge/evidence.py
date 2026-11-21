@@ -64,6 +64,15 @@ class _Animation(_Model):
     keyframes: list[_Frame] = Field(max_length=8)
 
 
+class _Component(_Model):
+    id: int = Field(ge=0)
+    parent: int = Field(ge=-1)
+    target: _Element
+    rect: list[float] = Field(min_length=4, max_length=4)
+    styles: dict[str, str]
+    text: str = Field(max_length=80)
+
+
 class _Viewport(_Model):
     width: float = Field(gt=0)
     height: float = Field(gt=0)
@@ -81,6 +90,8 @@ class _Session(_Model):
     targetRemoved: bool
     devicePixelRatio: float | None = None
     viewport: _Viewport | None = None
+    components: list[_Component] | None = Field(default=None, max_length=40)
+    componentsAtEnd: list[_Component] | None = Field(default=None, max_length=40)
 
     @field_validator("devicePixelRatio", "viewport", mode="before")
     @classmethod
@@ -99,6 +110,13 @@ class _Session(_Model):
                 or parts.path or parts.query or parts.fragment or value.endswith(("?", "#"))):
             raise ValueError("origin must be http(s)://host with nothing after it")
         return value
+
+    @model_validator(mode="after")
+    def _components_form_a_tree(self) -> _Session:
+        for items in (self.components, self.componentsAtEnd):
+            if items is not None and any(c.id != i or c.parent >= c.id for i, c in enumerate(items)):
+                raise ValueError("components must be numbered in order, each after its parent")
+        return self
 
     @model_validator(mode="after")
     def _times_inside_the_session(self) -> _Session:

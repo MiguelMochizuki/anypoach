@@ -188,3 +188,12 @@ def test_an_oversized_body_still_gets_its_413_while_the_client_is_sending(runnin
             reply = b"reset"
         sock.close()
         assert b" 413 " in reply, reply
+
+
+def test_a_session_with_41_components_is_422_and_one_with_components_is_204(running):
+    server, store = running
+    item = {"id": 0, "parent": -1, "target": {"tag": "p", "role": "", "classes": ""}, "rect": [0, 0, 10, 10], "styles": {}, "text": ""}
+    many = [{**item, "id": i} for i in range(41)]
+    assert call(server, "POST", "/v1/capture", session(components=many)) == 422
+    assert call(server, "POST", "/v1/capture", session(components=[item]), {"X-AnyPoach-Final": "1"}) == 204
+    assert store.latest_for((START, START + 1000))["components"] == [item]
