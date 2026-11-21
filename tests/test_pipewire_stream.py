@@ -32,7 +32,9 @@ def test_latest_returns_the_newest_complete_frame():
     stream.start()
     try:
         assert stream.wait_first_frame().pixels.shape == (2, 4, 4)
-        time.sleep(0.5)
+        deadline = time.monotonic() + 5
+        while stream.latest().pixels[0, 0, 0] != 4 and time.monotonic() < deadline:
+            time.sleep(0.05)  # a loaded CI runner can deliver the last frame late
         assert stream.latest().pixels[0, 0, 0] == 4
     finally:
         stream.close()

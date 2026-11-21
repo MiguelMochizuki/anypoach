@@ -161,6 +161,7 @@ def test_closing_the_window_releases_the_backend(app):
     assert controller.closed >= 1
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows excludes the window from capture and starts at once")
 def test_recording_starts_only_after_the_window_has_left_the_screen(app, monkeypatch):
     monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", lambda: False)
     controller = FakeController()
