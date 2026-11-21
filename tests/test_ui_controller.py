@@ -215,3 +215,13 @@ def test_handoff_prompt_explains_size_and_scale():
     prompt = handoff_prompt("ID", None)
     assert "evidence.capture" in prompt and "deviceScale" in prompt and "reduced" in prompt
     assert "ask" in prompt.split("deviceScale")[-1]
+
+
+def test_device_scale_counts_video_pixels_when_the_recorder_downsizes(tmp_path):
+    controller = make(tmp_path)
+    controller.choose_region(Rect(0, 0, 2400, 1200), device_scale=2.0)  # 1200x600 CSS px, recorded at 1920 px wide
+    controller.start()
+    time.sleep(0.4)
+    result = controller.stop()
+    assert result.capture.width_px == 1920
+    assert result.capture.device_scale == pytest.approx(1.6)  # video pixels per CSS pixel, not the screen's 2.0

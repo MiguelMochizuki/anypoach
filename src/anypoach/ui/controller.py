@@ -186,7 +186,7 @@ class Controller:
             self.message = "There is no recording to stop."
             return None
         self._recorder, self.state = None, "idle"
-        scale = self._device_scale  # close() below forgets the area, and the scale with it
+        scale, region = self._device_scale, self._region  # close() below forgets both
         try:
             try:
                 recording = recorder.stop()
@@ -200,7 +200,12 @@ class Controller:
         except (ValueError, OSError) as error:
             self.message = f"Could not finish the recording: {error}"
             return None
-        capture = dataclasses.replace(result.capture, device_scale=scale) if result.capture else None
+        capture = result.capture
+        if capture and scale is not None and region:
+            # The recorder shrinks anything over 1920 px, so the screen scale becomes video pixels per CSS pixel.
+            capture = dataclasses.replace(capture, device_scale=scale * capture.width_px / region.width)
+        elif capture:
+            capture = dataclasses.replace(capture, device_scale=scale)
         self.result = dataclasses.replace(result, pointer_trace=recording.trace.to_json(), capture=capture)
         self.state, self.message = "ready", ""
         return self.result
