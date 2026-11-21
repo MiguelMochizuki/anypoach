@@ -1,7 +1,7 @@
 [project]
 name = "anypoach"
 version = "0.1.0"
-description = "Portable Poach: capture, analysis and MCP server."
+description = "AnyPoach: record a UI interaction on any OS and hand it to a coding assistant over MCP."
 requires-python = ">=3.11"
 license = "Apache-2.0"
 dependencies = ["av", "numpy", "mcp", "platformdirs"]

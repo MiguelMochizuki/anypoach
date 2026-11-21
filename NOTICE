@@ -1,7 +1,7 @@
-Poach
-Copyright 2026 the Poach contributors
+AnyPoach
+Copyright 2026 the AnyPoach contributors
 
-This product is a fork of Poach, originally written by Guilherme Lopes
-(https://github.com/guilopeszw/poach) and released under the Apache License 2.0.
-The portable Python implementation in this repository (AnyPoach) is a derivative work of that code.
-See LICENSE for the license terms.
+AnyPoach started as a fork of Poach (https://github.com/guilopeszw/poach),
+released under the Apache License 2.0. It has since been rewritten in Python
+and no longer contains that project's source files, but it is a derivative
+work of it. See LICENSE for the license terms.
