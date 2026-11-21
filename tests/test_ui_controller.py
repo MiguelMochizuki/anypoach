@@ -218,6 +218,13 @@ def test_handoff_prompt_explains_size_and_scale():
     assert "ask" in prompt.split("deviceScale")[-1]
 
 
+def test_handoff_prompt_prefers_browser_evidence():
+    prompt = handoff_prompt("ID", None)
+    assert "evidence.browserEvidence" in prompt
+    tail = prompt.split("evidence.browserEvidence")[1]
+    assert "instead of measuring the video" in tail and "confirm" in tail
+
+
 def test_device_scale_counts_video_pixels_when_the_recorder_downsizes(tmp_path):
     controller = make(tmp_path)
     controller.choose_region(Rect(0, 0, 2400, 1200), device_scale=2.0)  # 1200x600 CSS px, recorded at 1920 px wide

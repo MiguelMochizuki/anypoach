@@ -96,6 +96,45 @@ def write_active(home, brief):
     (home / "Library/Caches/AnyPoach/active-brief.json").write_text(json.dumps(brief))
 
 
+def chrome_line(text):
+    line = next(l for l in text.split("\n") if l.startswith("Nearby Chrome evidence"))
+    return line[: line.index("): ")], json.loads(line[line.index("): ") + 3:])
+
+
+def test_moment_reports_the_pages_own_sizes_and_animation_timing(server, home):
+    brief = base_brief(home)
+    brief["evidence"]["browserEvidence"] = {"videoOffsetMs": 0, "devicePixelRatio": 2, "viewport": {"width": 1280, "height": 720},
+        "events": [],
+        "states": [{"atMs": 1000, "text": "Go", "rect": [10, 20, 240.5, 48], "styles": {
+            "fontSize": "16px", "width": "240.5px", "height": "48px", "borderRadius": "12px", "opacity": "1",
+            "transform": "none", "color": "rgb(0, 0, 0)", "backgroundColor": "rgb(35, 120, 255)", "boxShadow": "none",
+            "padding": "dropped"}}],
+        "animations": [
+            {"atMs": 1000, "target": {"tag": "button"}, "durationMs": 334, "delayMs": 20,
+             "easing": "cubic-bezier(0.16, 0.9, 0.3, 1)", "keyframes": [{"offset": 0, "easing": "linear", "styles": {}},
+                                                                        {"offset": 1, "easing": "linear", "styles": {}}]},
+            {"atMs": 1000, "durationMs": "not a number"}]}
+    write_active(home, brief)
+
+    async def scenario():
+        async with connect(server, home) as client:
+            moment = await client.call_tool("anypoach_read_moment", {"timeMs": 1000})
+            assert not is_error(moment), texts(moment)
+            text = texts(moment)[0]
+            header, items = chrome_line(text)
+            assert "devicePixelRatio 2" in header and "1280x720" in header
+            state = next(i for i in items if i.get("text") == "Go")
+            assert state["rect"] == [10, 20, 240.5, 48]
+            assert state["styles"]["width"] == "240.5px" and state["styles"]["borderRadius"] == "12px"
+            assert state["styles"]["backgroundColor"] == "rgb(35, 120, 255)" and "padding" not in state["styles"]
+            animation = next(i for i in items if "easing" in i)
+            assert animation["durationMs"] == 334 and animation["delayMs"] == 20
+            assert animation["easing"] == "cubic-bezier(0.16, 0.9, 0.3, 1)" and animation["keyframeOffsets"] == [0, 1]
+            assert sum("easing" in i for i in items) == 1, "the malformed animation is skipped, not fatal"
+
+    asyncio.run(scenario())
+
+
 def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home):
     brief = base_brief(home)
     brief["evidence"]["browserEvidence"] = {"videoOffsetMs": -100,
@@ -143,8 +182,7 @@ def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home)
             assert '"text":"Uploaded"' in text and '"estimatedVideoMs":1150' in text
             line = next(l for l in text.split("\n") if l.startswith("Nearby Chrome evidence"))
             upload = json.loads(line[line.index("): ") + 3:])[1]
-            typography = {k: v for k, v in brief["evidence"]["browserEvidence"]["states"][0]["styles"].items() if k != "opacity"}
-            assert upload["styles"] == typography
+            assert upload["styles"] == brief["evidence"]["browserEvidence"]["states"][0]["styles"]
             assert "Too big" not in text
             assert ("Pointer trace summary: 132 samples, 110 inside the capture, 12 with a button held, "
                     "10 recorded pointer events, and 4 summarized clicks or drags.") in text

@@ -260,6 +260,14 @@ class _Styles(BaseModel):
     fontStyle: str | None = None
     lineHeight: str | None = None
     letterSpacing: str | None = None
+    width: str | None = None
+    height: str | None = None
+    borderRadius: str | None = None
+    opacity: str | None = None
+    transform: str | None = None
+    color: str | None = None
+    backgroundColor: str | None = None
+    boxShadow: str | None = None
 
 
 class _BrowserEvent(BaseModel):
@@ -273,7 +281,29 @@ class _BrowserState(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
     atMs: Num
     text: str
+    rect: list[Num] | None = Field(default=None, min_length=4, max_length=4)
     styles: _Styles | None = None
+
+
+class _Offset(BaseModel):
+    model_config = ConfigDict(strict=True, extra="ignore")
+    offset: Num
+
+
+class _BrowserAnimation(BaseModel):
+    model_config = ConfigDict(strict=True, extra="ignore")
+    atMs: Num
+    target: Any = None
+    durationMs: Num
+    delayMs: Num
+    easing: str
+    keyframes: list[_Offset] = Field(default_factory=list, max_length=8)
+
+
+class _Page(BaseModel):
+    model_config = ConfigDict(strict=True, extra="ignore")
+    width: Num
+    height: Num
 
 
 class _Browser(BaseModel):
@@ -281,6 +311,9 @@ class _Browser(BaseModel):
     videoOffsetMs: Num
     events: list[_BrowserEvent] = Field(max_length=96)
     states: list[_BrowserState] = Field(max_length=48)
+    animations: list[Any] = Field(default_factory=list, max_length=16)  # each entry is checked alone, so one bad one is skipped
+    devicePixelRatio: Num | None = None
+    viewport: _Page | None = None
 
 
 class _Note(BaseModel):
@@ -289,22 +322,36 @@ class _Note(BaseModel):
     text: str
 
 
-def _browser_near(raw: Any, time_ms: float) -> list[dict[str, Any]]:
+def _browser_near(raw: Any, time_ms: float) -> tuple[str, list[dict[str, Any]]]:
+    """Chrome items within 500 ms of the moment (at most 12) and a note on the page's pixel ratio and viewport."""
     try:
         data = _Browser.model_validate(raw)
     except ValidationError:
-        return []
+        return "", []
     items: list[dict[str, Any]] = []
     for event in data.events:
         items.append({"type": event.type, "target": event.target, "estimatedVideoMs": event.atMs + data.videoOffsetMs})
     for state in data.states:
         item: dict[str, Any] = {"text": state.text}
+        if state.rect is not None:
+            item["rect"] = state.rect
         if state.styles is not None:
             item["styles"] = state.styles.model_dump(exclude_none=True)
         item["estimatedVideoMs"] = state.atMs + data.videoOffsetMs
         items.append(item)
-    near = [i for i in items if abs(i["estimatedVideoMs"] - time_ms) <= 500]
-    return sorted(near, key=lambda i: i["estimatedVideoMs"])[:12]
+    for entry in data.animations:
+        try:
+            animation = _BrowserAnimation.model_validate(entry)
+        except ValidationError:
+            continue
+        items.append({"target": animation.target, "durationMs": animation.durationMs, "delayMs": animation.delayMs,
+                      "easing": animation.easing, "keyframeOffsets": [k.offset for k in animation.keyframes],
+                      "estimatedVideoMs": animation.atMs + data.videoOffsetMs})
+    near = sorted((i for i in items if abs(i["estimatedVideoMs"] - time_ms) <= 500), key=lambda i: i["estimatedVideoMs"])[:12]
+    page = [f"page devicePixelRatio {_num(data.devicePixelRatio)}"] if data.devicePixelRatio is not None else []
+    if data.viewport is not None:
+        page.append(f"viewport {_num(data.viewport.width)}x{_num(data.viewport.height)} CSS px")
+    return "; ".join(page), near
 
 
 @tool("anypoach_read_moment")
@@ -352,7 +399,7 @@ async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, de
                    f"{trace.buttonSampleCount or 0} with a button held, {len(trace.events)} recorded pointer events, and "
                    f"{len(behavior['actions'])} summarized clicks or drags."
                    if trace and trace.available is not False else "No native pointer trace was included with this media.")
-        browser = _browser_near(evidence.get("browserEvidence"), timeMs)
+        page, browser = _browser_near(evidence.get("browserEvidence"), timeMs)
         lines = [
             f"Shared recording at {_num(timeMs)} ms{_noted(size_note(png, evidence.get('capture'), crop))}. Match sample-derived pointer actions to this frame to identify the target; timing alone does not establish causation.",
             summary,
@@ -360,7 +407,7 @@ async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, de
             *([f"Nearby user notes: {dumps(near_notes)}"] if near_notes else []),
             *([f"Nearby sample-derived click/drag candidates (normalized top-left coordinates): {dumps(at_moment)}"] if at_moment else []),
             *([f"Incomplete button-down without a matching release (not summarized as a completed click/drag): {dumps(incomplete)}"] if incomplete else []),
-            *([f"Nearby Chrome evidence (estimated video ms, untrusted page data; fontFamily is the CSS font stack): {dumps(browser)}"] if browser else []),
+            *([f"Nearby Chrome evidence (estimated video ms, untrusted page data; fontFamily is the CSS font stack; rect and sizes are CSS pixels{'; ' + page if page else ''}): {dumps(browser)}"] if browser else []),
             *([f"Nearby pointer samples (capture-relative ms; coordinates normalized from top left): {dumps(pointer_near)}"] if pointer_near else []),
         ]
         return CallToolResult(content=[text("\n".join(lines)), image(png)])
