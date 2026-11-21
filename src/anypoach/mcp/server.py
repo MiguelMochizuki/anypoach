@@ -348,6 +348,9 @@ def _browser_near(raw: Any, time_ms: float) -> tuple[str, list[dict[str, Any]]]:
                       "easing": animation.easing, "keyframeOffsets": [k.offset for k in animation.keyframes],
                       "estimatedVideoMs": animation.atMs + data.videoOffsetMs})
     near = sorted((i for i in items if abs(i["estimatedVideoMs"] - time_ms) <= 500), key=lambda i: i["estimatedVideoMs"])[:12]
+    earlier = [i for i in items if "text" in i and i["estimatedVideoMs"] < time_ms - 500]
+    if earlier and not any("text" in i for i in near if i["estimatedVideoMs"] <= time_ms):
+        near = [{**max(earlier, key=lambda i: i["estimatedVideoMs"]), "baseline": True}, *near][:12]  # the state still in force
     page = [f"page devicePixelRatio {_num(data.devicePixelRatio)}"] if data.devicePixelRatio is not None else []
     if data.viewport is not None:
         page.append(f"viewport {_num(data.viewport.width)}x{_num(data.viewport.height)} CSS px")

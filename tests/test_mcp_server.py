@@ -135,6 +135,22 @@ def test_moment_reports_the_pages_own_sizes_and_animation_timing(server, home):
     asyncio.run(scenario())
 
 
+def test_moment_always_includes_the_state_in_force_even_when_it_is_old(server, home):
+    brief = base_brief(home)
+    brief["evidence"]["browserEvidence"] = {"videoOffsetMs": -11075, "events": [],
+        "states": [{"atMs": 0, "text": "Hero", "rect": [0, 0, 1468, 720], "styles": {"width": "1468px", "fontSize": "16px"}}]}
+    write_active(home, brief)
+
+    async def scenario():
+        async with connect(server, home) as client:
+            moment = await client.call_tool("anypoach_read_moment", {"timeMs": 100})
+            _, items = chrome_line(texts(moment)[0])
+            assert items[0]["baseline"] is True and items[0]["styles"]["width"] == "1468px"
+            assert items[0]["estimatedVideoMs"] == -11075
+
+    asyncio.run(scenario())
+
+
 def test_shared_brief_carries_notes_and_visual_moments_through_mcp(server, home):
     brief = base_brief(home)
     brief["evidence"]["browserEvidence"] = {"videoOffsetMs": -100,

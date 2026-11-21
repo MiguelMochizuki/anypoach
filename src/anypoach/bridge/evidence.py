@@ -14,6 +14,7 @@ BYTE_LIMIT = 256 * 1024
 MAX_DURATION_MS = 90_000
 FINAL_TTL_S = 180
 PARTIAL_TTL_S = 10
+TRIM_MARGIN_MS = 1_000
 
 
 class _Model(BaseModel):
@@ -148,7 +149,23 @@ def align(evidence: dict[str, Any], recording_ms: tuple[int, int]) -> dict[str, 
     start = evidence["startedAtEpochMs"]
     if start > recording_ms[1] or start + evidence["durationMs"] < recording_ms[0]:
         return None
-    return {**evidence, "videoOffsetMs": start - recording_ms[0]}
+    return {**_trim(evidence, recording_ms[0] - start, recording_ms[1] - start), "videoOffsetMs": start - recording_ms[0]}
+
+
+def _trim(evidence: dict[str, Any], first: int, last: int) -> dict[str, Any]:
+    """Keep what touches the recording, given as session milliseconds, plus a second of margin either side.
+
+    The state that was in force when the recording began stays even when it is older, so the page's sizes and typography
+    at the start are never lost. A session always keeps at least one state.
+    """
+    low, high = first - TRIM_MARGIN_MS, last + TRIM_MARGIN_MS
+    states = evidence["states"]
+    in_force = max((i for i, s in enumerate(states) if s["atMs"] <= first), default=None)
+    kept = [s for i, s in enumerate(states) if low <= s["atMs"] <= high or i == in_force] or states[:1]
+    return {**evidence,
+            "events": [e for e in evidence["events"] if low <= e["atMs"] <= high],
+            "states": kept,
+            "animations": [a for a in evidence["animations"] if a["atMs"] <= high and a["atMs"] + a["delayMs"] + a["durationMs"] >= low]}
 
 
 class EvidenceStore:

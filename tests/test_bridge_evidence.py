@@ -71,6 +71,24 @@ def test_align_sets_the_video_offset_when_the_ranges_overlap():
     assert align(session(), (START + 1501, START + 6000)) is None
 
 
+def test_align_keeps_only_what_touches_the_recording_and_the_state_it_started_from():
+    long = session(durationMs=30_000,
+                   events=[{"atMs": t, "type": "pointerdown", "target": TARGET} for t in (500, 9_000, 10_500, 12_000, 20_000)],
+                   states=[state(0), state(4_000), state(9_500), state(10_200), state(15_000)],
+                   animations=[animation(at=2_000), animation(at=9_800), animation(at=10_700), animation(at=25_000)])
+    kept = align(long, (START + 10_000, START + 11_000))  # the recording is 10 s into the session, 1 s long
+    assert kept["videoOffsetMs"] == -10_000
+    assert [e["atMs"] for e in kept["events"]] == [9_000, 10_500, 12_000]  # within 1 s either side
+    assert [a["atMs"] for a in kept["animations"]] == [9_800, 10_700]  # 2_000 ended long before, 25_000 starts after
+    assert [t["atMs"] for t in kept["states"]] == [9_500, 10_200]  # the one in force at the start, and what changed
+    assert long["states"][0]["atMs"] == 0 and len(long["events"]) == 5, "the stored session is not modified"
+
+
+def test_align_keeps_the_last_state_before_the_recording_even_when_nothing_changed_in_it():
+    kept = align(session(durationMs=80_000, states=[state(0)], events=[]), (START + 60_000, START + 62_000))
+    assert [s["atMs"] for s in kept["states"]] == [0]
+
+
 class Clock:
     def __init__(self):
         self.now = 1000.0
