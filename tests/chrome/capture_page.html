@@ -6,6 +6,7 @@
   #target.wide { width: 220px; }
 </style>
 <button id="target">Go</button>
+<div style="height: 4000px"></div>
 <pre id="out"></pre>
 <script>
   window.__messages = [];
@@ -23,6 +24,7 @@
     target.classList.add("wide");
     target.animate([{ opacity: 1 }, { opacity: 0.5 }], { duration: 300, easing: "ease-out" });
   }, 200);
+  for (const [at, y] of [[400, 300], [500, 700], [600, 1200], [700, 1500]]) setTimeout(() => window.scrollTo(0, y), at);
   setTimeout(() => listener({ anypoach: "finish" }, { id: "test" }, reply => {
     document.getElementById("out").textContent = JSON.stringify({ evidence: reply.evidence, streamed: window.__messages.length });
     document.title = "done";

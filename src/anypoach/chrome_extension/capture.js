@@ -71,7 +71,8 @@
         value: element instanceof HTMLProgressElement ? String(element.value) : limit(element.getAttribute("aria-valuenow")),
       }));
     const state = { rect: rect(root), styles: styles(root), text: visibleText(root), indicators };
-    const key = JSON.stringify(state);
+    const onPage = ([x, y, width, height]) => [x + scrollX, y + scrollY, width, height];  // scrolling alone is not a change
+    const key = JSON.stringify({ ...state, rect: onPage(state.rect), indicators: indicators.map(item => ({ ...item, rect: onPage(item.rect) })) });
     if (key !== recording.lastState) {
       recording.lastState = key;
       if (states.length >= 48) states.splice(1, 1);

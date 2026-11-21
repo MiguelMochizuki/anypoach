@@ -112,6 +112,7 @@ def test_capture_script_records_a_component_in_headless_chrome(tmp_path):
     assert evidence["version"] == 1 and evidence["origin"].startswith("http://127.0.0.1:")
     widths = [state["rect"][2] for state in evidence["states"]]
     assert widths[-1] > widths[0] and widths[-1] == pytest.approx(220, abs=1)
+    assert len(evidence["states"]) == 2, "scrolling the page is not a change of the component"
     animation = evidence["animations"][0]
     assert animation["durationMs"] == 300 and animation["easing"] == "ease-out" and animation["keyframes"]
     assert evidence["devicePixelRatio"] > 0 and evidence["viewport"]["width"] > 0
