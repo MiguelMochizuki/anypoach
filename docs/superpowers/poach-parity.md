@@ -20,7 +20,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 | Controle | atalho que liga e desliga, ícone na barra de menu, sombra na área, janelas próprias fora do vídeo | botões na janela; janelas próprias fora do vídeo |
 | Editor | comentários presos à timeline, paleta ajustável, instruções gerais | comentários, timeline, play e instruções gerais (v0.3.0); falta a paleta ajustável |
 | Entrega | "Continue com Codex/Claude Code" abre o app e copia o prompt | só copia o prompt |
-| Conector MCP | instalador do Codex e extensão `.mcpb` | comando manual no README |
+| Conector MCP | instalador do Codex e extensão `.mcpb` | `anypoach-setup` imprime o comando do Claude Code, do Codex ou JSON; sem `.mcpb` |
 | Extras | favoritos `.poach`, "Snatch font", limpeza de armazenamento, atualização, onboarding | nenhum |
 | Chrome | extensão com estilos computados, eventos e tempos de animação | extensão própria na v0.2.0 (porta 47832, sem loja): estilos, animações, eventos, cartão do inspetor e componentes filhos |
 | Distribuição | `.zip` pronto | instalação por `uv` |
@@ -43,9 +43,10 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.2.1 | macOS: ponteiro por CoreGraphics, regiões Retina e aviso de permissão de gravação de tela | pronta (pré-release); spike e checagens manuais num Mac ainda não rodados |
 | v0.3.0 | Trechos de movimento (várias interações por gravação) e editor com comentários, instruções gerais e timeline | pronta (pré-release); checagens manuais da janela ainda não rodadas |
 | v0.3.1 | Botão de tela cheia (um clique, sem arrastar) | publicada (pré-release) |
-| v0.4.0 | Bandeja permanente com menu (mostrar, gravar tela cheia, sair; parar durante a gravação) | pronta; checagem manual pendente |
+| v0.4.0 | Bandeja permanente com menu (mostrar, gravar tela cheia, sair; parar durante a gravação) | publicada (pré-release) |
 | v0.4.1+ | Modo janela, atalho global (conflita com a promessa de não usar hooks globais; só com o portal GlobalShortcuts), onboarding, paleta ajustável | não começou |
-| v0.5.0 | Instalador sem `uv`, `.mcpb` e comando do Codex, verificação de atualização | não começou |
+| v0.5.0 | `anypoach-setup` (comandos do Claude Code, do Codex e JSON) e instalação por `uv tool install` sem clonar | pronta; checagem manual pendente |
+| v0.6.0+ | Instalador sem `uv` (PyInstaller), `.mcpb`; verificação de atualização só se for sob demanda, por causa da promessa de não usar rede | não começou |
 | Depois, sem data | Importar vídeo ou imagem, screenshot, limpeza de armazenamento; painel lateral do Chrome e lista na janela (opções B e C do inspetor); PyInstaller, `.mcpb` e comando do Codex; favoritos e font matcher (o matcher depende de OCR e CoreText do Mac) | ideias |
 
 O Poach resolve tudo isso apenas para quem tem um Mac, o que continua sendo um recorte de público impressionante.

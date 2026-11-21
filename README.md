@@ -26,7 +26,7 @@ AnyPoach captures a screen area, samples the pointer (position and button state 
 
 ### Status and limitations
 
-Early (v0.4.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. On macOS the pointer comes from CoreGraphics, Retina regions are converted between points and pixels, and recording is refused with a message until Screen Recording is allowed; all of that is covered by tests with fakes and a smoke test on the macOS CI runner, and no person has run it on a Mac yet (see `docs/superpowers/macos-spike.md` once it exists). Not done: global shortcut, a Chrome Web Store listing for the companion extension. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
+Early (v0.5.0 is a pre-release). Analysis, brief storage, the MCP server, pointer-trace logic, and the recorder are covered by automated tests on Linux. Screen capture and the window have not been run on real Windows or Linux X11 desktops yet, and the Windows pieces (ACLs, pointer source) only have CI to lean on. Wayland capture goes through the desktop portal and has been tried on GNOME only; other compositors may work and are not promised. On Wayland the compositor draws the cursor into the video, and the pointer trace stays off because no global pointer position exists. On macOS the pointer comes from CoreGraphics, Retina regions are converted between points and pixels, and recording is refused with a message until Screen Recording is allowed; all of that is covered by tests with fakes and a smoke test on the macOS CI runner, and no person has run it on a Mac yet (see `docs/superpowers/macos-spike.md` once it exists). Not done: global shortcut, a Chrome Web Store listing for the companion extension. Manual checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md#manual-checks).
 
 ### Why not just use Poach?
 
@@ -48,6 +48,12 @@ Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 ```sh
 uv sync --extra ui    # PySide6 for the window, mss for screen capture
 uv run anypoach       # choose an area or the full screen, record, stop, copy the prompt
+```
+
+Without cloning the repository, `uv` can install it as a tool (the commands `anypoach`, `anypoach-mcp` and `anypoach-setup` then go on your `PATH`):
+
+```sh
+uv tool install "anypoach[ui] @ git+https://github.com/MiguelMochizuki/anypoach"
 ```
 
 On macOS the first recording triggers the system Screen Recording prompt; allow AnyPoach (or the terminal that runs it) in System Settings > Privacy & Security > Screen Recording, then quit and reopen it.
@@ -161,10 +167,12 @@ What stays local: the server listens on `127.0.0.1` only, while the window is op
 ### Connect an assistant
 
 ```sh
-claude mcp add anypoach -- uv run --project /absolute/path/to/anypoach anypoach-mcp
+anypoach-setup claude   # prints: claude mcp add anypoach -- /path/to/anypoach-mcp
+anypoach-setup codex    # the same for Codex
+anypoach-setup json     # an `mcpServers` entry for any other client
 ```
 
-Any MCP client that launches a stdio command works the same way.
+Run the printed command (or paste the JSON). From a clone, use `uv run anypoach-setup claude`. Any MCP client that launches a stdio command works the same way.
 
 | Tool | Purpose |
 | --- | --- |
