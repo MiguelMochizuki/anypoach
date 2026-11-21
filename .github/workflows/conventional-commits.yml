@@ -18,7 +18,7 @@ jobs:
       - name: Check every proposed commit subject
         shell: bash
         run: |
-          context='Poach / Conventional Commits'
+          context='AnyPoach / Conventional Commits'
           report() {
             gh api --silent --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
               -f state="$1" -f context="$context" -f description="$2" \
