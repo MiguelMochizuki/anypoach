@@ -8,6 +8,7 @@ from PySide6.QtCore import QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeyEvent, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -95,6 +96,8 @@ class MainWindow(QMainWindow):
         self._limit.timeout.connect(self._stop)
         self.area, self.record_button = self._button("Choose area", self._choose), self._button("Record", self._record)
         self.full_screen = self._button("Full screen", self._choose_full_screen)
+        self.screenshot = self._button("Screenshot", self._screenshot)
+        self.import_button = self._button("Import…", self._import)
         self.stop_button, self.copy_button = self._button("Stop", self._stop), self._button("Copy prompt for assistant", self._copy)
         self.status = QLabel("Choose an area, then record.")
         self.status.setAccessibleName("Status")
@@ -103,7 +106,7 @@ class MainWindow(QMainWindow):
         self.frames.setIconSize(QSize(160, 100))
         self.frames.setAccessibleName("Keyframes")
         buttons = QHBoxLayout()
-        for button in (self.area, self.full_screen, self.record_button, self.stop_button, self.copy_button):
+        for button in (self.area, self.full_screen, self.screenshot, self.import_button, self.record_button, self.stop_button, self.copy_button):
             buttons.addWidget(button)
         body = QVBoxLayout()
         body.addLayout(buttons)
@@ -198,6 +201,8 @@ class MainWindow(QMainWindow):
         state = self.controller.state
         self.area.setEnabled(state != "recording")
         self.full_screen.setEnabled(state != "recording")
+        self.screenshot.setEnabled(state != "recording" and self.controller.ready_to_record)
+        self.import_button.setEnabled(state != "recording")
         self.record_button.setEnabled(state != "recording")
         self.stop_button.setEnabled(state == "recording")
         self.copy_button.setEnabled(state == "ready")
@@ -330,12 +335,24 @@ class MainWindow(QMainWindow):
         self._limit.stop()
         result = self.controller.stop()
         self._return_to_screen()
+        self._show_result(result, f"Recorded {result.duration_ms} ms. Copy the prompt and paste it to your assistant." if result else "")
+
+    def _screenshot(self) -> None:
+        self._show_result(self.controller.screenshot(), "Screenshot taken. Copy the prompt and paste it to your assistant.")
+
+    def _import(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Import a video or image", "",
+                                              "Video or image (*.mp4 *.mov *.png *.jpg *.jpeg *.webp *.tif *.tiff *.bmp)")
+        if path:
+            self._show_result(self.controller.import_file(path), "Imported. Copy the prompt and paste it to your assistant.")
+
+    def _show_result(self, result, text: str) -> None:
         self.frames.clear()
+        self._close_review()
         if result is not None:
             for key in result.keyframes:
-                item = QListWidgetItem(QIcon(key.image_path), f"{key.kind} · {key.time_ms} ms")
-                self.frames.addItem(item)
-            self.status.setText(f"Recorded {result.duration_ms} ms. Copy the prompt and paste it to your assistant.")
+                self.frames.addItem(QListWidgetItem(QIcon(key.image_path), f"{key.kind} · {key.time_ms} ms"))
+            self.status.setText(text)
             self._show_review(result)
         self._refresh()
 

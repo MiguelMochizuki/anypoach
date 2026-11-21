@@ -400,3 +400,45 @@ def test_a_refused_start_keeps_the_comments(tmp_path):
     controller.add_comment(100, "stay")
     controller.start()  # no area chosen
     assert controller.comments == [{"timeMs": 100, "text": "stay"}]
+
+
+def test_a_screenshot_of_the_chosen_area_becomes_an_image_brief(tmp_path):
+    controller = make(tmp_path)
+    assert controller.screenshot() is None and "area" in controller.message.lower()
+    controller.choose_region(Rect(10, 10, 160, 90))
+    result = controller.screenshot()
+    assert result.media_type == "image" and (result.capture.width_px, result.capture.height_px) == (160, 90)
+    assert controller.state == "ready" and controller.message == ""
+    assert controller.copy_handoff() and read_brief(cache=tmp_path / "cache")["briefId"]
+
+
+def test_a_denied_screenshot_is_a_message(tmp_path):
+    controller = make(tmp_path, backend=LiveBackend(PermissionError("denied")))
+    controller.choose_region(Rect(10, 10, 160, 90))
+    assert controller.screenshot() is None and "permission" in controller.message
+
+
+def test_importing_a_video_or_image_and_refusing_other_files(tmp_path):
+    from tests.fixtures import build_multi
+    video = build_multi(tmp_path, [(0.5, 0.6, 24)], "clip.mov")
+    controller = make(tmp_path)
+    assert controller.import_file(video).media_type == "video" and controller.state == "ready"
+    controller.annotations = [{"timeMs": 1, "text": "old"}]
+    shot = make(tmp_path)
+    shot.choose_region(Rect(0, 0, 40, 40))
+    image = shot.screenshot().source_path
+    assert controller.import_file(image).media_type == "image" and controller.annotations == []
+    notes = tmp_path / "notes.txt"
+    notes.write_text("no")
+    assert controller.import_file(notes) is None and "notes.txt" in controller.message
+
+
+def test_nothing_is_imported_or_captured_while_recording(tmp_path):
+    controller = make(tmp_path)
+    controller.choose_region(Rect(10, 10, 160, 90))
+    controller.start()
+    try:
+        assert controller.screenshot() is None and controller.import_file(tmp_path) is None
+        assert "Stop" in controller.message
+    finally:
+        controller.stop()

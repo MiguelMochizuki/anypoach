@@ -7,7 +7,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
-from anypoach.analysis.inspect import inspect_recording
+import numpy as np
+
+from anypoach.analysis.inspect import IMAGE_EXTENSIONS, inspect_image, inspect_recording, inspect_video
+from anypoach.analysis.source import encode_png
 from anypoach.analysis.types import InspectionResult
 from anypoach.bridge.evidence import EvidenceStore
 from anypoach.brief.store import share
@@ -292,6 +295,64 @@ class Controller:
         elif capture:
             capture = dataclasses.replace(capture, device_scale=scale)
         self.result = dataclasses.replace(result, pointer_trace=recording.trace.to_json(), capture=capture)
+        self.state, self.message = "ready", ""
+        return self.result
+
+    def import_file(self, path: str | Path) -> InspectionResult | None:
+        """Analyze a video (`.mp4`, `.mov`) or still image from disk as if it had just been recorded.
+
+        Returns:
+            The analysis, or None with `message` set when something is recording or the file cannot be analyzed.
+        """
+        if self.state == "recording":
+            self.message = "Stop the recording first."
+            return None
+        path = Path(path)
+        try:
+            if path.suffix.lower() in IMAGE_EXTENSIONS:
+                result = inspect_image(path, output_dir=self._work / "frames")
+            else:
+                result = inspect_video(path, output_dir=self._work / "frames")
+        except (ValueError, OSError) as error:
+            self.message = f"Could not analyze {path.name}: {error}"
+            return None
+        return self._ready(result, None)
+
+    def screenshot(self) -> InspectionResult | None:
+        """Grab the chosen area once and analyze it as a still image.
+
+        Returns:
+            The analysis, or None with `message` set when no area is chosen, something is recording, capture was
+            denied, or the image could not be analyzed.
+        """
+        if self.state == "recording":
+            self.message = "Stop the recording first."
+            return None
+        if self._region is None:
+            self.message = "Choose an area to capture first."
+            return None
+        if not self.check_screen_access():
+            return None
+        try:
+            frame = self._backend.grab(self._region)
+            self._work.mkdir(parents=True, exist_ok=True)
+            shot = self._work / "screenshot.png"
+            shot.write_bytes(encode_png(np.ascontiguousarray(frame.pixels[:, :, 2::-1])))  # BGRA to RGB
+            result = inspect_image(shot, output_dir=self._work / "frames")
+        except PermissionError:
+            self.message = "AnyPoach cannot capture the screen. Check the screen recording permission and try again."
+            return None
+        except (ValueError, OSError) as error:
+            self.message = f"Could not take the screenshot: {error}"
+            return None
+        if self.supports_preview:
+            self.close()
+        return self._ready(result, self._device_scale)
+
+    def _ready(self, result: InspectionResult, scale: float | None) -> InspectionResult:
+        capture = dataclasses.replace(result.capture, device_scale=scale) if result.capture else None
+        self.result = dataclasses.replace(result, capture=capture)
+        self.annotations, self._epoch_range = [], None
         self.state, self.message = "ready", ""
         return self.result
 

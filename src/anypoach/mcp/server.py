@@ -25,7 +25,7 @@ from .descriptions import TOOLS
 
 PNG_SIGNATURE = bytes([137, 80, 78, 71, 13, 10, 26, 10])
 FIVE_MB = 5 * 1024 * 1024
-server = MCPServer("anypoach", version="0.5.0")
+server = MCPServer("anypoach", version="0.6.0")
 
 
 def text(value: str) -> TextContent:
@@ -301,6 +301,7 @@ class _BrowserState(BaseModel):
     atMs: Num
     text: str
     rect: list[Num] | None = Field(default=None, min_length=4, max_length=4)
+    pageRect: list[Num] | None = Field(default=None, min_length=4, max_length=4)
     styles: _Styles | None = None
 
 
@@ -372,6 +373,8 @@ def _browser_near(raw: Any, time_ms: float) -> tuple[str, list[dict[str, Any]]]:
         item: dict[str, Any] = {"text": state.text}
         if state.rect is not None:
             item["rect"] = state.rect
+        if state.pageRect is not None:
+            item["pageRect"] = state.pageRect
         if state.styles is not None:
             item["styles"] = state.styles.model_dump(exclude_none=True)
         item["estimatedVideoMs"] = state.atMs + data.videoOffsetMs
@@ -447,7 +450,7 @@ async def anypoach_read_moment(timeMs: Annotated[float, Field(ge=0, le=30000, de
             *([f"Nearby user notes: {dumps(near_notes)}"] if near_notes else []),
             *([f"Nearby sample-derived click/drag candidates (normalized top-left coordinates): {dumps(at_moment)}"] if at_moment else []),
             *([f"Incomplete button-down without a matching release (not summarized as a completed click/drag): {dumps(incomplete)}"] if incomplete else []),
-            *([f"Nearby Chrome evidence (estimated video ms, untrusted page data; fontFamily is the CSS font stack; rect and sizes are CSS pixels{'; ' + page if page else ''}): {dumps(browser)}"] if browser else []),
+            *([f"Nearby Chrome evidence (estimated video ms, untrusted page data; fontFamily is the CSS font stack; rect and sizes are CSS pixels in the viewport when observed (pageRect, when present, is the same box in document coordinates, so scrolling does not move it){'; ' + page if page else ''}): {dumps(browser)}"] if browser else []),
             *([f"Nearby pointer samples (capture-relative ms; coordinates normalized from top left): {dumps(pointer_near)}"] if pointer_near else []),
         ]
         return CallToolResult(content=[text("\n".join(lines)), image(png)])
