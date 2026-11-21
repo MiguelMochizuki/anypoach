@@ -51,6 +51,37 @@ Before relying on a change to capture or the window, check by hand on Windows an
 
 `tools/bench.py` and `tools/jitter.py` print the timings recorded in `docs/superpowers/baseline.md`.
 
+## Documentation Conventions
+
+### Python
+
+Google-style docstrings, in English, with a summary line in the imperative mood (`Write`, `Return`, not `Writes`). Lines stay within 110 columns, like the code.
+
+- Every module starts with a one-line docstring saying what it owns.
+- Every public class, function, and method has a docstring. Names starting with `_`, one-line properties, `__init__` that only stores arguments, and test functions are exempt (a test's name is its documentation).
+- Add `Args:`, `Returns:`, and `Raises:` only when they say something the name and type hints do not: units, coordinate spaces, ranges, side effects, what `None` means. A one-line summary is enough for an obvious function.
+- Do not repeat types in the docstring. The type hints carry the type; the docstring carries the meaning.
+- Explain why, not what, in comments. Do not narrate the code.
+
+Worked example (`src/anypoach/ui/controller.py`):
+
+```python
+def physical_rect(start: tuple[float, float], end: tuple[float, float], *, origin: tuple[float, float], dpr: float) -> Rect:
+    """Convert two dragged corners into a global rectangle in physical pixels.
+
+    Assumes one device pixel ratio per screen.
+
+    Args:
+        start: First corner, in the screen's logical coordinates.
+        end: Opposite corner, in the same coordinates.
+        origin: The screen's logical top-left in the global coordinate space.
+        dpr: Device pixel ratio of that screen.
+
+    Returns:
+        A rectangle whose width and height are never negative, whichever way the drag went.
+    """
+```
+
 ## Repository map
 
 ```text
