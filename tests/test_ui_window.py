@@ -1,6 +1,7 @@
 """The Qt window and the area overlay, run offscreen."""
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -253,10 +254,10 @@ def test_a_port_error_is_visible_and_recording_still_works(app):
 def test_open_the_extension_folder(app, monkeypatch, tmp_path):
     opened = []
     monkeypatch.setattr("anypoach.ui.app.extension_dir", lambda: tmp_path)
-    monkeypatch.setattr("anypoach.ui.app.QDesktopServices.openUrl", lambda url: opened.append(url.toLocalFile()) or True)
+    monkeypatch.setattr("anypoach.ui.app.QDesktopServices.openUrl", lambda url: opened.append(Path(url.toLocalFile())) or True)
     window = MainWindow(FakeController(), FakeBridge())
     window.open_extension_button.click()
-    assert opened == [str(tmp_path)]
+    assert opened == [tmp_path]
     monkeypatch.setattr("anypoach.ui.app.extension_dir", lambda: tmp_path / "missing")
     window.open_extension_button.click()
     assert "not found" in window.chrome_status.text() and len(opened) == 1
