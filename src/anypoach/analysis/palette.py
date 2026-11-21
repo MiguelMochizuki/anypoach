@@ -5,6 +5,18 @@ import numpy as np
 
 
 def extract_palette(frame: np.ndarray, size: float = 6) -> list[str]:
+    """Return the dominant colors of a frame, most frequent first.
+
+    Pixels are grouped into 4-bit-per-channel buckets and each bucket is reported as the rounded average
+    of its pixels. Ties keep the order in which the colors first appear.
+
+    Args:
+        frame: RGB or RGBA image as a `(height, width, channels)` uint8 array.
+        size: How many colors to return (rounded and clamped to 1-12).
+
+    Returns:
+        Uppercase hex strings such as `#1A2B3C`.
+    """
     size = max(1, min(12, round(size)))
     px = frame.reshape(-1, frame.shape[-1])[:, :3].astype(np.int64)
     keys = ((px[:, 0] >> 4) << 8) | ((px[:, 1] >> 4) << 4) | (px[:, 2] >> 4)

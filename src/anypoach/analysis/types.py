@@ -9,17 +9,39 @@ from .motion import MotionTiming
 
 @dataclass(frozen=True)
 class Keyframe:
+    """A frame chosen to represent the clip.
+
+    Attributes:
+        kind: `start` (movement begins), `peak` (just before the biggest change), or `settled` (calm again,
+        or the last frame when it never calms down).
+        time_ms: Moment in the clip, in milliseconds.
+        image_path: PNG written for this frame.
+        motion: Change from the previous sample, from 0 to 1.
+    """
     kind: Literal["start", "peak", "settled"]
     time_ms: int
     image_path: str
     motion: float
 
     def to_json(self) -> dict[str, Any]:
+        """Return the camelCase dictionary stored in briefs."""
         return {"kind": self.kind, "timeMs": self.time_ms, "imagePath": self.image_path, "motion": self.motion}
 
 
 @dataclass(frozen=True)
 class InspectionResult:
+    """Everything learned from analyzing one video or image.
+
+    Attributes:
+        media_type: Whether the source was a `video` or an `image`.
+        source_path: Absolute path of the analyzed file.
+        duration_ms: Length of the clip in milliseconds (0 for images).
+        keyframes: Chosen frames, in time order.
+        palette: Dominant colors as hex strings.
+        timing: Estimated duration and easing of the main movement.
+        pointer_trace: Pointer samples recorded alongside the clip, when there are any.
+        annotations: Notes pinned to timestamps, when there are any.
+    """
     media_type: Literal["video", "image"]
     source_path: str
     duration_ms: int
@@ -30,6 +52,7 @@ class InspectionResult:
     annotations: list[dict[str, Any]] | None = field(default=None)
 
     def to_json(self) -> dict[str, Any]:
+        """Return the camelCase dictionary stored in briefs; optional parts appear only when set."""
         out: dict[str, Any] = {
             "mediaType": self.media_type, "sourcePath": self.source_path, "durationMs": self.duration_ms,
             "keyframes": [k.to_json() for k in self.keyframes], "palette": self.palette,
@@ -46,11 +69,23 @@ class InspectionResult:
 
 @dataclass(frozen=True)
 class DragFrame:
+    """One frame captured after a drag was released.
+
+    Attributes:
+        time_ms: Moment in the clip, in milliseconds.
+        png: The frame as PNG bytes.
+    """
     time_ms: float
     png: bytes
 
 
 @dataclass(frozen=True)
 class DragFrames:
+    """Frames sampled after a drag was released.
+
+    Attributes:
+        end_time_ms: Last moment frames may come from: just before the next recorded drag or the end of the clip.
+        frames: Frames in time order; empty when the release is already past `end_time_ms`.
+    """
     end_time_ms: float
     frames: list[DragFrame]

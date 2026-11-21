@@ -46,6 +46,26 @@ def _output_dir(output_dir: str | Path | None) -> Path:
 def inspect_video(path: str | Path, *, output_dir: str | Path | None = None, sample_width: float = DEFAULT_SAMPLE_WIDTH,
                   samples_per_second: float = DEFAULT_SAMPLES_PER_SECOND, palette_size: int = 6,
                   on_progress: Progress | None = None) -> InspectionResult:
+    """Analyze a video: keyframes, palette, and motion timing.
+
+    Samples frames at `samples_per_second`, then keeps up to three of them as PNGs: where movement begins
+    (`start`), the sample before the biggest change (`peak`), and the first calm sample after it
+    (`settled`, or the last frame if it never calms down).
+
+    Args:
+        path: A `.mp4` or `.mov` file, at most 512 MiB and 30 s long.
+        output_dir: Where the keyframe PNGs go; a private temporary folder when omitted.
+        sample_width: Width in pixels of the downscaled frames used for analysis (clamped to 48-256).
+        samples_per_second: Sampling rate (clamped to 2-24; never more than 720 samples in total).
+        palette_size: Number of palette colors, 1 to 12.
+        on_progress: Called with the stage name (`"motion"`, `"frames"`) as the analysis advances.
+
+    Returns:
+        The keyframes, palette, and estimated easing of the clip.
+
+    Raises:
+        ValueError: If the file is missing, unsupported, too large, too long, or has no readable frames.
+    """
     progress = on_progress or (lambda _stage: None)
     with VideoSource(path) as source:
         duration = source.duration_s
@@ -120,6 +140,21 @@ def _clip(source_path: Path, target: Path, seconds: int, fps: int = 30) -> None:
 
 def inspect_image(path: str | Path, *, output_dir: str | Path | None = None, sample_width: float = DEFAULT_SAMPLE_WIDTH,
                   palette_size: int = 6, on_progress: Progress | None = None, **_ignored) -> InspectionResult:
+    """Analyze a still image: its palette and a copy of it as the single keyframe.
+
+    Args:
+        path: A PNG, JPEG, WebP, TIFF, or BMP file, at most 512 MiB.
+        output_dir: Where the keyframe PNG goes; a private temporary folder when omitted.
+        sample_width: Width in pixels of the downscaled copy used for the palette (clamped to 48-256).
+        palette_size: Number of palette colors, 1 to 12.
+        on_progress: Called with the stage name as the analysis advances.
+
+    Returns:
+        An image result with one `start` keyframe and no measurable motion.
+
+    Raises:
+        ValueError: If the file is missing, unsupported, too large, or cannot be decoded.
+    """
     progress = on_progress or (lambda _stage: None)
     source_path = Path(path).resolve()
     if source_path.suffix.lower() not in IMAGE_EXTENSIONS:

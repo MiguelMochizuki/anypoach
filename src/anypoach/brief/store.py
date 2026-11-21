@@ -24,12 +24,18 @@ _INSTRUCTIONS = {
 
 
 def check_uuid(value: str) -> str:
+    """Return `value` unchanged if it is a UUID.
+
+    Raises:
+        ValueError: If it is anything else, which keeps path tricks like `../x` out of file names.
+    """
     if not _UUID.fullmatch(value):
         raise ValueError("briefId must be a UUID")
     return value
 
 
 def write_private(path: Path, data: bytes) -> None:
+    """Write `data` to `path` atomically, readable only by the current user."""
     temp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     temp.write_bytes(data)
     restrict(temp, directory=False)
@@ -58,6 +64,23 @@ def archive_active(active: Path, archive: Path) -> None:
 
 def share(result: InspectionResult, context: str, annotations: list[dict[str, Any]], *,
           cache: Path | None = None) -> str:
+    """Write a brief and make it the latest one.
+
+    The previous latest brief is archived by id while it is still valid. The new brief keeps the analysis
+    without its per-keyframe `motion` value, and can be read back with `read_brief`.
+
+    Args:
+        result: Analysis of the recording or image.
+        context: Free text for the assistant, such as what to build.
+        annotations: Notes pinned to timestamps.
+        cache: Brief cache directory; the per-OS default when omitted.
+
+    Returns:
+        The new brief id, an uppercase UUID.
+
+    Raises:
+        OSError: If the files cannot be written.
+    """
     root = private_dir(cache or cache_dir())
     archive = private_dir(root / "briefs")
     evidence = result.to_json()
@@ -76,6 +99,19 @@ def share(result: InspectionResult, context: str, annotations: list[dict[str, An
 
 
 def read_brief(brief_id: str | None = None, *, cache: Path | None = None) -> dict[str, Any]:
+    """Read the latest shared brief, or an archived one by id.
+
+    Args:
+        brief_id: UUID of the brief; the latest when omitted.
+        cache: Brief cache directory; the per-OS default when omitted.
+
+    Returns:
+        The brief as stored: `briefId`, `sharedAt`, `context`, `instruction`, and `evidence`.
+
+    Raises:
+        ValueError: If `brief_id` is not a UUID, nothing was shared, the file is unreadable or not a regular
+            file, the id was replaced, or the brief is older than 24 hours. An expired archived brief is deleted.
+    """
     root = cache or cache_dir()
     latest = root / "active-brief.json"
     path = latest

@@ -24,6 +24,13 @@ _FRAME_FILE = re.compile(r"^[a-zA-Z0-9_-]{1,48}-(image|(start|peak|settled)-[0-9
 
 @dataclass
 class Usage:
+    """Disk space used by AnyPoach's temporary media.
+
+    Attributes:
+        total: Bytes used by every recognized file.
+        unused: Bytes in files no valid brief or open window still needs.
+        removable: The files counted in `unused`.
+    """
     total: int = 0
     unused: int = 0
     removable: list[Path] = field(default_factory=list)
@@ -57,6 +64,22 @@ def _protected_media(cache: Path) -> set[str]:
 
 
 def scan_storage(*, temp: Path | None = None, cache: Path | None = None, open_paths: Iterable[str] = ()) -> Usage:
+    """Measure the temporary recordings and frames AnyPoach left behind.
+
+    Only files with AnyPoach's own names inside real (non-symlink) folders are counted. Media referenced by a
+    brief that has not expired, or listed in `open_paths`, is protected.
+
+    Args:
+        temp: Folder holding the temporary media; the system temp folder when omitted.
+        cache: Brief cache directory; the per-OS default when omitted.
+        open_paths: Extra files that must not be removed, such as the one open in the window.
+
+    Returns:
+        Total and unused sizes, plus the removable files.
+
+    Raises:
+        ValueError: If a stored brief is unreadable, since guessing could delete media a brief still needs.
+    """
     temp = temp or Path(tempfile.gettempdir())
     protected = {os.path.realpath(p) for p in (*open_paths, *_protected_media(cache or cache_dir()))}
     usage = Usage()
@@ -85,6 +108,10 @@ def scan_storage(*, temp: Path | None = None, cache: Path | None = None, open_pa
 
 
 def clear_storage(*, temp: Path | None = None, cache: Path | None = None, open_paths: Iterable[str] = ()) -> None:
+    """Delete the files `scan_storage` reports as unused, then any folder that became empty.
+
+    Takes the same arguments as `scan_storage`. The shared `AnyPoach` folder itself is never removed.
+    """
     files = scan_storage(temp=temp, cache=cache, open_paths=open_paths).removable
     for file in files:
         file.unlink()

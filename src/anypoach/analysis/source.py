@@ -25,6 +25,7 @@ def seek_for_moment(times: Sequence[float], seconds: float) -> float:
 
 
 def encode_png(rgb: np.ndarray) -> bytes:
+    """Encode an RGB uint8 array of shape `(height, width, 3)` as PNG bytes."""
     frame = av.VideoFrame.from_ndarray(np.ascontiguousarray(rgb), format="rgb24")
     codec = av.CodecContext.create("png", "w")
     codec.width, codec.height, codec.pix_fmt = frame.width, frame.height, "rgb24"
@@ -46,6 +47,11 @@ def scaled_png(frame: av.VideoFrame, max_size: int) -> bytes:
 
 
 def read_still(path: str | Path) -> av.VideoFrame:
+    """Decode the first frame of a still image file.
+
+    Raises:
+        ValueError: If the file has no decodable pixels.
+    """
     with av.open(str(path)) as container:
         for frame in container.decode(video=0):
             return frame
@@ -53,6 +59,19 @@ def read_still(path: str | Path) -> av.VideoFrame:
 
 
 class VideoSource:
+    """A video file opened for sampling frames by presentation time.
+
+    Decoding happens in this process, so a whole analysis is one pass instead of one external process per
+    sample. Use it as a context manager so the file is closed even when analysis fails.
+
+    Attributes:
+        path: Resolved path of the file.
+        duration_s: Container duration in seconds (always positive).
+        closed: Whether `close()` has been called.
+
+    Raises:
+        ValueError: On construction, if the file is missing, not `.mp4`/`.mov`, over 512 MiB, or has no video stream or duration.
+    """
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path).resolve()
         if self.path.suffix.lower() not in (".mp4", ".mov"):
@@ -82,12 +101,20 @@ class VideoSource:
         self.close()
 
     def close(self) -> None:
+        """Close the file. Safe to call more than once."""
         if not self.closed:
             self._container.close()
             self.closed = True
 
     @property
     def presentation_times(self) -> list[float]:
+        """Presentation time of every stored frame in seconds, sorted and starting near zero.
+
+        Read once from the container's packets and cached. A frame held for several seconds appears once.
+
+        Raises:
+            ValueError: If the video has no timestamped frames.
+        """
         if self._times is None:
             base = self._stream.time_base
             self._container.seek(0)
@@ -98,6 +125,14 @@ class VideoSource:
         return self._times
 
     def seek_for_moment(self, seconds: float) -> float:
+        """Return the time to seek to so the frame on screen at `seconds` is the one decoded.
+
+        Args:
+            seconds: Moment in the recording, relative to its first frame.
+
+        Returns:
+            A time between the shown frame's timestamp and its predecessor's, or 0 near the start.
+        """
         return seek_for_moment(self.presentation_times, seconds)
 
     def _collect(self, seeks: Sequence[float], convert: Callable[[av.VideoFrame], T]) -> list[T]:
@@ -120,7 +155,25 @@ class VideoSource:
         return [out[i] for i in range(len(seeks))]
 
     def frames_at(self, seeks: Sequence[float], width: int) -> list[np.ndarray]:
+        """Decode the frame shown at each seek time, scaled for analysis.
+
+        Args:
+            seeks: Times from `seek_for_moment`, in any order.
+            width: Output width in pixels; height keeps the aspect ratio and stays even.
+
+        Returns:
+            One RGB uint8 array per seek, in the order of `seeks`.
+
+        Raises:
+            ValueError: If a frame at or after a seek time cannot be decoded.
+        """
         return self._collect(seeks, lambda frame: scaled_rgb(frame, width))
 
     def png_at(self, seek: float, max_size: int = 1280) -> bytes:
+        """Decode the frame shown at `seek` and return it as PNG bytes.
+
+        Args:
+            seek: Time from `seek_for_moment`.
+            max_size: Longest allowed side in pixels; smaller frames are never enlarged.
+        """
         return self._collect([seek], lambda frame: scaled_png(frame, max_size))[0]

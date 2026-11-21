@@ -11,6 +11,13 @@ LUMA = np.array([0.2126, 0.7152, 0.0722])
 
 @dataclass(frozen=True)
 class MotionTiming:
+    """Estimated duration and easing of the main movement in a clip.
+
+    Attributes:
+        duration_ms: Length of the movement in milliseconds.
+        bezier: Control points `(x1, y1, x2, y2)` of a CSS cubic-bezier, or None when no easing could be estimated.
+        token: Human-readable summary, for example `240ms • cubic-bezier(0.16, 1, 0.3, 1)`.
+    """
     duration_ms: int
     bezier: tuple[float, float, float, float] | None
     token: str

@@ -26,6 +26,7 @@ def restrict(path: Path, *, directory: bool) -> None:
 
 
 def private_dir(path: Path) -> Path:
+    """Create `path` (and parents) if needed and restrict it to the current user. Returns `path`."""
     path.mkdir(parents=True, exist_ok=True)
     restrict(path, directory=True)
     return path
