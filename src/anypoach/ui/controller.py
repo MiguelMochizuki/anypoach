@@ -18,6 +18,7 @@ from anypoach.brief.store import share
 from anypoach.capture.backend import CaptureBackend, Frame
 from anypoach.capture.recorder import Recorder
 from anypoach.capture.windows import WindowInfo, WindowLister
+from anypoach.favorites import FavoriteError, FavoriteStore
 from anypoach.pointer.recorder import PointerTraceRecorder
 from anypoach.pointer.trace import PointerSource, Rect
 
@@ -105,14 +106,17 @@ class Controller:
         work_dir: Folder for recordings and keyframes.
         cache: Brief cache directory; the per-OS default when omitted.
         store: Where the Chrome companion's sessions arrive, or None when it is not in use.
+        favorites: Where saved handoffs live; the per-user folder when omitted.
         windows: Lists the windows that can be recorded by their bounds, or None where there is no way to.
         screen_access: Says whether the OS lets the app record the screen (True, False, or None when unknown),
             or None when the platform has no such permission.
     """
     def __init__(self, backend: CaptureBackend, pointer_source: PointerSource | None, work_dir: Path, *,
                  cache: Path | None = None, store: EvidenceStore | None = None,
-                 screen_access: Callable[[], bool | None] | None = None, windows: WindowLister | None = None) -> None:
+                 screen_access: Callable[[], bool | None] | None = None, windows: WindowLister | None = None,
+                 favorites: FavoriteStore | None = None) -> None:
         self._windows = windows
+        self.favorites = favorites or FavoriteStore()
         self._backend, self._source, self._work, self._cache = backend, pointer_source, Path(work_dir), cache
         self._screen_access = screen_access
         self._store = store
@@ -409,6 +413,34 @@ class Controller:
         self.annotations, self._epoch_range, self._palette = [], None, None
         self.state, self.message = "ready", ""
         return self.result
+
+    def save_favorite(self, name: str) -> str | None:
+        """Keep the current handoff (notes, instructions, palette, up to three frames) under `name`.
+
+        Returns:
+            The favorite's id, or None with `message` set when there is nothing to keep or it cannot be kept.
+        """
+        if self.result is None:
+            self.message = "Record or import something first."
+            return None
+        try:
+            favorite_id = self.favorites.save(name, self.result, self.context, self.annotations, self.palette)
+        except (FavoriteError, OSError) as error:
+            self.message = str(error)
+            return None
+        self.message = ""
+        return favorite_id
+
+    def favorite_handoff(self, favorite_id: str) -> str:
+        """Write a fresh brief from a favorite and return the prompt for the assistant ('' with `message` on failure)."""
+        try:
+            result, context, notes = self.favorites.to_result(favorite_id, self._work / "frames")
+            brief_id = share(result, context, notes, cache=self._cache)
+        except (FavoriteError, OSError) as error:
+            self.message = str(error)
+            return ""
+        self.message = ""
+        return handoff_prompt(brief_id, result.pointer_trace)
 
     def copy_handoff(self) -> str:
         """Writes the brief and returns the prompt for the assistant (the window puts it on the clipboard)."""

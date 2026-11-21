@@ -486,3 +486,20 @@ def test_windows_come_from_the_lister_and_a_missing_one_is_a_message(tmp_path):
     assert make(tmp_path, windows=Lister()).windows()[0].title == "Editor"
     controller = make(tmp_path)
     assert controller.windows() == [] and "area" in controller.message
+
+
+def test_a_favorite_gives_back_a_fresh_brief_without_a_video(tmp_path):
+    from anypoach.favorites import FavoriteStore
+    controller = make(tmp_path, favorites=FavoriteStore(tmp_path / "fav"))
+    assert controller.save_favorite("x") is None and "first" in controller.message
+    controller.choose_region(Rect(10, 10, 160, 90))
+    controller.screenshot()
+    controller.context = "Match this."
+    controller.add_comment(0, "note")
+    favorite_id = controller.save_favorite("Card")
+    assert favorite_id and controller.save_favorite("  ") is None and controller.message
+    prompt = controller.favorite_handoff(favorite_id)
+    brief = read_brief(cache=tmp_path / "cache")
+    assert brief["briefId"] in prompt and brief["context"] == "Match this."
+    assert brief["evidence"]["sourcePath"] == "" and brief["evidence"]["annotations"][0]["text"] == "note"
+    assert controller.favorite_handoff("nope") == "" and controller.message
