@@ -7,18 +7,26 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6")
 
+import numpy as np
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QApplication, QPushButton, QSystemTrayIcon
 
+from anypoach.capture.backend import Frame
 from anypoach.pointer.trace import Rect
 from anypoach.ui.app import MainWindow, hide_from_capture
+from anypoach.ui.frozen_selection import FrozenSelection
 from anypoach.ui.selection import SelectionOverlay
 
 
 class FakeController:
+    supports_preview = False
+
     def __init__(self):
         self.state, self.message, self.calls = "idle", "", []
+
+    def close(self):
+        self.calls.append("close")
 
     def choose_region(self, region):
         self.calls.append(("choose", region))
@@ -85,3 +93,61 @@ def test_overlay_reports_the_dragged_area_in_physical_pixels_and_esc_cancels(app
 @pytest.mark.skipif(sys.platform == "win32", reason="the exclusion flag exists only on Windows")
 def test_hide_from_capture_is_a_no_op_outside_windows(app):
     assert hide_from_capture(MainWindow(FakeController())) is False
+
+
+class PreviewController(FakeController):
+    """A controller whose backend needs a preview frame, like the Wayland portal."""
+    supports_preview = True
+
+    def __init__(self, failure=""):
+        super().__init__()
+        self.failure, self.closed = failure, 0
+
+    def preview(self):
+        if self.failure:
+            self.message = self.failure
+            return None
+        return Frame(np.zeros((10, 20, 4), np.uint8), 0.0)
+
+    def close(self):
+        self.closed += 1
+
+
+def test_choosing_an_area_on_a_preview_backend_shows_the_frozen_selection(app):
+    window = MainWindow(PreviewController())
+    window._choose()
+    assert isinstance(window._overlay, FrozenSelection)
+    window._overlay.close()
+
+
+def test_a_failed_preview_shows_the_message_and_keeps_the_window(app):
+    window = MainWindow(PreviewController("Screen sharing was cancelled."))
+    window.show()
+    window._choose()
+    assert window.isVisible() and "cancelled" in window.status.text()
+
+
+def test_cancelling_the_frozen_selection_closes_the_portal_session(app):
+    controller = PreviewController()
+    window = MainWindow(controller)
+    window.show()
+    window._choose()
+    window._overlay.cancelled.emit()
+    assert controller.closed == 1 and window.isVisible()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows excludes the window from capture instead")
+def test_without_a_tray_the_window_minimizes_while_recording(app, monkeypatch):
+    monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", lambda: False)
+    window = MainWindow(FakeController())
+    window.show()
+    window._leave_the_screen()
+    assert window.isMinimized()
+
+
+def test_closing_the_window_releases_the_backend(app):
+    controller = PreviewController()
+    window = MainWindow(controller)
+    window.show()
+    window.close()
+    assert controller.closed >= 1

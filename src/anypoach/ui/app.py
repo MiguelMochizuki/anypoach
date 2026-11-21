@@ -21,11 +21,12 @@ from PySide6.QtWidgets import (
 )
 
 from anypoach.brief.paths import cache_dir
-from anypoach.capture.mss_backend import MssBackend
+from anypoach.capture.default import default_backend
 from anypoach.pointer import default_source
 from anypoach.tempdirs import make_temp_dir
 
 from .controller import Controller
+from .frozen_selection import FrozenSelection
 from .selection import SelectionOverlay
 
 MAX_RECORDING_MS = 30_000  # the analysis only reads the first 30 s
@@ -103,12 +104,30 @@ class MainWindow(QMainWindow):
 
     def _choose(self) -> None:
         self.hide()
-        overlay = SelectionOverlay(QApplication.screenAt(self.pos()) or QApplication.primaryScreen())
+        if self.controller.supports_preview:  # Wayland: no overlay can sit over the screen, so pick on a frozen frame
+            frame = self.controller.preview()
+            if frame is None:
+                self.show()
+                self._refresh()
+                return
+            overlay = FrozenSelection(frame)
+            overlay.cancelled.connect(self._selection_cancelled)
+        else:
+            overlay = SelectionOverlay(QApplication.screenAt(self.pos()) or QApplication.primaryScreen())
+            overlay.cancelled.connect(self.show)
         overlay.selected.connect(self._chosen)
-        overlay.cancelled.connect(self.show)
         self._overlay = overlay
         overlay.showFullScreen()
         overlay.setFocus()
+
+    def _selection_cancelled(self) -> None:
+        self.controller.close()  # ends the portal session so the compositor stops showing that it is sharing
+        self.show()
+
+    def closeEvent(self, event) -> None:
+        """Release the capture backend (closing any portal session) before the window goes away."""
+        self.controller.close()
+        super().closeEvent(event)
 
     def _chosen(self, region) -> None:
         self.controller.choose_region(region)
@@ -126,7 +145,10 @@ class MainWindow(QMainWindow):
 
     def _leave_the_screen(self) -> None:
         # Without an OS-level exclusion the window would show up in the video, so hide it; a tray menu stops the recording.
-        if sys.platform == "win32" or not QSystemTrayIcon.isSystemTrayAvailable():
+        if sys.platform == "win32":
+            return
+        if not QSystemTrayIcon.isSystemTrayAvailable():  # e.g. GNOME: minimize, and restore the window to stop
+            self.showMinimized()
             return
         tray = QSystemTrayIcon(QIcon.fromTheme("media-record"), self)
         menu = QMenu()
@@ -143,7 +165,7 @@ class MainWindow(QMainWindow):
             self._tray.hide()
             self._tray = None
         result = self.controller.stop()
-        self.show()
+        self.showNormal()
         self.frames.clear()
         if result is not None:
             for key in result.keyframes:
@@ -164,7 +186,7 @@ def main() -> int:
     """Start the AnyPoach window and return the Qt exit code. This is the `anypoach` command."""
     app = QApplication(sys.argv)
     work = make_temp_dir()
-    controller = Controller(MssBackend(), default_source(), Path(work), cache=cache_dir())
+    controller = Controller(default_backend(), default_source(), Path(work), cache=cache_dir())
     window = MainWindow(controller)
     window.show()
     return app.exec()
