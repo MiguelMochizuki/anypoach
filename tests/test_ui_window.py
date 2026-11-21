@@ -21,6 +21,7 @@ from anypoach.ui.selection import SelectionOverlay
 
 class FakeController:
     supports_preview = False
+    ready_to_record = True
 
     def __init__(self):
         self.state, self.message, self.calls = "idle", "", []
@@ -49,6 +50,11 @@ def app():
     return QApplication.instance() or QApplication([])
 
 
+@pytest.fixture(autouse=True)
+def short_leave_delay(monkeypatch):
+    monkeypatch.setattr("anypoach.ui.app.LEAVE_SCREEN_MS", 60)
+
+
 def test_every_button_has_an_accessible_name_and_state_follows_the_controller(app):
     controller = FakeController()
     window = MainWindow(controller)
@@ -56,6 +62,7 @@ def test_every_button_has_an_accessible_name_and_state_follows_the_controller(ap
     assert len(buttons) == 4 and all(b.accessibleName() for b in buttons)
     assert (window.stop_button.isEnabled(), window.copy_button.isEnabled()) == (False, False)
     window.record_button.click()
+    QTest.qWait(300)
     assert controller.calls == ["start"] and window.stop_button.isEnabled() and not window.record_button.isEnabled()
     window.stop_button.click()
     assert controller.calls[-1] == "stop" and window.copy_button.isEnabled()
@@ -69,6 +76,7 @@ def test_enter_activates_the_focused_button(app):
     window.show()
     window.record_button.setFocus()
     QTest.keyClick(window, Qt.Key.Key_Return)
+    QTest.qWait(300)
     assert controller.calls == ["start"]
 
 
@@ -151,3 +159,34 @@ def test_closing_the_window_releases_the_backend(app):
     window.show()
     window.close()
     assert controller.closed >= 1
+
+
+def test_recording_starts_only_after_the_window_has_left_the_screen(app, monkeypatch):
+    monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", lambda: False)
+    controller = FakeController()
+    window = MainWindow(controller)
+    window.show()
+    window.record_button.click()
+    assert controller.calls == [] and window.isMinimized()  # the window goes first, so it is not in the video
+    QTest.qWait(300)
+    assert controller.calls == ["start"]
+
+
+def test_record_without_an_area_keeps_the_window_where_it_is(app):
+    controller = FakeController()
+    controller.ready_to_record = False
+    window = MainWindow(controller)
+    window.show()
+    window.record_button.click()
+    assert controller.calls == ["start"] and window.isVisible() and not window.isMinimized()
+
+
+def test_a_start_that_fails_brings_the_window_back(app, monkeypatch):
+    monkeypatch.setattr(QSystemTrayIcon, "isSystemTrayAvailable", lambda: False)
+    controller = FakeController()
+    controller.start = lambda: setattr(controller, "message", "Could not start recording: gone")
+    window = MainWindow(controller)
+    window.show()
+    window.record_button.click()
+    QTest.qWait(300)
+    assert not window.isMinimized() and "Could not start" in window.status.text()

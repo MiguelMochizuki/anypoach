@@ -30,6 +30,7 @@ from .frozen_selection import FrozenSelection
 from .selection import SelectionOverlay
 
 MAX_RECORDING_MS = 30_000  # the analysis only reads the first 30 s
+LEAVE_SCREEN_MS = 500  # time for the compositor to take the window off the screen before capture starts
 
 
 def hide_from_capture(window: QWidget) -> bool:
@@ -136,12 +137,28 @@ class MainWindow(QMainWindow):
         self._refresh()
 
     def _record(self) -> None:
+        if not self.controller.ready_to_record:
+            self.controller.start()  # only sets the reason (no area chosen, already recording); nothing to hide
+            self._refresh()
+            return
+        self.record_button.setEnabled(False)
+        self._leave_the_screen()  # first, so the window is not in the first frames of the video
+        QTimer.singleShot(0 if sys.platform == "win32" else LEAVE_SCREEN_MS, self._begin_recording)
+
+    def _begin_recording(self) -> None:
         self.controller.start()
         if self.controller.state == "recording":
             self.status.setText("Recording…")
             self._limit.start()
-            self._leave_the_screen()
+        else:
+            self._return_to_screen()
         self._refresh()
+
+    def _return_to_screen(self) -> None:
+        if self._tray is not None:
+            self._tray.hide()
+            self._tray = None
+        self.showNormal()
 
     def _leave_the_screen(self) -> None:
         # Without an OS-level exclusion the window would show up in the video, so hide it; a tray menu stops the recording.
@@ -161,11 +178,8 @@ class MainWindow(QMainWindow):
 
     def _stop(self) -> None:
         self._limit.stop()
-        if self._tray is not None:
-            self._tray.hide()
-            self._tray = None
         result = self.controller.stop()
-        self.showNormal()
+        self._return_to_screen()
         self.frames.clear()
         if result is not None:
             for key in result.keyframes:

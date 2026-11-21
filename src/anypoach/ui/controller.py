@@ -97,6 +97,11 @@ class Controller:
         return self._backend
 
     @property
+    def ready_to_record(self) -> bool:
+        """Whether `start()` would begin a recording: an area is chosen and nothing is recording."""
+        return self._region is not None and self.state != "recording"
+
+    @property
     def supports_preview(self) -> bool:
         """Whether the backend needs a preview frame to choose the area (the Wayland portal does)."""
         return hasattr(self._backend, "preview")

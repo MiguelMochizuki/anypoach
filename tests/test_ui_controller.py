@@ -155,3 +155,13 @@ def test_close_releases_the_backend_and_the_region(preview_controller):
     assert preview_controller.backend.closed == 1
     preview_controller.start()
     assert "Choose an area" in preview_controller.message
+
+
+def test_ready_to_record_needs_an_area_and_no_running_recording(tmp_path):
+    controller = make(tmp_path)
+    assert not controller.ready_to_record
+    controller.choose_region(Rect(10, 10, 160, 90))
+    assert controller.ready_to_record
+    controller.start()
+    assert not controller.ready_to_record
+    controller.stop()
