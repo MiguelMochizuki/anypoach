@@ -42,8 +42,9 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.2.0 | Extensão do Chrome (PR #3) e inspetor de página: cartão ao passar o mouse e medidas dos componentes filhos | publicada (pré-release) |
 | v0.2.1 | macOS: ponteiro por CoreGraphics, regiões Retina e aviso de permissão de gravação de tela | pronta (pré-release); spike e checagens manuais num Mac ainda não rodados |
 | v0.3.0 | Trechos de movimento (várias interações por gravação) e editor com comentários, instruções gerais e timeline | pronta (pré-release); checagens manuais da janela ainda não rodadas |
-| v0.3.1 | Botão de tela cheia (um clique, sem arrastar) | pronta |
-| v0.4.0 | Resto da 2b: modo janela, atalho global e bandeja, onboarding, paleta ajustável | não começou |
+| v0.3.1 | Botão de tela cheia (um clique, sem arrastar) | publicada (pré-release) |
+| v0.4.0 | Bandeja permanente com menu (mostrar, gravar tela cheia, sair; parar durante a gravação) | pronta; checagem manual pendente |
+| v0.4.1+ | Modo janela, atalho global (conflita com a promessa de não usar hooks globais; só com o portal GlobalShortcuts), onboarding, paleta ajustável | não começou |
 | v0.5.0 | Instalador sem `uv`, `.mcpb` e comando do Codex, verificação de atualização | não começou |
 | Depois, sem data | Importar vídeo ou imagem, screenshot, limpeza de armazenamento; painel lateral do Chrome e lista na janela (opções B e C do inspetor); PyInstaller, `.mcpb` e comando do Codex; favoritos e font matcher (o matcher depende de OCR e CoreText do Mac) | ideias |
 
