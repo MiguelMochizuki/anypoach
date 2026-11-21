@@ -184,6 +184,22 @@ class Frame(BaseModel):
     timeMs: Num
 
 
+MAX_BRIEF_IMAGES = 12
+
+
+def _frames_to_send(top: list[Frame], segments: Any) -> list[Frame]:
+    """The frames one `anypoach_read_brief` answer carries: the segments' own, in time order, with the top-level
+    ones (the strongest segment's) sent once. A brief without segments sends just its top-level frames."""
+    if not isinstance(segments, list) or not segments:
+        return top
+    own = [Frame.model_validate(f) for segment in segments if isinstance(segment, dict) for f in segment.get("keyframes", [])]
+    seen = {frame.imagePath for frame in own}
+    frames = [frame for frame in top if frame.imagePath not in seen] + own
+    if len(frames) > MAX_BRIEF_IMAGES:
+        raise ValueError("Too many keyframes")
+    return frames
+
+
 def _num(value: float) -> str:
     return str(int(value)) if float(value).is_integer() else str(value)
 
@@ -238,9 +254,10 @@ async def anypoach_read_brief(briefId: uuid.UUID | None = None,
         if components_line := _components_line(brief.evidence.get("browserEvidence")):
             content.append(text(components_line))
         if includeKeyframes:
-            frames = [Frame.model_validate(f) for f in brief.evidence.get("keyframes", [])]
-            if len(frames) > 3:
+            top = [Frame.model_validate(f) for f in brief.evidence.get("keyframes", [])]
+            if len(top) > 3:
                 raise ValueError("Too many keyframes")
+            frames = _frames_to_send(top, brief.evidence.get("segments"))
             for frame in frames:
                 content += _keyframe(frame.model_dump(), brief.evidence.get("capture"))
             source = brief.evidence.get("sourcePath")

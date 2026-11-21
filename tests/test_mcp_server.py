@@ -507,3 +507,63 @@ def test_an_oversized_image_is_refused_with_a_hint(monkeypatch):
     monkeypatch.setattr(mcp_server, "FIVE_MB", 1000)
     with pytest.raises(ValueError, match="use a smaller crop or maxSize"):
         mcp_server.ensure_png_fits(b"x" * 1001)
+
+
+def png_file(path, color):
+    ffmpeg("-f", "lavfi", "-i", f"color=c={color}:s=64x48:r=1", "-frames:v", "1", str(path))
+    return str(path)
+
+
+def seg(home, name, start, kinds, color, strength=0.1):
+    frames = [{"kind": kind, "timeMs": start + 100 * i, "imagePath": png_file(home / f"{name}-{kind}.png", color)}
+              for i, kind in enumerate(kinds)]
+    timing = {"durationMs": 300, "bezier": None, "token": "300ms"}
+    return {"startMs": start, "peakMs": start + 100, "endMs": start + 400, "strength": strength, "timing": timing, "keyframes": frames}
+
+
+def segments_brief(home, segments, top):
+    brief = base_brief(home)
+    brief["evidence"].pop("pointerTrace")  # its drags would add release frames to the images
+    brief["evidence"]["keyframes"] = top
+    brief["evidence"]["segments"] = segments
+    return brief
+
+
+def test_read_brief_returns_segment_images_in_time_order_without_repeats(server, home):
+    first, strongest, last = (seg(home, "a", 500, ["start", "peak"], "red"), seg(home, "b", 3000, ["start", "peak", "settled"], "blue", 0.3),
+                              seg(home, "c", 6000, [], "green"))
+    write_active(home, segments_brief(home, [first, strongest, last], strongest["keyframes"]))
+
+    async def scenario():
+        async with connect(server, home) as client:
+            result = await client.call_tool("anypoach_read_brief", {})
+            assert not is_error(result)
+            assert len(images(result)) == 5  # 2 + 3, the top-level frames are the strongest segment's and come once
+            assert len(structured(result)["evidence"]["segments"]) == 3
+    asyncio.run(scenario())
+
+
+def test_read_brief_allows_up_to_twelve_images_and_refuses_more(server, home):
+    four = [seg(home, f"s{i}", 1000 * i, ["start", "peak", "settled"], "red") for i in range(4)]
+    write_active(home, segments_brief(home, four, four[0]["keyframes"]))
+    five = four + [seg(home, "s4", 9000, ["start", "peak", "settled"], "red")]
+
+    async def scenario():
+        async with connect(server, home) as client:
+            ok = await client.call_tool("anypoach_read_brief", {})
+            assert not is_error(ok) and len(images(ok)) == 12
+            write_active(home, segments_brief(home, five, five[0]["keyframes"]))
+            refused = await client.call_tool("anypoach_read_brief", {})
+            assert is_error(refused) and "Too many keyframes" in texts(refused)[0]
+    asyncio.run(scenario())
+
+
+def test_a_brief_without_segments_is_read_as_before(server, home):
+    write_active(home, base_brief(home))
+
+    async def scenario():
+        async with connect(server, home) as client:
+            result = await client.call_tool("anypoach_read_brief", {})
+            assert not is_error(result) and "segments" not in structured(result)["evidence"]
+            assert len(images(result)) >= 1
+    asyncio.run(scenario())

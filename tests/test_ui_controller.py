@@ -59,6 +59,12 @@ def test_empty_region_is_a_message_not_an_exception(tmp_path):
     assert controller.state == "idle" and "area" in controller.message.lower()
 
 
+def test_handoff_prompt_warns_about_several_interactions():
+    sentence = ("A recording may hold several interactions: each segment in evidence.segments has its own timing, "
+                "so never read one segment's timing as another's.")
+    assert sentence in handoff_prompt("ID", None)
+
+
 def test_capture_permission_errors_become_a_message(tmp_path):
     controller = make(tmp_path, backend=LiveBackend(PermissionError("denied")))
     assert record(controller, 0.2) is None

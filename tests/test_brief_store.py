@@ -9,7 +9,7 @@ import uuid
 import pytest
 
 from anypoach.analysis.motion import MotionTiming
-from anypoach.analysis.types import CaptureInfo, InspectionResult, Keyframe
+from anypoach.analysis.types import CaptureInfo, InspectionResult, Keyframe, MotionSegment
 from anypoach.brief.cleanup import clear_storage, scan_storage
 from anypoach.brief.store import read_brief, share
 
@@ -202,3 +202,16 @@ def test_share_keeps_browser_evidence(env):
     assert read_brief(brief_id, cache=cache)["evidence"]["browserEvidence"] == session
     plain = share(result(make_media(temp)), "", [], cache=cache)
     assert "browserEvidence" not in read_brief(plain, cache=cache)["evidence"]
+
+
+def test_segments_are_stored_without_motion(env):
+    cache, temp = env
+    media = make_media(temp)
+    shot = result(media)
+    keyframes = shot.keyframes
+    timing = shot.timing
+    segment = MotionSegment(0, 0, 100, 0.2, timing, keyframes)
+    brief_id = share(dataclasses.replace(shot, segments=[segment]), "", [], cache=cache)
+    stored = read_brief(brief_id, cache=cache)["evidence"]
+    assert len(stored["segments"]) == 1
+    assert all("motion" not in k for k in stored["keyframes"]) and all("motion" not in k for k in stored["segments"][0]["keyframes"])
