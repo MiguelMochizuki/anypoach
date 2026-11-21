@@ -24,7 +24,7 @@ O Poach é uma boa ideia que mora numa barra de menu que só um Mac enxerga, e a
 | Extras | favoritos `.poach`, "Snatch font", limpeza de armazenamento, atualização, onboarding | nenhum |
 | Chrome | extensão com estilos computados, eventos e tempos de animação | extensão própria na v0.2.0 (porta 47832, sem loja): estilos, animações, eventos, cartão do inspetor e componentes filhos |
 | Distribuição | `.zip` pronto | instalação por `uv` |
-| Ponteiro | macOS | Windows e X11 (macOS e Wayland sem trace) |
+| Ponteiro | macOS | Windows, X11 e macOS (Wayland sem trace; macOS só testado com fakes e CI até alguém rodar o spike) |
 
 ## O que o Poach também não resolve
 
@@ -39,8 +39,8 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | Versão | Conteúdo | Estado |
 | --- | --- | --- |
 | v0.1.0 | Tamanho e escala da captura no brief e nas legendas; captura no Wayland | publicada (pré-release) |
-| v0.2.0 | Extensão do Chrome (PR #3) e inspetor de página: cartão ao passar o mouse e medidas dos componentes filhos | pronta, falta a verificação manual no Chrome |
-| v0.2.1 | macOS: ponteiro por `CGEventSource` e aviso de permissão de gravação de tela | plano próprio, não começou |
+| v0.2.0 | Extensão do Chrome (PR #3) e inspetor de página: cartão ao passar o mouse e medidas dos componentes filhos | publicada (pré-release) |
+| v0.2.1 | macOS: ponteiro por CoreGraphics, regiões Retina e aviso de permissão de gravação de tela | pronta (pré-release); spike e checagens manuais num Mac ainda não rodados |
 | v0.3.0 | Trechos de movimento (várias interações por gravação) e editor com comentários, instruções gerais e timeline | em andamento (PR #16; spec e plano `2026-11-21-anypoach-v030-segments-and-editor`); falta rodar as checagens manuais |
 | v0.4.0 | Resto da 2b: tela cheia, modo janela, atalho global e bandeja, onboarding, paleta ajustável | não começou |
 | v0.5.0 | Instalador sem `uv`, `.mcpb` e comando do Codex, verificação de atualização | não começou |

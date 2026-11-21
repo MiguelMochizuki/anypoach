@@ -13,6 +13,7 @@ from anypoach.capture.backend import Frame, Screen
 from anypoach.capture.mss_backend import MssBackend
 from anypoach.capture.overlay import CLICK_RING_SECONDS, draw_click_ring, draw_cursor
 from anypoach.capture.recorder import Recorder
+from anypoach.macos import Display
 from anypoach.pointer.recorder import PointerTraceRecorder
 from anypoach.pointer.trace import Rect
 from tests.test_pointer_recorder import Clock, Script, at
@@ -142,11 +143,75 @@ def test_mss_backend_converts_regions_and_monitors():
             shots.append(box)
             return SimpleNamespace(bgra=bytes(box["width"] * box["height"] * 4), width=box["width"], height=box["height"])
 
-    backend = MssBackend(sct=FakeSct(), clock=lambda: 5.0)
+    backend = MssBackend(sct=FakeSct(), clock=lambda: 5.0, platform="linux")
     assert backend.screens() == [Screen(1, Rect(-10, 0, 30, 10), 1.0)]
     frame = backend.grab(Rect(-5.4, 2.0, 11.6, 4.0))
     assert shots == [{"left": -5, "top": 2, "width": 12, "height": 4}]
     assert frame.pixels.shape == (4, 12, 4) and frame.time_s == 5.0
+
+
+class RetinaSct:
+    """`mss` as measured on macOS (assumption A1): boxes in points, frames in pixels (`scale` times larger)."""
+    monitors: ClassVar = [{}, {"left": 0, "top": 0, "width": 1512, "height": 982}]
+
+    def __init__(self, scale=2):
+        self.boxes, self.scale = [], scale
+
+    def grab(self, box):
+        self.boxes.append(box)
+        w, h = box["width"] * self.scale, box["height"] * self.scale
+        return SimpleNamespace(bgra=bytes(w * h * 4), width=w, height=h)
+
+
+class FakeCG:
+    def __init__(self, *displays):
+        self._displays = list(displays)
+
+    def displays(self):
+        return self._displays
+
+
+RETINA = Display(1, Rect(0, 0, 1512, 982), 2.0)
+LEFT_1X = Display(2, Rect(-1920, 0, 1920, 1080), 1.0)
+
+
+def test_retina_region_is_converted_to_points_and_the_frame_has_the_region_size():
+    sct = RetinaSct()
+    backend = MssBackend(sct=sct, platform="darwin", cg=FakeCG(RETINA), clock=lambda: 1.0)
+    frame = backend.grab(Rect(200, 100, 800, 600))
+    assert sct.boxes == [{"left": 100, "top": 50, "width": 400, "height": 300}]
+    assert frame.pixels.shape == (600, 800, 4)
+
+
+def test_an_odd_retina_region_covers_whole_points_and_is_cropped_to_its_size():
+    sct = RetinaSct()
+    frame = MssBackend(sct=sct, platform="darwin", cg=FakeCG(RETINA)).grab(Rect(201, 101, 801, 601))
+    assert sct.boxes == [{"left": 100, "top": 50, "width": 401, "height": 301}]
+    assert frame.pixels.shape == (601, 801, 4)
+
+
+def test_a_1x_display_next_to_a_retina_one_uses_its_own_scale():
+    sct = RetinaSct(scale=1)
+    frame = MssBackend(sct=sct, platform="darwin", cg=FakeCG(RETINA, LEFT_1X)).grab(Rect(-1000, 100, 200, 100))
+    assert sct.boxes == [{"left": -1000, "top": 100, "width": 200, "height": 100}]
+    assert frame.pixels.shape == (100, 200, 4)
+
+
+def test_a_short_frame_is_padded_to_the_region_size():
+    sct = RetinaSct(scale=1)  # the display claims 2x but mss answered at 1x: still hand the recorder the right size
+    frame = MssBackend(sct=sct, platform="darwin", cg=FakeCG(RETINA)).grab(Rect(200, 100, 800, 600))
+    assert frame.pixels.shape == (600, 800, 4)
+
+
+def test_screens_report_physical_bounds_and_scale_on_macos():
+    backend = MssBackend(sct=RetinaSct(), platform="darwin", cg=FakeCG(RETINA, LEFT_1X))
+    assert backend.screens() == [Screen(1, Rect(0, 0, 3024, 1964), 2.0), Screen(2, Rect(-1920, 0, 1920, 1080), 1.0)]
+
+
+def test_other_platforms_do_not_convert():
+    sct = RetinaSct(scale=1)
+    MssBackend(sct=sct, platform="linux", cg=FakeCG(RETINA)).grab(Rect(200, 100, 800, 600))
+    assert sct.boxes == [{"left": 200, "top": 100, "width": 800, "height": 600}]
 
 
 @pytest.mark.live

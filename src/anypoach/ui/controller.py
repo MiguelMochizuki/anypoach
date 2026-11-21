@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import dataclasses
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
@@ -75,6 +76,9 @@ def handoff_prompt(brief_id: str, trace: dict[str, Any] | None) -> str:
 MAX_COMMENT_CHARS = 500
 MAX_COMMENTS = 50
 
+SCREEN_RECORDING_MESSAGE = ("AnyPoach needs Screen Recording permission. Allow it in System Settings > Privacy & Security "
+                            "> Screen Recording, then quit and reopen AnyPoach.")
+
 
 class Controller:
     """Runs the record-analyze-share flow without any UI toolkit, so it can be tested and reused.
@@ -94,10 +98,14 @@ class Controller:
         work_dir: Folder for recordings and keyframes.
         cache: Brief cache directory; the per-OS default when omitted.
         store: Where the Chrome companion's sessions arrive, or None when it is not in use.
+        screen_access: Says whether the OS lets the app record the screen (True, False, or None when unknown),
+            or None when the platform has no such permission.
     """
     def __init__(self, backend: CaptureBackend, pointer_source: PointerSource | None, work_dir: Path, *,
-                 cache: Path | None = None, store: EvidenceStore | None = None) -> None:
+                 cache: Path | None = None, store: EvidenceStore | None = None,
+                 screen_access: Callable[[], bool | None] | None = None) -> None:
         self._backend, self._source, self._work, self._cache = backend, pointer_source, Path(work_dir), cache
+        self._screen_access = screen_access
         self._store = store
         self._epoch_range: tuple[int, int] | None = None
         self._started_ms = 0
@@ -217,6 +225,14 @@ class Controller:
         if 0 <= index < len(self.annotations):
             del self.annotations[index]
 
+    def check_screen_access(self) -> bool:
+        """Whether recording may go ahead: False, with `message` explaining where to allow it, only when the OS
+        says Screen Recording is denied. An unknown answer, or no checker, does not block."""
+        if self._screen_access is not None and self._screen_access() is False:
+            self.message = SCREEN_RECORDING_MESSAGE
+            return False
+        return True
+
     def start(self) -> None:
         """Begin recording the chosen area. Refused with a message if no area is chosen, a recording is already running, or capture cannot start."""
         if self.state == "recording":
@@ -224,6 +240,8 @@ class Controller:
             return
         if self._region is None:
             self.message = "Choose an area to record first."
+            return
+        if not self.check_screen_access():
             return
         pointer = PointerTraceRecorder(self._region, self._source)
         recorder = Recorder(self._backend, pointer, self._work)

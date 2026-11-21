@@ -27,8 +27,8 @@ class LiveBackend:
         return Frame(np.zeros((int(region.height), int(region.width), 4), np.uint8), time.perf_counter())
 
 
-def make(tmp_path, backend=None, pointer=None):
-    return Controller(backend or LiveBackend(), pointer, tmp_path / "work", cache=tmp_path / "cache")
+def make(tmp_path, backend=None, pointer=None, **kwargs):
+    return Controller(backend or LiveBackend(), pointer, tmp_path / "work", cache=tmp_path / "cache", **kwargs)
 
 
 def record(controller, seconds=0.5):
@@ -63,6 +63,26 @@ def test_handoff_prompt_warns_about_several_interactions():
     sentence = ("A recording may hold several interactions: each segment in evidence.segments has its own timing, "
                 "so never read one segment's timing as another's.")
     assert sentence in handoff_prompt("ID", None)
+
+
+def test_denied_screen_recording_is_a_message_and_nothing_starts(tmp_path):
+    controller = make(tmp_path, screen_access=lambda: False)
+    controller.choose_region(Rect(10, 10, 160, 90))
+    assert controller.check_screen_access() is False
+    assert "Screen Recording" in controller.message and "System Settings" in controller.message
+    controller.message = ""
+    controller.start()
+    assert controller.state == "idle" and "Screen Recording" in controller.message
+
+
+@pytest.mark.parametrize("answer", [True, None])
+def test_an_allowed_or_unknown_permission_does_not_block(tmp_path, answer):
+    controller = make(tmp_path, screen_access=lambda: answer)
+    controller.choose_region(Rect(10, 10, 160, 90))
+    assert controller.check_screen_access() is True
+    controller.start()
+    assert controller.state == "recording"
+    controller.stop()
 
 
 def test_capture_permission_errors_become_a_message(tmp_path):
