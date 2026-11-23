@@ -22,7 +22,7 @@ You are building a UI, and a hover, a drag, or an easing curve is right in your 
 What you get:
 
 - **Windows, Linux (X11 and Wayland) and macOS** from one Python code base.
-- **One process** decodes the video: 0.06 s and 0.17 s on two small test clips, against 3.76 s and 33.5 s for one `ffmpeg` launch per sample ([measurements](docs/superpowers/baseline.md)).
+- **One process** decodes the video: 0.06 s and 0.17 s on two small test clips, against 3.76 s and 33.5 s for the one-`ffmpeg`-per-sample code AnyPoach forked from (Poach has batched since 1.0.0; not re-measured) ([measurements](docs/superpowers/baseline.md)).
 - **Private by construction:** no telemetry, audio or keyboard capture; briefs are owner-only and expire after 24 hours ([details](docs/privacy.md)).
 - **Four MCP tools** any assistant that can launch a stdio command can use.
 - **A Chrome companion** that sends the real CSS sizes, computed styles and animation timing of the component you record, so the assistant stops guessing them from pixels.
@@ -139,9 +139,9 @@ Python 3.11+ with `uv` and `hatchling`; PyAV and numpy for analysis and encoding
 
 ## Acknowledgments
 
-AnyPoach began as a fork of [**Poach**](https://github.com/guilopeszw/poach) by **Guilherme Lopes**, a charming Mac menu-bar app. It is lovely, provided you own a Mac and do not mind it launching `ffmpeg` 364 times to look at 30 seconds of video (we counted). AnyPoach was rewritten in Python to do the job in one process and to run on Windows, Linux and macOS, but the idea, and the Chrome extension it grew from, are Guilherme's, and the credit stays in [NOTICE](NOTICE), as the license asks.
+AnyPoach began as a fork of [**Poach**](https://github.com/guilopeszw/poach) by **Guilherme Lopes**, a charming Mac menu-bar app, and the idea, and the Chrome extension it grew from, are his. The credit stays in [NOTICE](NOTICE), as the license asks. The first version of Poach launched `ffmpeg` 364 times to look at 30 seconds of video (we counted); AnyPoach was rewritten in Python to do the job in one process and to run on Windows, Linux and macOS.
 
-Thank you, Guilherme. When Poach 1.0.0 came out, its release notes and NOTICE credited AnyPoach for the child measurement and inspector work, which was a generous thing to do, and we return it here: if you own a Mac and want a native app, [use Poach](https://github.com/guilopeszw/poach). If you do not, we are here, and the ideas keep flowing both ways.
+Thank you, Guilherme. The rivalry is friendly and the borrowing runs both ways. Poach 1.0.0 credits AnyPoach in its release notes and NOTICE for the child measurement and the live inspector, which it adapted with receipts attached, and it now has favorites, a font snatcher, size captions on images and a single `ffmpeg` process, which we are sure is convergent evolution. We took the tray, the window picker and the favorites file from the same playbook, so nobody is clean. Poach is still the one with the native Mac app, ScreenCaptureKit and a menu bar with a personality: if that is you, [use Poach](https://github.com/guilopeszw/poach). If you are on Windows or Linux, we are here, and the ideas keep flowing both ways.
 
 ## Contributing
 

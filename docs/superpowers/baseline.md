@@ -18,7 +18,7 @@ Medido com `tools/bench.py` (PyAV 19.0.2, decodificação em um único processo,
 | `inspect_video` em `motion.mov` | 0,06 s | 1,27 s (inclui importar PyAV/numpy) | 62 MB |
 | `inspect_recording` em `overrun.mov` | 0,17 s | 1,49 s | 69 MB |
 
-Contra o original (3,76 s e 33,5 s, porque ele abre um `ffmpeg` novo a cada amostra, como quem reabre a geladeira a cada garfada) a análise ficou cerca de 60x e 200x mais rápida nessas fixtures pequenas (96x64 e 160x90). Em gravações reais de até 1920 px o custo de decodificação domina; medir de novo com uma gravação real antes de fixar metas.
+Contra o original (o código do primeiro Poach; o 1.0.0 do Poach já agrupa as amostras em um `ffmpeg` e não foi medido de novo) (3,76 s e 33,5 s, porque ele abre um `ffmpeg` novo a cada amostra, como quem reabre a geladeira a cada garfada) a análise ficou cerca de 60x e 200x mais rápida nessas fixtures pequenas (96x64 e 160x90). Em gravações reais de até 1920 px o custo de decodificação domina; medir de novo com uma gravação real antes de fixar metas.
 
 ## Clipe real de 1920x1080 (v0.1.0), mesma máquina
 
