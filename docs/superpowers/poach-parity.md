@@ -57,6 +57,7 @@ Proposta, a confirmar. A versão do pacote e a da extensão sobem juntas (um tes
 | v0.15.0 | Instalador sem `uv`: pasta do PyInstaller com a janela, o servidor MCP e o `anypoach-setup`, um zip por sistema com `SHA256SUMS.txt`, montados pela CI a cada tag (sem assinatura) | publicada (pré-release) |
 | v0.16.0 | Moldura vermelha fora da área gravada (sem Wayland), menu da bandeja com escolher área, gravar a área e screenshot, e "Continuar com Claude/Codex" (copia o prompt e tenta abrir o app; esquemas `claude://` e `codex://` não verificados) | publicada (pré-release) |
 | v0.17.0 | Modo janela no macOS (`CGWindowListCopyWindowInfo`; nomes de janela dependem da permissão de gravação de tela) | pronta; só o runner de macOS da CI exercitou a chamada real |
-| v0.18.0+ | Resto do Poach: atalho global no macOS e no Wayland; assinatura e notarização dos pacotes | não começou |
+| v1.0.0 | Primeira versão estável: paridade de recursos com o Poach 1.0.0 exceto o que está nas issues #36 a #41; nenhuma pessoa rodou em desktop real (issue #12) | publicada |
+| v1.1+ | Atalho global no macOS e no Wayland, detecção automática de texto na fonte, assinatura e pacotes nativos (issues #36, #37, #39, #40) | não começou |
 
 O Poach resolve tudo isso apenas para quem tem um Mac, o que continua sendo um recorte de público impressionante.
