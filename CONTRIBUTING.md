@@ -20,7 +20,7 @@ Keep one independently reviewable change per commit. Include regression tests wi
 
 Use a lowercase scope made of letters, digits, dots, underscores, slashes, or hyphens, starting with a letter or digit. The check also accepts `perf` and `revert`. Rebase your branch to update it and reword any failing commits. GitHub checks each commit subject. Reviewers check branch names and PR titles. Every PR must pass the commit check and resolve review conversations. PRs from contributors require approval from @guilopeszw, the code owner for every path. New commits dismiss earlier approvals. For an owner-authored PR, the owner can use GitHub’s review bypass to rebase and merge after the checks pass. Reserve repository administrator access for the owner.
 
-Run the tests and lint before opening a pull request. Keep virtual environments, build output, temporary captures, and private media out of commits. Update the README and this guide when commands, capabilities, permissions, or data handling change. Contributions are licensed under the repository’s [Apache License 2.0](LICENSE).
+Run the tests and lint before opening a pull request. Keep virtual environments, build output, temporary captures, and private media out of commits. Update the README, the guides in `docs/` and this guide when commands, capabilities, permissions, or data handling change. Contributions are licensed under the repository’s [Apache License 2.0](LICENSE).
 
 ## Development setup
 
@@ -60,7 +60,7 @@ For the Chrome companion, check by hand with a real Chrome: load the unpacked `s
 Versions follow `docs/superpowers/poach-parity.md` (section "Roteiro de releases"). To prepare one:
 
 1. Bump `version` in `pyproject.toml` and in `src/anypoach/chrome_extension/manifest.json` (a test keeps them equal), and refresh `uv.lock`.
-2. Refresh the docs: README (status and usage), this file, and the roadmap table.
+2. Refresh the docs: the version in the README's Status section, the guides in `docs/` the release touches, this file, and the roadmap table.
 3. Check that CI is green on Ubuntu, Windows, and macOS, and run the manual checks above that the release touches.
 4. Write the notes in the style of the v0.1.0 release: what is new, what was verified and where, what is not done.
 5. Releases from 1.0.0 on are regular releases (the packages are attached by the Package workflow). Create the tag and the release only after the maintainer says so.
@@ -102,5 +102,5 @@ def physical_rect(start: tuple[float, float], end: tuple[float, float], *, origi
 src/anypoach/   analysis, brief storage, MCP server, pointer trace, capture, window, Chrome bridge and extension
 tests/          unit, end-to-end, and window tests, plus golden files
 tools/          benchmark and jitter measurement scripts
-docs/           design, plan, and measured baseline (docs/superpowers)
+docs/           guides (usage, Chrome companion, output format, privacy, architecture); design, plans, roadmap and baseline in docs/superpowers
 ```
