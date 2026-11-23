@@ -11,7 +11,8 @@ globalThis.chrome = {
   runtime: { id: "test-extension", onMessage: { addListener: fn => { listener = fn; } } },
 };
 const realFetch = globalThis.fetch;
-globalThis.fetch = (url, options) => realFetch(String(url).replace(":47832", `:${port}`), options);
+let drops = 0;  // how many of the next requests fail like a dropped connection
+globalThis.fetch = (url, options) => drops-- > 0 ? Promise.reject(new TypeError("fetch failed")) : realFetch(String(url).replace(":47832", `:${port}`), options);
 await import(pathToFileURL(bridgePath).href);
 
 const send = message => new Promise(resolve => {
@@ -19,6 +20,10 @@ const send = message => new Promise(resolve => {
 });
 const session = JSON.parse(readFileSync(sessionFile, "utf8"));
 const out = {};
+drops = 1;
+out.afterOneDrop = await send({ anypoachBridge: "pair", code: "00000000-0000-4000-8000-000000000000" });
+drops = 2;
+out.afterTwoDrops = await send({ anypoachBridge: "pair", code });
 out.wrongCode = await send({ anypoachBridge: "pair", code: "00000000-0000-4000-8000-000000000000" });
 out.malformedCode = await send({ anypoachBridge: "pair", code: "nope" });
 out.rightCode = await send({ anypoachBridge: "pair", code });

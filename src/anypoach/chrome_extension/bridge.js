@@ -2,18 +2,27 @@
 const base = "http://127.0.0.1:47832/v1";
 const queues = new Map();
 
+async function attempt(path, code, options) {
+  const response = await fetch(base + path, {
+    ...options,
+    headers: { Authorization: "Bearer " + code, ...options.headers },
+    signal: AbortSignal.timeout(2500),
+  });
+  if (response.ok) return { ok: true };
+  if (response.status === 401) return { error: "The pairing code changed. Pair again with the code shown in AnyPoach." };
+  return { error: "AnyPoach couldn’t accept this capture." };
+}
+
+// A dropped connection or a slow first request is retried once: the window may have just opened, and the server
+// stores a session under its start time, so receiving the same one twice changes nothing.
 async function send(path, code, options = {}) {
-  try {
-    const response = await fetch(base + path, {
-      ...options,
-      headers: { Authorization: "Bearer " + code, ...options.headers },
-      signal: AbortSignal.timeout(2500),
-    });
-    if (response.ok) return { ok: true };
-    if (response.status === 401) return { error: "The pairing code changed. Pair again with the code shown in AnyPoach." };
-    return { error: "AnyPoach couldn’t accept this capture." };
-  } catch {
-    return { error: "Open AnyPoach and try again." };
+  for (let tries = 0; ; tries++) {
+    try {
+      return await attempt(path, code, options);
+    } catch {
+      if (tries === 1) return { error: "Open AnyPoach and try again." };
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
   }
 }
 
