@@ -77,6 +77,8 @@ def test_bridge_flow_against_the_real_server(tmp_path):
                                str(EXTENSION / "bridge.js")], capture_output=True, text=True, timeout=60, check=False)
         assert done.returncode == 0, done.stderr
         out = json.loads(done.stdout)
+        assert "Pair again" in out["afterOneDrop"]["error"]  # the retry reached the server and got its 401
+        assert out["afterTwoDrops"] == {"error": "Open AnyPoach and try again."}
         assert "error" in out["wrongCode"] and "Pair again" in out["wrongCode"]["error"]
         assert "error" in out["malformedCode"]
         assert out["rightCode"] == {"ok": True} and out["storedAfterPairing"] is True
