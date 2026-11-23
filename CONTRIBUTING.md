@@ -63,7 +63,7 @@ Versions follow `docs/superpowers/poach-parity.md` (section "Roteiro de releases
 2. Refresh the docs: README (status and usage), this file, and the roadmap table.
 3. Check that CI is green on Ubuntu, Windows, and macOS, and run the manual checks above that the release touches.
 4. Write the notes in the style of the v0.1.0 release: what is new, what was verified and where, what is not done.
-5. Publish as a pre-release until 1.0. Create the tag and the release only after the maintainer says so.
+5. Releases from 1.0.0 on are regular releases (the packages are attached by the Package workflow). Create the tag and the release only after the maintainer says so.
 
 ## Documentation Conventions
 
