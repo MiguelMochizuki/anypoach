@@ -25,7 +25,7 @@ from .descriptions import TOOLS
 
 PNG_SIGNATURE = bytes([137, 80, 78, 71, 13, 10, 26, 10])
 FIVE_MB = 5 * 1024 * 1024
-server = MCPServer("anypoach", version="1.0.0")
+server = MCPServer("anypoach", version="1.0.1")
 
 
 def text(value: str) -> TextContent:
